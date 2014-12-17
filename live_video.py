@@ -39,8 +39,8 @@ def main():
     # mmc.setCircularBufferMemoryFootprint(100)
     cam=mmc.getCameraDevice()
     
-    mmc.setConfig('Channels','Violet')
-    mmc.waitForConfig('Channels','Violet')
+    mmc.setConfig('Channels','DAPI')
+    mmc.waitForConfig('Channels','DAPI')
     #self.mmc.setShutterOpen(False)
     
     #cv2.namedWindow('MM controls')

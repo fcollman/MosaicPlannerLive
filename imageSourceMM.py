@@ -8,21 +8,41 @@ class imageSource():
     
     def __init__(self,configFile,channelGroupName='Channels'):
       #NEED TO IMPLEMENT IF NOT MICROMANAGER
+     
         self.configFile=configFile
         self.mmc = MMCorePy.CMMCore() 
         self.mmc.loadSystemConfiguration(self.configFile)
+
         self.channelGroupName=channelGroupName
+       
         #set the exposure to use
+    
+    def get_max_pixel_value(self):
+        bit_depth=self.mmc.getImageBitDepth()
+        return np.power(2,bit_depth)
         
     def set_exposure(self,exp_msec):
       #NEED TO IMPLEMENT IF NOT MICROMANAGER
         self.mmc.setExposure(exp_msec)
     
+    def reset_focus_offset(self):
+        if self.has_hardware_autofocus():
+            focusDevice=self.mmc.getAutoFocusDevice()
+            self.mmc.setProperty(focusDevice,"CRISP State","Reset Focus Offset")
+  
+    def get_hardware_autofocus_state(self):
+        if self.has_hardware_autofocus():
+            return self.mmc.isContinuousFocusLocked()
+           
+    def set_hardware_autofocus_state(self,state):
+        if self.has_hardware_autofocus():
+            self.mmc.enableContinuousFocus(state)
+        
     def has_hardware_autofocus(self):
        #NEED TO IMPLEMENT IF NOT MICROMANAGER
-        print "need to implement automatic detection of hardware autofocus"
-        
+        #print "need to implement automatic detection of hardware autofocus"
         return True
+        
         
     def is_hardware_autofocus_done(self):
       #NEED TO IMPLEMENT IF NOT MICROMANAGER
@@ -100,26 +120,37 @@ class imageSource():
         y=self.mmc.getYPosition(xystg)
         
         return (-x,y)
-        
+    def get_z(self):
+        focus_stage=self.mmc.getFocusDevice()
+        return self.mmc.getPosition(focus_stage)
+    def set_z(self,z):
+        focus_stage=self.mmc.getFocusDevice()
+        self.mmc.setPosition (focus_stage,z)
+        self.mmc.waitForDevice(focus_stage)
         
     def get_pixel_size(self):
         #NEED TO IMPLEMENT IF NOT MICROMANAGER
         return self.mmc.getPixelSizeUm()
+    
+    def get_frame_size_um(self):
+        (sensor_width,sensor_height)=self.get_sensor_size()
+        pixsize = self.get_pixel_size()
+        return (sensor_width*pixsize,sensor_height*pixsize)
+        
         
     def calc_bbox(self,x,y):
         #do not need to implement
-        (sensor_width,sensor_height)=self.get_sensor_size()
-        pixsize = self.get_pixel_size()
+        (fw,fh)=self.get_frame_size_um()
         
         #we are going to follow the convention of upper left being 0,0 
         #and lower right being X,X where X is positive
-        left = x - pixsize*sensor_width/2;
-        right = x + pixsize*sensor_width/2;
+        left = x - fw/2;
+        right = x + fw/2;
         
-        top = y - pixsize*sensor_height/2;
-        bottom = y + pixsize*sensor_height/2;
+        top = y - fh/2;
+        bottom = y + fh/2;
         
-        print (x,y,pixsize,sensor_height)
+       
         return Rectangle(left,right,top,bottom)
         
     

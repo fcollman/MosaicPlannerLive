@@ -37,7 +37,140 @@ class CameraSettings():
         self.sensor_width=cfg.ReadInt('sensor_width',1388)
         self.pix_width=cfg.ReadFloat('pix_width',6.5)
         self.pix_height=cfg.ReadFloat('pix_height',6.5)
+
+class ChannelSettings():
+    """simple struct for containing the parameters for the microscope"""
+    def __init__(self,channels,exposure_times=dict([]),zoffsets=dict([]),usechannels=dict([]),prot_names=dict([]),map_chan=None,def_exposure=100,def_offset=0.0):
+        #def_exposure is default exposure time in msec
+       
         
+        self.channels= channels
+        self.def_exposure=def_exposure
+        self.def_offset=0.0
+        
+        self.exposure_times=exposure_times
+        self.zoffsets=zoffsets
+        self.usechannels=usechannels
+        self.prot_names=prot_names
+        
+        if map_chan is None:
+            for ch in self.channels:
+                if 'dapi' in ch.lower():
+                    map_chan = ch
+        if map_chan is None:
+            map_chan = channels[0]
+            
+        self.map_chan = map_chan
+        
+    def save_settings(self,cfg):    
+        
+        cfg.Write('map_chan',self.map_chan)
+        for ch in self.channels:
+            cfg.WriteInt('Exposures/'+ch,self.exposure_times[ch])
+            cfg.WriteFloat('ZOffsets/'+ch,self.zoffsets[ch])
+            cfg.WriteBool('UseChannel/'+ch,self.usechannels[ch])
+            cfg.Write('ProteinNames/'+ch,self.prot_names[ch])
+            
+    def load_settings(self,cfg):
+        for ch in self.channels:
+            self.exposure_times[ch]=cfg.ReadInt('Exposures/'+ch, self.def_exposure)
+            self.zoffsets[ch]=cfg.ReadFloat('ZOffsets/'+ch,self.def_offset)
+            self.usechannels[ch]=cfg.ReadBool('UseChannel/'+ch,True)
+            self.prot_names[ch]=cfg.Read('ProteinNames/'+ch,ch)
+        self.map_chan=str(cfg.Read('map_chan','DAPI'))
+
+class ChangeChannelSettings(wx.Dialog):
+    """simple dialog for changing the channel settings"""
+    def __init__(self, parent, id, title, settings,style):
+        wx.Dialog.__init__(self, parent, id, title,style=wx.DEFAULT_DIALOG_STYLE, size=(420, -1))
+        
+        self.settings=settings
+        vbox = wx.BoxSizer(wx.VERTICAL)   
+        Nch=len(settings.channels)
+        print Nch
+        
+        gridSizer=wx.FlexGridSizer(rows=Nch+1,cols=6,vgap=5,hgap=5)
+        
+      
+        gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label="chan"),border=5)
+        gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label="protein"),border=5)     
+        gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label="use?"),border=5)
+        gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label="exposure"),border=5)
+        gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label="map?"),border=5)
+        gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label="zoffset     "),border=5)
+        
+        
+        self.ProtNameCtrls=[]
+        self.UseCtrls=[]
+        self.ExposureCtrls=[]
+        self.MapRadCtrls=[]
+        self.ZOffCtrls=[]
+        
+        for ch in settings.channels:
+            hbox =wx.BoxSizer(wx.HORIZONTAL)
+            Txt=wx.StaticText(self,label=ch)
+            ProtText=wx.TextCtrl(self,value=settings.prot_names[ch])
+            ChBox = wx.CheckBox(self)
+            ChBox.SetValue(settings.usechannels[ch])
+            IntCtrl=wx.lib.intctrl.IntCtrl( self, value=settings.exposure_times[ch],size=(50,-1))
+            FloatCtrl=wx.lib.agw.floatspin.FloatSpin(self, 
+                                       value=settings.zoffsets[ch],
+                                       min_val=-3.0,
+                                       max_val=3.0,
+                                       increment=.1,
+                                       digits=2,
+                                       name='',
+                                       size=(95,-1)) 
+               
+            if ch is settings.channels[0]:
+                RadBut = wx.RadioButton(self,-1,'',style=wx.RB_GROUP)
+            else:
+                RadBut = wx.RadioButton(self,-1,'')
+            if ch == settings.map_chan:
+                RadBut.SetValue(True)
+                
+            gridSizer.Add(Txt,0,flag=wx.ALL|wx.EXPAND,border=5)
+            gridSizer.Add(ProtText,1,flag=wx.ALL|wx.EXPAND,border=5)
+            gridSizer.Add(ChBox,0,flag=wx.ALL|wx.EXPAND,border=5)
+            gridSizer.Add(IntCtrl,0,border=5)
+            gridSizer.Add(RadBut,0,flag=wx.ALL|wx.EXPAND,border=5)
+            gridSizer.Add(FloatCtrl,0,flag=wx.ALL|wx.EXPAND,border=5)
+            
+            self.ProtNameCtrls.append(ProtText)
+            self.UseCtrls.append(ChBox)
+            self.ExposureCtrls.append(IntCtrl)
+            self.MapRadCtrls.append(RadBut)
+            self.ZOffCtrls.append(FloatCtrl)
+        
+           
+        hbox = wx.BoxSizer(wx.HORIZONTAL)      
+        ok_button = wx.Button(self,wx.ID_OK,'OK')
+        cancel_button = wx.Button(self,wx.ID_CANCEL,'Cancel')
+        hbox.Add(ok_button)
+        hbox.Add(cancel_button)
+        
+        vbox.Add(gridSizer)
+        vbox.Add(hbox)
+        
+        self.SetSizer(vbox)
+    
+        
+    def GetSettings(self):
+        prot_names=dict([])
+        usechannels=dict([])
+        exposure_times=dict([])
+        zoffsets=dict([])
+        
+        for i,ch in enumerate(self.settings.channels):
+            prot_names[ch]=self.ProtNameCtrls[i].GetValue()
+            usechannels[ch]=self.UseCtrls[i].GetValue()
+            exposure_times[ch]=self.ExposureCtrls[i].GetValue()
+            if self.MapRadCtrls[i].GetValue():
+                map_chan=ch
+            zoffsets[ch]=self.ZOffCtrls[i].GetValue()
+        return ChannelSettings(self.settings.channels,exposure_times=exposure_times,zoffsets=zoffsets,usechannels=usechannels,prot_names=prot_names,map_chan=map_chan)
+        
+ 
 class MosaicSettings:
     def __init__(self,mag=65.486,mx=1,my=1,overlap=10,show_box=False,show_frames=False):
         """a simple struct class for encoding settings about mosaics

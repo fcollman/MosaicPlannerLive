@@ -64,7 +64,7 @@ class posList():
         return self.slicePositions[myindex+1]
         
     def get_prev_pos(self,pos):
-        self.__sort_points()
+        #self.__sort_points()
         myindex=self.slicePositions.index(pos)
         if (myindex)==0:
             return None 

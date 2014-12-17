@@ -13,6 +13,7 @@ import cv2
 import MMCorePy
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtGui, QtCore
+import time
 
 WIDTH, HEIGHT = 320, 240
 DEVICE = ['Camera', 'DemoCamera', 'DCam']
@@ -45,7 +46,7 @@ mmc.enableStderrLog(False)
 mmc.enableDebugLog(False)
 # mmc.setCircularBufferMemoryFootprint(100)
 cam=mmc.getCameraDevice()
-
+mmc.setExposure(50)
 mmc.setConfig('Channels','Violet')
 mmc.waitForConfig('Channels','Violet')
 #self.mmc.setShutterOpen(False)
@@ -63,53 +64,62 @@ mmc.waitForConfig('Channels','Violet')
 #      int(float(mmc.getProperty(cam, 'Exposure'))),
 #     100,  # int(mmc.getPropertyUpperLimit(DEVICE[0], 'Exposure')),
 #        lambda value: mmc.setProperty(cam, 'Exposure', int(value)))
-
+def myExitHandler(): 
+    global mmc
+    mmc.stopSequenceAcquisition()
+    mmc.reset()
+    
 set_mmc_resolution(mmc, WIDTH, HEIGHT)
-mmc.setProperty(cam, 'Gain', 20)
+mmc.setProperty(cam, 'Gain', 1)
 mmc.snapImage()  # Baumer workaround
 data=mmc.getImage()
 gray = data.view(dtype=np.uint8)
-
+mmc.startContinuousSequenceAcquisition(50)
        
 #QtGui.QApplication.setGraphicsSystem('raster')
 app = QtGui.QApplication([])
+app.aboutToQuit.connect(myExitHandler) 
 #mw = QtGui.QMainWindow()
 #mw.resize(800,800)
 
 win = QtGui.QMainWindow()
 win.setWindowTitle('pyqtgraph example: VideoSpeedTest')
 win.resize(800,800)
-ui = Ui_MainWindow()
-win.show()
+gv = pg.GraphicsView()
+win.setCentralWidget(gv)
 
 vb = pg.ViewBox()
-ui.graphicsView.setCentralItem(vb)
+gv.setCentralItem(vb)
 vb.setAspectLocked()
 img = pg.ImageItem()
+img.setImage(gray)
 vb.addItem(img)
 vb.setRange(QtCore.QRectF(0, 0, 512, 512))
 
+win.show()
+
+
+
 def update():
-    global ui,mmc
+    global img,mmc
     remcount = mmc.getRemainingImageCount()
-    print('Images in circular buffer: %s') % remcount
+    #print remcount
+
+    #print('Images in circular buffer: %s') % remcount
+  
     if remcount > 0:
-        # rgb32 = mmc.popNextImage()
-        rgb32 = mmc.getLastImage()
+        rgb32 = mmc.popNextImage()
+        #rgb32 = mmc.getLastImage()
         gray = rgb32.view(dtype=np.uint8)
         gray=cv2.equalizeHist(gray)
-        ui.rawGLImg.setImage(gray)
+        img.setImage(gray)
        
         #cv2.imshow('Video', gray)
-    else:
-        print('No frame')
-    
-    
-mmc.stopSequenceAcquisition()
-mmc.reset()
+    #else:
+    #    print('No frame')
 
-## Start Qt event loop unless running in interactive mode or using pyside.
-if __name__ == '__main__':
-    import sys
-    if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
-        QtGui.QApplication.instance().exec_()
+viewtimer = QtCore.QTimer()
+viewtimer.timeout.connect(update)
+viewtimer.start(5)
+        
+

@@ -23,7 +23,7 @@ import OleFileIO_PL,os
 from PIL import Image
 import wx.lib.intctrl
 import numpy as np
-from Settings import MosaicSettings, CameraSettings, ChangeCameraSettings, ImageSettings, ChangeImageMetadata, SmartSEMSettings, ChangeSEMSettings
+from Settings import MosaicSettings, CameraSettings, ChangeCameraSettings, ImageSettings, ChangeImageMetadata, SmartSEMSettings, ChangeSEMSettings, ChannelSettings, ChangeChannelSettings
 from PositionList import posList
 from MyLasso import MyLasso
 from MosaicImage import MosaicImage
@@ -35,7 +35,12 @@ import bioformats
 import xml.etree.ElementTree as ET
 import numpy
 from imageSourceMM import imageSource
-  
+import LiveMode
+from pyqtgraph.Qt import QtCore, QtGui
+import sys, traceback
+from libtiff import TIFFimage
+import time
+
 class MosaicToolbar(NavBarImproved):
     """A custom toolbar which adds buttons and to interact with a MosaicPanel
     
@@ -80,9 +85,12 @@ class MosaicToolbar(NavBarImproved):
     ON_GRID = wx.NewId()
     ON_ROTATE = wx.NewId()
     ON_REDRAW = wx.NewId()
+    ON_LIVE_MODE = wx.NewId()
     MAGCHOICE = wx.NewId()
     SHOWMAG = wx.NewId()
-  
+    ON_ACQGRID = wx.NewId()
+    ON_RUN = wx.NewId()
+    
     def __init__(self, plotCanvas):  
         """initializes this object
         
@@ -109,19 +117,25 @@ class MosaicToolbar(NavBarImproved):
         smalltargetBmp = wx.Image('icons/small-target-icon.png', wx.BITMAP_TYPE_PNG).ConvertToBitmap()
         rotateBmp = wx.Image('icons/rotate-icon.png', wx.BITMAP_TYPE_PNG).ConvertToBitmap()
         gridBmp = wx.Image('icons/grid-icon.png', wx.BITMAP_TYPE_PNG).ConvertToBitmap()
-    
+        cameraBmp = wx.Image('icons/camera-icon.png',wx.BITMAP_TYPE_PNG).ConvertToBitmap()
+        mosaicBmp = wx.Image('icons/mosaic-icon.png',wx.BITMAP_TYPE_PNG).ConvertToBitmap()
+        carBmp = wx.Image('icons/car-icon.png',wx.BITMAP_TYPE_PNG).ConvertToBitmap()
         
         #add the mutually exclusive/toggleable tools to the toolbar, see superclass for details on how function works
-        self.selectNear=self.add_user_tool('selectnear',7,selectnearBmp,True,'Add Nearest Point to selection')
-        self.selectTool=self.add_user_tool('select', 8, selectBmp, True, 'Select Points')
-        self.addTool=self.add_user_tool('add', 9, addpointBmp, True, 'Add a Point')     
-        self.oneTool = self.add_user_tool('selectone', 10, oneBmp, True, 'Choose pointLine2D 1') 
-        self.twoTool = self.add_user_tool('selecttwo', 11, twoBmp, True, 'Choose pointLine2D 2')
+       
+        self.snapPictureTool = self.add_user_tool('snappic',7,mosaicBmp,True,'take 3x3 mosaic on click')
+        self.selectNear=self.add_user_tool('selectnear',8,selectnearBmp,True,'Add Nearest Point to selection')
+        self.selectTool=self.add_user_tool('select', 9, selectBmp, True, 'Select Points')
+        self.addTool=self.add_user_tool('add', 10, addpointBmp, True, 'Add a Point')     
+        self.oneTool = self.add_user_tool('selectone', 11, oneBmp, True, 'Choose pointLine2D 1') 
+        self.twoTool = self.add_user_tool('selecttwo', 12, twoBmp, True, 'Choose pointLine2D 2')
+        
         self.AddSeparator()
         self.AddSeparator()
         
         #add the simple button click tools
-        #self.leftcorrTool=self.AddSimpleTool(self.ON_CORR_LEFT,leftcorrBmp,'do something with correlation','correlation baby!') 
+        #self.leftcorrTool=self.AddSimpleTool(self.ON_CORR_LEFT,leftcorrBmp,'do something with correlation','correlation baby!')
+        self.liveModeTool = self.AddSimpleTool(self.ON_LIVE_MODE,cameraBmp,'Enter Live Mode','liveMode')        
         self.deleteTool=self.AddSimpleTool(self.ON_DELETE_SELECTED,trashBmp,'Delete selected points','delete points') 
         self.corrTool=self.AddSimpleTool(self.ON_CORR,corrBmp,'Ajdust pointLine2D 2 with correlation','corrTool') 
         self.stepTool=self.AddSimpleTool(self.ON_STEP,stepBmp,'Take one step using points 1+2','stepTool')     
@@ -134,12 +148,13 @@ class MosaicToolbar(NavBarImproved):
         #self.redrawTool=self.AddSimpleTool(self.ON_REDRAW,smalltargetBmp,'redraw canvas','redrawTool')  
         self.rotateTool=self.AddCheckTool(self.ON_ROTATE,rotateBmp,wx.NullBitmap,'toggle rotate boxes')
         #self.AddSimpleTool(self.ON_ROTATE,rotateBmp,'toggle rotate mosaic boxes according to rotation','rotateTool')  
-      
+        self.runAcqTool=self.AddSimpleTool(self.ON_RUN,carBmp,'Acquire AT Data','run_tool')       
+        
         #setup the controls for the mosaic
         self.showmagCheck = wx.CheckBox(self)
         self.showmagCheck.SetValue(False)
         self.magChoiceCtrl = wx.lib.agw.floatspin.FloatSpin(self,size=(65, -1 ),
-                                       value=65.486,
+                                       value=self.canvas.posList.mosaic_settings.mag,
                                        min_val=0,
                                        increment=.1,
                                        digits=2,
@@ -188,15 +203,18 @@ class MosaicToolbar(NavBarImproved):
         #self.Bind(wx.lib.intctrl.EVT_INT,self.updateSliderRange, self.sliderMinCtrl)
         self.Bind(wx.lib.intctrl.EVT_INT,self.updateSliderRange, self.sliderMaxCtrl)
         
+        wx.EVT_TOOL(self, self.ON_LIVE_MODE, self.canvas.OnLiveMode)
         wx.EVT_TOOL(self, self.ON_DELETE_SELECTED, self.canvas.OnDeletePoints)  
         wx.EVT_TOOL(self, self.ON_CORR, self.canvas.OnCorrTool)        
-        wx.EVT_TOOL(self, self.ON_STEP, self.canvas.OnStepTool)           
+        wx.EVT_TOOL(self, self.ON_STEP, self.canvas.OnStepTool)    
+        wx.EVT_TOOL(self, self.ON_RUN, self.canvas.OnRunAcq)
         wx.EVT_TOOL(self, self.ON_FF, self.canvas.OnFastForwardTool)
         wx.EVT_TOOL(self, self.ON_GRID, self.canvas.OnGridTool)
         #wx.EVT_TOOL(self, self.ON_FINETUNE, self.canvas.OnFineTuneTool)
         #wx.EVT_TOOL(self, self.ON_REDRAW, self.canvas.OnRedraw)
         wx.EVT_TOOL(self, self.ON_ROTATE, self.canvas.OnRotateTool)
-        
+        self.app = QtGui.QApplication([])
+    
         self.Realize()
     
     def updateMosaicSettings(self,evt=""):
@@ -259,13 +277,36 @@ class MosaicPanel(FigureCanvas):
         #initialize the camera settings and mosaic settings
         self.cfg=config
         
-        camera_settings=CameraSettings()
-        camera_settings.load_settings(config)
+        self.camera_settings=CameraSettings()
+        self.camera_settings.load_settings(config)
         mosaic_settings=MosaicSettings()
-        mosaic_settings.load_settings(config)
-                                                    
+        mosaic_settings.load_settings(config)   
+        self.MM_config_file= str(self.cfg.Read('MM_config_file',"C:\Users\Smithlab\Documents\ASI_LUM_RETIGA_CRISP.cfg"))  
+        print self.MM_config_file
+        
+        #setup the image source
+        self.imgSrc=None
+        while self.imgSrc is None:
+            try:
+                self.imgSrc=imageSource(self.MM_config_file)
+            except:
+                traceback.print_exc(file=sys.stdout)
+                dlg = wx.MessageBox("Error Loading Micromanager\n check scope and re-select config file","MM Error")
+                self.EditMMConfig()
+
+        channels=self.imgSrc.get_channels()
+        self.channel_settings=ChannelSettings(self.imgSrc.get_channels())
+        self.channel_settings.load_settings(config)
+        
+        map_chan=self.channel_settings.map_chan
+        if map_chan not in channels: #if the saved settings don't match, call up dialog
+            self.EditChannels()
+            map_chan=self.channel_settings.map_chan
+        self.imgSrc.set_channel(map_chan)
+        self.imgSrc.set_exposure(self.channel_settings.exposure_times[map_chan])
+        
         #setup a blank position list
-        self.posList=posList(self.subplot,mosaic_settings,camera_settings)
+        self.posList=posList(self.subplot,mosaic_settings,self.camera_settings)
         #start with no MosaicImage
         self.mosaicImage=None
         #start with relative_motion on, so that keypress calls shift_selected_curved() of posList
@@ -285,13 +326,164 @@ class MosaicPanel(FigureCanvas):
         self.canvas.mpl_connect('button_release_event', self.on_release)
         self.canvas.mpl_connect('key_press_event', self.on_key)
      
-    def OnLoad(self,rootPath,configfile="C:\Users\Smithlab\Documents\ASI_LUM_RETIGA_CRISP.cfg"):
-        #configfile="C:\Users\Smithlab\Documents\ASI_LUM_RETIGA_CRISP.cfg"
-        imgSrc=imageSource(configfile)
+    def OnLoad(self,rootPath):
+        self.rootPath=rootPath
         
-        self.mosaicImage=MosaicImage(self.subplot,self.posone_plot,self.postwo_plot,self.corrplot,imgSrc,rootPath)
+        self.mosaicImage=MosaicImage(self.subplot,self.posone_plot,self.postwo_plot,self.corrplot,self.imgSrc,rootPath)
         self.draw()
+    def write_slice_metadata(self,filename,ch,xpos,ypos,zpos):
+    
+        f = open(filename, 'w')
+        channelname=self.channel_settings.prot_names[ch]
+        (height,width)=self.imgSrc.get_sensor_size()
+        ScaleFactorX=self.imgSrc.get_pixel_size()
+        ScaleFactorY=self.imgSrc.get_pixel_size()
+        exp_time=self.channel_settings.exposure_times[ch]
         
+        f.write("Channel\tWidth\tHeight\tMosaicX\tMosaicY\tScaleX\tScaleY\tExposureTime\n")
+        f.write("%s\t%d\t%d\t%d\t%d\t%f\t%f\t%f\n" % \
+        (channelname, width, height, 1, 1, ScaleFactorX, ScaleFactorY, exp_time))
+        
+        f.write("XPositions\tYPositions\tFocusPositions\n")
+        f.write("%s\t%s\t%s\n" %(xpos, ypos, zpos))
+        
+    def write_session_metadata(self,outdir):
+        filename=os.path.join(outdir,'session_metadata.txt')
+        f = open(filename, 'w')
+        
+        (height,width)=self.imgSrc.get_sensor_size()
+        Nch=0
+        for k,ch in enumerate(self.channel_settings.channels):
+            if self.channel_settings.usechannels[ch]:
+                Nch+=1
+                
+        f.write("Width\tHeight\t#chan\tMosaicX\tMosaicY\tScaleX\tScaleY\n")
+        f.write("%d\t%d\t%d\t%d\t%d\t%f\t%f\n" % (width,height, Nch,self.posList.mosaic_settings.mx, self.posList.mosaic_settings.mx, self.imgSrc.get_pixel_size(), self.imgSrc.get_pixel_size()))
+        f.write("Channel\tExposure Times (msec)\tRLPosition\n")
+        for k,ch in enumerate(self.channel_settings.channels):
+            if self.channel_settings.usechannels[ch]:
+                f.write(self.channel_settings.prot_names[ch] + "\t" + "%f\t%s\n" % (self.channel_settings.exposure_times[ch],ch))
+        
+
+        
+    def MultiDAcq(self,outdir,x,y,slice_index,frame_index=0):
+    
+        self.imgSrc.set_hardware_autofocus_state(True)
+        self.imgSrc.move_stage(x,y)
+        attempts=0
+        
+        #wait till autofocus settles
+        while not self.imgSrc.is_hardware_autofocus_done():
+            time.sleep(.1)
+            attempts+=1
+            if attempts>100:
+                print "not auto-focusing correctly.. giving up after 10 seconds"
+                break
+        time.sleep(.1) #wait an extra 100 ms for settle
+        
+        self.imgSrc.set_hardware_autofocus_state(False) #turn off autofocus
+        currZ=self.imgSrc.get_z()
+        
+        for k,ch in enumerate(self.channel_settings.channels):
+            prot_name=self.channel_settings.prot_names[ch]
+            path=os.path.join(outdir,prot_name)
+            if self.channel_settings.usechannels[ch]:
+                z=currZ+self.channel_settings.zoffsets[ch]
+                self.imgSrc.set_z(z)
+                self.imgSrc.set_exposure(self.channel_settings.exposure_times[ch])
+                self.imgSrc.set_channel(ch)
+                data=self.imgSrc.snap_image()
+                
+                tif_filepath=os.path.join(path,prot_name+"_S%04d_F%04d.tif"%(slice_index,frame_index))
+                metadata_filepath=os.path.join(path,prot_name+"_S%04d_F%04d_metadata.txt"%(slice_index,frame_index))
+                
+                tiff = TIFFimage(data, description='')
+                tiff.write_file(tif_filepath, compression='none')
+                del tiff
+                
+                self.write_slice_metadata(metadata_filepath,ch,x,y,z)
+                
+    
+        
+    def OnRunAcq(self,event="none"):
+        print "running"
+        #self.channel_settings
+        #self.pos_list
+        #self.imgSrc
+        
+        #get an output directory
+        dlg=wx.DirDialog(self,message="Pick output directory",defaultPath= os.path.split(self.rootPath)[0])
+        dlg.ShowModal()
+        outdir=dlg.GetPath()
+        dlg.Destroy()
+        
+        #setup output directories
+        for k,ch in enumerate(self.channel_settings.channels):
+            if self.channel_settings.usechannels[ch]:
+                thedir=os.path.join(outdir,self.channel_settings.prot_names[ch])
+                if not os.path.isdir(thedir):
+                    os.makedirs(thedir)
+        
+        self.write_session_metadata(outdir)
+        
+        #step the stage back to the first position, position by position
+        #so as to not lose the immersion oil
+        (x,y)=self.imgSrc.get_xy()
+        currpos=self.posList.get_position_nearest(x,y)
+        while currpos is not None:
+            #turn on autofocus
+            self.imgSrc.set_hardware_autofocus_state(True)
+            self.imgSrc.move_stage(currpos.x,currpos.y)
+            currpos=self.posList.get_prev_pos(currpos)
+        
+        #loop over positions
+        for i,pos in enumerate(self.posList.slicePositions):
+            #turn on autofocus
+            if pos.frameList is None:
+                self.MultiDAcq(outdir,pos.x,pos.y,i)
+            else:
+                for j,fpos in enumerate(pos.frameList.slicePositions):
+                    self.MultiDAcq(outdir,fpos.x,fpos.y,i,j)
+                    
+                    
+        
+    def EditChannels(self,event = "none"):
+        dlg = ChangeChannelSettings(None, -1, title = "Channel Settings", settings = self.channel_settings,style=wx.OK)
+        ret=dlg.ShowModal()
+        if ret == wx.ID_OK:  
+            self.channel_settings=dlg.GetSettings()
+            self.channel_settings.save_settings(self.cfg)
+            map_chan=self.channel_settings.map_chan
+            self.imgSrc.set_channel(map_chan)
+            self.imgSrc.set_exposure(self.channel_settings.exposure_times[map_chan])
+            print "should be changed"
+        
+        dlg.Destroy()   
+        
+    def OnLiveMode(self,evt="none"):
+        expTimes=LiveMode.launchLive(self.imgSrc,exposure_times=self.channel_settings.exposure_times)
+        self.channel_settings.exposure_times=expTimes
+        self.channel_settings.save_settings(self.cfg)
+        #reset the current channel to the mapping channel, and it's exposure
+        map_chan=self.channel_settings.map_chan
+        self.imgSrc.set_channel(map_chan)
+        self.imgSrc.set_exposure(self.channel_settings.exposure_times[map_chan])
+        
+        
+    def EditMMConfig(self, event = "none"):
+               
+        fullpath=self.MM_config_file
+        if fullpath is None:
+            fullpath = ""
+            
+        (dir,file)=os.path.split(fullpath)
+        dlg = wx.FileDialog(self,"select configuration file",dir,file,"*.cfg")
+        
+        dlg.ShowModal()
+        self.MM_config_file = str(dlg.GetPath())
+        self.cfg.Write('MM_config_file',self.MM_config_file)  
+  
+        dlg.Destroy()
         
     def repaint_image(self,evt):
         """event handler used when the slider bar changes and you want to repaint the MosaicImage with a different color scale"""
@@ -364,6 +556,12 @@ class MosaicPanel(FigureCanvas):
                         self.lasso = MyLasso(evt.inaxes, (evt.xdata, evt.ydata), self.lasso_callback,linecolor='white')
                         self.lassoLock=True                
                         self.canvas.widgetlock(self.lasso)
+                    elif (mode == 'snappic' ):
+                        (fw,fh)=self.mosaicImage.imgCollection.get_image_size_um()
+                        for i in range(-1,2):
+                            for j in range(-1,2):
+                                self.mosaicImage.imgCollection.add_covered_point(evt.xdata+(j*fw),evt.ydata+(i*fh))
+                        
                 self.draw()
                 
     def on_release(self, evt):
@@ -399,6 +597,8 @@ class MosaicPanel(FigureCanvas):
         #make the frames grid visible/invisible accordingly
         self.posList.set_frames_visible(visible)
         self.draw()
+     
+   
         
     def OnDeletePoints(self,event="none"):
         """handlier for handling the Delete tool press"""
@@ -606,6 +806,9 @@ class ZVISelectFrame(wx.Frame):
     ID_FLIPVERT = wx.NewId()
     ID_FULLRES = wx.NewId()
     ID_SAVE_SETTINGS = wx.NewId()
+    ID_EDIT_CHANNELS = wx.NewId()
+    ID_EDIT_MM_CONFIG = wx.NewId()
+    
     
     def __init__(self, parent, title):     
         """default init function for a wx.Frame
@@ -619,16 +822,23 @@ class ZVISelectFrame(wx.Frame):
         #default_meta=""
         #default_image=""
         
+       
+        
         #recursively call old init function
-        wx.Frame.__init__(self, parent, title=title, size=(1400,885),pos=(5,5))
+        wx.Frame.__init__(self, parent, title=title, size=(1550,885),pos=(5,5))
         self.cfg = wx.Config('settings')
+        #setup a mosaic panel
+        self.mosaicCanvas=MosaicPanel(self,config=self.cfg) 
+        
         #setup menu        
         menubar = wx.MenuBar()
         options = wx.Menu()   
         transformMenu = wx.Menu()
-        SmartSEM_Menu = wx.Menu()
+        Platform_Menu = wx.Menu()
+        Channels_Menu = wx.Menu()
         
-        #setup the menu options
+        
+        #OPTIONS MENU
         self.relative_motion = options.Append(self.ID_RELATIVEMOTION, 'Relative motion?', 'Move points in the ribbon relative to the apparent curvature, else in absolution coordinates',kind=wx.ITEM_CHECK)
         self.sort_points = options.Append(self.ID_SORTPOINTS,'Sort positions?','Should the program automatically sort the positions by their X coordinate from right to left?',kind=wx.ITEM_CHECK)
         self.show_numbers = options.Append(self.ID_SHOWNUMBERS,'Show numbers?','Display a number next to each position to show the ordering',kind=wx.ITEM_CHECK)
@@ -636,6 +846,7 @@ class ZVISelectFrame(wx.Frame):
         self.fullResOpt = options.Append(self.ID_FULLRES,'Load full resolution (speed vs memory)','Rather than loading a 10x downsampled ',kind=wx.ITEM_CHECK)
         self.saveSettings = options.Append(self.ID_SAVE_SETTINGS,'Save Settings','Saves current configuration settings to config file that will be loaded automatically',kind=wx.ITEM_NORMAL)
         
+        #SET THE INTIAL SETTINGS
         options.Check(self.ID_RELATIVEMOTION,self.cfg.ReadBool('relativemotion',True))           
         options.Check(self.ID_SORTPOINTS,True)  
         options.Check(self.ID_SHOWNUMBERS,False)
@@ -645,12 +856,14 @@ class ZVISelectFrame(wx.Frame):
         
         self.edit_transform = options.Append(self.ID_EDIT_CAMERA_SETTINGS,'Edit Camera Properties...','Edit the size of the camera chip and the pixel size',kind=wx.ITEM_NORMAL)
         
+        #SETUP THE CALLBACKS
         self.Bind(wx.EVT_MENU, self.SaveSettings, id=self.ID_SAVE_SETTINGS) 
         self.Bind(wx.EVT_MENU, self.ToggleRelativeMotion, id=self.ID_RELATIVEMOTION)
         self.Bind(wx.EVT_MENU, self.ToggleSortOption, id=self.ID_SORTPOINTS)
         self.Bind(wx.EVT_MENU, self.ToggleShowNumbers,id=self.ID_SHOWNUMBERS)
         self.Bind(wx.EVT_MENU, self.EditCameraSettings, id=self.ID_EDIT_CAMERA_SETTINGS)
         
+        #TRANSFORM MENU
         self.save_transformed = transformMenu.Append(self.ID_SAVETRANSFORM,'Save Transformed?',\
         'Rather than save the coordinates in the original space, save a transformed set of coordinates according to transform configured in set_transform...',kind=wx.ITEM_CHECK)
         transformMenu.Check(self.ID_SAVETRANSFORM,self.cfg.ReadBool('savetransform',False))
@@ -662,18 +875,25 @@ class ZVISelectFrame(wx.Frame):
         self.Transform = Transform()
         self.Transform.load_settings(self.cfg)
             
-            
-        self.edit_smartsem_settings = SmartSEM_Menu.Append(self.ID_EDIT_SMARTSEM_SETTINGS,'Edit SmartSEMSettings',\
+        #PLATFORM MENU    
+        self.edit_smartsem_settings = Platform_Menu.Append(self.ID_EDIT_SMARTSEM_SETTINGS,'Edit SmartSEMSettings',\
         'Edit the settings used to set the magnification, rotation,tilt, Z position, and working distance of SEM software in position list',kind=wx.ITEM_NORMAL)
         self.Bind(wx.EVT_MENU, self.EditSmartSEMSettings, id=self.ID_EDIT_SMARTSEM_SETTINGS)
         
+        #CHANNELS MENU
+        self.edit_micromanager_config = Channels_Menu.Append(self.ID_EDIT_MM_CONFIG,'Set MicroManager Configuration',kind=wx.ITEM_NORMAL)
+        self.edit_channels = Channels_Menu.Append(self.ID_EDIT_CHANNELS,'Edit Channels',kind=wx.ITEM_NORMAL)
+        self.Bind(wx.EVT_MENU, self.mosaicCanvas.EditMMConfig, id = self.ID_EDIT_MM_CONFIG)
+        self.Bind(wx.EVT_MENU, self.mosaicCanvas.EditChannels, id = self.ID_EDIT_CHANNELS)
+        
+        
         menubar.Append(options, '&Options')
         menubar.Append(transformMenu,'&Transform')
-        menubar.Append(SmartSEM_Menu,'&Platform Options')
+        menubar.Append(Platform_Menu,'&Platform Options')
+        menubar.Append(Channels_Menu,'&Microscope Settings')
         self.SetMenuBar(menubar)
         
-        #setup a mosaic panel
-        self.mosaicCanvas=MosaicPanel(self,config=self.cfg)     
+    
       
         #setup a file picker for the metadata selector
         #self.meta_label=wx.StaticText(self,id=wx.ID_ANY,label="metadata file")
@@ -708,7 +928,7 @@ class ZVISelectFrame(wx.Frame):
         self.array_filepicker.SetPath(self.cfg.Read('default_arraypath',""))
         
         self.array_load_button=wx.Button(self,id=wx.ID_ANY,label="Load",name="load button")
-        self.array_formatBox=wx.ComboBox(self,id=wx.ID_ANY,value='AxioVision',\
+        self.array_formatBox=wx.ComboBox(self,id=wx.ID_ANY,value='uManager',\
         size=wx.DefaultSize,choices=['uManager','AxioVision','SmartSEM','OMX','ZEN'], name='File Format For Position List')
         self.array_formatBox.SetEditable(False)
         self.array_save_button=wx.Button(self,id=wx.ID_ANY,label="Save",name="save button")
@@ -769,6 +989,8 @@ class ZVISelectFrame(wx.Frame):
         #self.OnArrayLoad()          
         #self.mosaicCanvas.draw()
     
+
+        
     def SaveSettings(self,event="none"):
         #save the transform parameters
         self.Transform.save_settings(self.cfg)
@@ -780,7 +1002,7 @@ class ZVISelectFrame(wx.Frame):
         self.cfg.WriteBool('savetransform',self.save_transformed.IsChecked())
         
         #save the camera settings
-        #self.mosaicCanvas.posList.camera_settings.save_settings(self.cfg)
+        self.mosaicCanvas.posList.camera_settings.save_settings(self.cfg)
         
         #save the mosaic options
         self.mosaicCanvas.posList.mosaic_settings.save_settings(self.cfg)
@@ -887,15 +1109,21 @@ class ZVISelectFrame(wx.Frame):
         else:
             self.mosaicCanvas.posList.setNumberVisibility(False)
         self.mosaicCanvas.draw()
-            
+    
+
+    
+ 
+        
+    
     def EditCameraSettings(self,event):
         """event handler for clicking the camera setting menu button"""
         dlg = ChangeCameraSettings(None, -1,
                                    title="Camera Settings",
                                    settings=self.mosaicCanvas.camera_settings)
         dlg.ShowModal()
-        del self.posList.camera_settings
+        #del self.posList.camera_settings
         #passes the settings to the position list
+        self.mosaicCanvas.camera_settings=dlg.GetSettings()
         self.mosaicCanvas.posList.set_camera_settings(dlg.GetSettings())
         dlg.Destroy()        
     
@@ -932,3 +1160,4 @@ app = wx.App(False)
 frame = ZVISelectFrame(None,"Mosaic Planner") 
 # A Frame is a top-level window.
 app.MainLoop()
+QtGui.QApplication.quit()

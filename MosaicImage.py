@@ -132,7 +132,7 @@ class MosaicImage():
         self.oneImage=None
         self.twoImage=None
         self.corrImage=None
-
+        self.imgSrc = imgSrc
         self.imgCollection=ImageCollection(rootpath=rootPath,imageSource=imgSrc,axis=self.axis)
         
         (x,y)=imgSrc.get_xy()
@@ -141,9 +141,8 @@ class MosaicImage():
         self.imgCollection.loadImageCollection()
         
         
-        self.maxvalue=255
-        imgSrc.set_channel('Violet')
-        imgSrc.set_exposure(250)
+        self.maxvalue=512
+       
         
         self.axis.set_title('Mosaic Image')
         
@@ -490,8 +489,11 @@ class MosaicImage():
         
         #one_cuta=np.minimum(one_cut*256.0/self.maxvalue,255.0).astype(np.uint8)
         #two_cuta=np.minimum(two_cut*256.0/self.maxvalue,255.0).astype(np.uint8)
-        one_cuta=cv2.equalizeHist(one_cut)
-        two_cuta=cv2.equalizeHist(two_cut)
+        one_cuta = np.copy(one_cut)
+        two_cuta = np.copy(two_cut)
+        
+        one_cuta=cv2.equalizeHist(one_cuta)
+        two_cuta=cv2.equalizeHist(two_cuta)
         
         
         sift = cv2.SIFT(nfeatures=500,contrastThreshold=.2)
@@ -502,8 +504,8 @@ class MosaicImage():
         
 
         
-        img_one = cv2.drawKeypoints(one_cuta,kp1)
-        img_two = cv2.drawKeypoints(two_cuta,kp2)
+        #img_one = cv2.drawKeypoints(one_cut,kp1)
+        #img_two = cv2.drawKeypoints(two_cut,kp2)
         
   
         #image2=self.two_axis.imshow(img_two)
@@ -597,13 +599,13 @@ class MosaicImage():
             print (dx_um,dy_um)
 
             
-            self.paintImageOne(img_one,xy=xy1)
-            self.paintImageTwo(img_two,xy=xy2,xyp=(x2-dx_um,y2-dy_um))
+            self.paintImageOne(one_cut,xy=xy1)
+            self.paintImageTwo(two_cut,xy=xy2,xyp=(x2-dx_um,y2-dy_um))
             
             return ((dx_um,dy_um),len(bestInlierIdx))
         else:
-            self.paintImageOne(img_one,xy=xy1)
-            self.paintImageTwo(img_two,xy=xy2)
+            self.paintImageOne(one_cut,xy=xy1)
+            self.paintImageTwo(two_cut,xy=xy2)
             
             return ((0.0,0.0),0)
         

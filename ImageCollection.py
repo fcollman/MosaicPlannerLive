@@ -2,9 +2,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 from PIL import Image
+from libtiff import TIFFimage
 import time
 import json
 from Rectangle import Rectangle
+import traceback,sys
 #from imageSourceMM import imageSource
 
         
@@ -89,8 +91,11 @@ class MyImage():
         return 'txt' in theext
                 
     def saveData(self,data):
-        img = Image.fromarray(data)
-        img.save(self.imagePath)
+        #img = Image.fromarray(data)
+        #img.save(self.imagePath)
+        tiff = TIFFimage(data, description='')
+        tiff.write_file(self.imagePath, compression='none')
+        del tiff
         
     def contains_rect(self,box):
         return self.boundBox.contains_rect(box)
@@ -100,6 +105,7 @@ class MyImage():
     def getData(self):
         img=Image.open(self.imagePath,mode='r')
         thedata=img.getdata()
+        
         (width,height)=img.size
         data=np.reshape(np.array(thedata,np.dtype('uint8')),(height,width))
         return data
@@ -120,10 +126,28 @@ class ImageCollection():
         self.matplot_images=[]
         self.minvalue=0
         self.maxvalue=512
-        
+    
+    def display8bit(self,image, display_min, display_max): 
+        image = np.array(image, copy=True)
+        image.clip(display_min, display_max, out=image)
+        image -= display_min
+        image //= (display_max - display_min + 1) / 256.
+        return image.astype(np.uint8)
+
+    def lut_convert16as8bit(self,image, display_min, display_max) :
+        lut = np.arange(2**16, dtype='uint16')
+        lut = self.display8bit(lut, display_min, display_max)
+        return np.take(lut, image)
+
+
+    
     def get_pixel_size(self):
         return self.imageSource.get_pixel_size()
     
+    def get_image_size_um(self):
+        (fw,fh)=self.imageSource.get_frame_size_um()
+        return (fw,fh)
+        
     def set_view_home(self,box=None):
         if box==None:
             self.axis.set_xlim(left=self.bigBox.left,right=self.bigBox.right)
@@ -168,9 +192,15 @@ class ImageCollection():
         #go get an image at x,y
         try:
             (thedata,bbox)=self.imageSource.take_image(x,y)
+            if thedata.dtype == np.uint16:
+                print "converting"
+                maxval=self.imageSource.get_max_pixel_value()
+                thedata=self.lut_convert16as8bit(thedata,0,maxval)
+            
         except:
             #todo handle this better
             print "ahh no! imageSource failed us"
+            traceback.print_exc(file=sys.stdout)
         print "hmm.. bbox is"
         bbox.printRect()
         print "x,y is",x,y
@@ -263,6 +293,9 @@ class ImageCollection():
     def loadImageCollection(self):
         #list all metadata files in rootdir
         testimage=self.imageClass()
+        if not os.path.isdir(self.rootpath):
+            os.makedirs(self.rootpath)
+        
         metafiles=[os.path.join(self.rootpath,f) for f in os.listdir(self.rootpath) if f.endswith('.txt') ]
         
         print "loading metadata"
