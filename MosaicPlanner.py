@@ -30,8 +30,6 @@ from MosaicImage import MosaicImage
 from Transform import Transform,ChangeTransform
 from xml.dom.minidom import parseString
 import wx
-import javabridge
-import bioformats
 import xml.etree.ElementTree as ET
 import numpy
 from imageSourceMM import imageSource
