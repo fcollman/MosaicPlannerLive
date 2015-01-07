@@ -719,7 +719,7 @@ class MosaicPanel(FigureCanvas):
             return False    
         
    
-    def SiftCorrTool(self,window=70):
+    def SiftCorrTool(self,window=70,contrastThreshold=.1):
         """function for performing the correction of moving point2 to match the image shown around point1
                   
         keywords)
@@ -728,7 +728,7 @@ class MosaicPanel(FigureCanvas):
         inliers is the number of inliers in the best transformation obtained by this operation
         
         """
-        (dxy_um,inliers)=self.mosaicImage.align_by_sift((self.posList.pos1.x,self.posList.pos1.y),(self.posList.pos2.x,self.posList.pos2.y))
+        (dxy_um,inliers)=self.mosaicImage.align_by_sift((self.posList.pos1.x,self.posList.pos1.y),(self.posList.pos2.x,self.posList.pos2.y),contrastThreshold=contrastThreshold)
         (dx_um,dy_um)=dxy_um
         self.posList.pos2.shiftPosition(-dx_um,-dy_um)
         return inliers

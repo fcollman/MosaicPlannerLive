@@ -464,7 +464,7 @@ class MosaicImage():
         return vis
         
             
-    def align_by_sift(self,xy1,xy2,window=70):
+    def align_by_sift(self,xy1,xy2,window=70,contrastThreshold=.1):
         """take two points in the image, and calculate SIFT features image around those two points
         cutting out size window
 
@@ -496,7 +496,7 @@ class MosaicImage():
         two_cuta=cv2.equalizeHist(two_cuta)
         
         
-        sift = cv2.SIFT(nfeatures=500,contrastThreshold=.2)
+        sift = cv2.SIFT(nfeatures=500,contrastThreshold=contrastThreshold)
         kp1, des1 = sift.detectAndCompute(one_cuta,None)
         kp2, des2 = sift.detectAndCompute(two_cuta,None)
         print "features1:%d"%len(kp1)
