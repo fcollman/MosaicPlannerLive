@@ -27,6 +27,7 @@ import Queue
 from CenterRectangle import CenterRectangle
 from matplotlib.lines import Line2D
 from ImageCollection import ImageCollection
+from Settings import SiftSettings
 from Rectangle import Rectangle
 import cv2 
 import ransac
@@ -464,7 +465,7 @@ class MosaicImage():
         return vis
         
             
-    def align_by_sift(self,xy1,xy2,window=70,contrastThreshold=.1):
+    def align_by_sift(self,xy1,xy2,window=70,SiftSettings=SiftSettings()):
         """take two points in the image, and calculate SIFT features image around those two points
         cutting out size window
 
@@ -496,7 +497,7 @@ class MosaicImage():
         two_cuta=cv2.equalizeHist(two_cuta)
         
         
-        sift = cv2.SIFT(nfeatures=1000,contrastThreshold=contrastThreshold)
+        sift = cv2.SIFT(nfeatures=SiftSettings.numFeatures,contrastThreshold=SiftSettings.contrastThreshold)
         kp1, des1 = sift.detectAndCompute(one_cuta,None)
         kp2, des2 = sift.detectAndCompute(two_cuta,None)
         print "features1:%d"%len(kp1)

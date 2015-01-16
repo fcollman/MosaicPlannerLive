@@ -60,8 +60,18 @@ class ChangeSiftSettings(wx.Dialog):
         hbox2.Add(self.contrastThresholdTxt)
         hbox2.Add(self.contrastThresholdFloatCtrl)
         
+       
+
+        hbox3 = wx.BoxSizer(wx.HORIZONTAL)      
+        ok_button = wx.Button(self,wx.ID_OK,'OK')
+        cancel_button = wx.Button(self,wx.ID_CANCEL,'Cancel')
+        hbox3.Add(ok_button)
+        hbox3.Add(cancel_button)
+        
         vbox.Add(hbox1)
         vbox.Add(hbox2)
+        vbox.Add(hbox3)
+
         self.SetSizer(vbox)
         
     def GetSettings(self):

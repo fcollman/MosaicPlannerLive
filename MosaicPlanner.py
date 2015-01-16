@@ -23,7 +23,7 @@ import OleFileIO_PL,os
 from PIL import Image
 import wx.lib.intctrl
 import numpy as np
-from Settings import MosaicSettings, CameraSettings, ChangeCameraSettings, ImageSettings, ChangeImageMetadata, SmartSEMSettings, ChangeSEMSettings, ChannelSettings, ChangeChannelSettings, ChangeSiftSettings
+from Settings import MosaicSettings, CameraSettings,SiftSettings,ChangeCameraSettings, ImageSettings, ChangeImageMetadata, SmartSEMSettings, ChangeSEMSettings, ChannelSettings, ChangeChannelSettings, ChangeSiftSettings
 from PositionList import posList
 from MyLasso import MyLasso
 from MosaicImage import MosaicImage
@@ -474,7 +474,7 @@ class MosaicPanel(FigureCanvas):
         
     def EditSIFTSettings(self, event = "none"):
         dlg = ChangeSiftSettings(None, -1, title= "Edit SIFT Settings", settings = self.SiftSettings, style = wx.OK)
-        ret=dlg.ShowModel()
+        ret=dlg.ShowModal()
         if ret == wx.ID_OK:
             self.SiftSettings = dlg.GetSettings()
             self.SiftSettings.save_settings(self.cfg)
@@ -732,7 +732,7 @@ class MosaicPanel(FigureCanvas):
             return False    
         
    
-    def SiftCorrTool(self,window=70,contrastThreshold=.025):
+    def SiftCorrTool(self,window=70):
         """function for performing the correction of moving point2 to match the image shown around point1
                   
         keywords)
@@ -741,7 +741,7 @@ class MosaicPanel(FigureCanvas):
         inliers is the number of inliers in the best transformation obtained by this operation
         
         """
-        (dxy_um,inliers)=self.mosaicImage.align_by_sift((self.posList.pos1.x,self.posList.pos1.y),(self.posList.pos2.x,self.posList.pos2.y),contrastThreshold=contrastThreshold)
+        (dxy_um,inliers)=self.mosaicImage.align_by_sift((self.posList.pos1.x,self.posList.pos1.y),(self.posList.pos2.x,self.posList.pos2.y),SiftSettings=self.SiftSettings)
         (dx_um,dy_um)=dxy_um
         self.posList.pos2.shiftPosition(-dx_um,-dy_um)
         return inliers
@@ -815,7 +815,7 @@ class ZVISelectFrame(wx.Frame):
     ID_SAVETRANSFORM = wx.NewId()
     ID_EDITTRANSFORM = wx.NewId()
     ID_FLIPVERT = wx.NewId()
-    ID_FULLRES = wx.NewId()
+    #ID_FULLRES = wx.NewId()
     ID_SAVE_SETTINGS = wx.NewId()
     ID_EDIT_CHANNELS = wx.NewId()
     ID_EDIT_MM_CONFIG = wx.NewId()
@@ -862,7 +862,7 @@ class ZVISelectFrame(wx.Frame):
         options.Check(self.ID_SORTPOINTS,True)  
         options.Check(self.ID_SHOWNUMBERS,False)
         options.Check(self.ID_FLIPVERT,self.cfg.ReadBool('flipvert',False))
-        options.Check(self.ID_FULLRES,self.cfg.ReadBool('fullres',False))
+        #options.Check(self.ID_FULLRES,self.cfg.ReadBool('fullres',False))
 
         
         self.edit_transform = options.Append(self.ID_EDIT_CAMERA_SETTINGS,'Edit Camera Properties...','Edit the size of the camera chip and the pixel size',kind=wx.ITEM_NORMAL)
