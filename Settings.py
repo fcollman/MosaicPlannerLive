@@ -18,6 +18,59 @@
 #===============================================================================
 import wx
 
+class SiftSettings():
+
+    def __init__(self,contrastThreshold=.05,numFeatures=1000):
+    
+        self.contrastThreshold=contrastThreshold
+        self.numFeatures=numFeatures
+        
+    def save_settings(self,cfg):
+        cfg.WriteInt('numFeatures',self.numFeatures)
+        cfg.WriteFloat('contrastThreshold',self.contrastThreshold)
+    
+    def load_settings(self,cfg):
+        self.numFeatures=cfg.ReadInt('numFeatures',1000)
+        self.contrastThreshold=cfg.ReadFloat('contrastThreshold',0.5)
+        
+class ChangeSiftSettings(wx.Dialog):
+    def __init__(self, parent, id, title, settings,style):
+        wx.Dialog.__init__(self, parent, id, title,style=wx.DEFAULT_DIALOG_STYLE, size=(420, -1))   
+        vbox =wx.BoxSizer(wx.VERTICAL)
+        
+        self.settings=settings
+        self.numFeatureTxt=wx.StaticText(self,label="max features")
+        self.numFeatureIntCtrl = wx.lib.intctrl.IntCtrl( self, value=settings.numFeatures,size=(50,-1))
+        
+        self.contrastThresholdTxt = wx.StaticText(self,label="contrast threshold")
+        self.contrastThresholdFloatCtrl = wx.lib.agw.floatspin.FloatSpin(self, 
+                                       value=settings.contrastThreshold,
+                                       min_val=0,
+                                       max_val=12.0,
+                                       increment=.01,
+                                       digits=2,
+                                       name='',
+                                       size=(95,-1)) 
+        hbox1 = wx.BoxSizer(wx.HORIZONTAL)
+        hbox2 = wx.BoxSizer(wx.HORIZONTAL)
+        
+        hbox1.Add(self.numFeatureTxt)
+        hbox1.Add(self.numFeatureIntCtrl)
+        
+        hbox2.Add(self.contrastThresholdTxt)
+        hbox2.Add(self.contrastThresholdFloatCtrl)
+        
+        vbox.Add(hbox1)
+        vbox.Add(hbox2)
+        self.SetSizer(vbox)
+        
+    def GetSettings(self):
+        numFeatures = self.numFeatureIntCtrl.GetValue()
+        contrastThreshold = self.contrastThresholdFloatCtrl.GetValue()
+        
+        return SiftSettings(contrastThreshold,numFeatures)
+        
+        
 class CameraSettings():
     """simple struct for containing the parameters for the camera"""
     def __init__(self,sensor_height=1040,sensor_width=1388,pix_width=6.5,pix_height=6.5):

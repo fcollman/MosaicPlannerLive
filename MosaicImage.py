@@ -496,7 +496,7 @@ class MosaicImage():
         two_cuta=cv2.equalizeHist(two_cuta)
         
         
-        sift = cv2.SIFT(nfeatures=500,contrastThreshold=contrastThreshold)
+        sift = cv2.SIFT(nfeatures=1000,contrastThreshold=contrastThreshold)
         kp1, des1 = sift.detectAndCompute(one_cuta,None)
         kp2, des2 = sift.detectAndCompute(two_cuta,None)
         print "features1:%d"%len(kp1)
@@ -604,6 +604,7 @@ class MosaicImage():
             
             return ((dx_um,dy_um),len(bestInlierIdx))
         else:
+            print "no model found"
             self.paintImageOne(one_cut,xy=xy1)
             self.paintImageTwo(two_cut,xy=xy2)
             

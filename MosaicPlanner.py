@@ -23,7 +23,7 @@ import OleFileIO_PL,os
 from PIL import Image
 import wx.lib.intctrl
 import numpy as np
-from Settings import MosaicSettings, CameraSettings, ChangeCameraSettings, ImageSettings, ChangeImageMetadata, SmartSEMSettings, ChangeSEMSettings, ChannelSettings, ChangeChannelSettings
+from Settings import MosaicSettings, CameraSettings, ChangeCameraSettings, ImageSettings, ChangeImageMetadata, SmartSEMSettings, ChangeSEMSettings, ChannelSettings, ChangeChannelSettings, ChangeSiftSettings
 from PositionList import posList
 from MyLasso import MyLasso
 from MosaicImage import MosaicImage
@@ -303,6 +303,11 @@ class MosaicPanel(FigureCanvas):
         self.imgSrc.set_channel(map_chan)
         self.imgSrc.set_exposure(self.channel_settings.exposure_times[map_chan])
         
+        #load the SIFT settings
+        
+        self.SiftSettings = SiftSettings()
+        self.SiftSettings.load_settings(config)
+        
         #setup a blank position list
         self.posList=posList(self.subplot,mosaic_settings,self.camera_settings)
         #start with no MosaicImage
@@ -466,6 +471,14 @@ class MosaicPanel(FigureCanvas):
         map_chan=self.channel_settings.map_chan
         self.imgSrc.set_channel(map_chan)
         self.imgSrc.set_exposure(self.channel_settings.exposure_times[map_chan])
+        
+    def EditSIFTSettings(self, event = "none"):
+        dlg = ChangeSiftSettings(None, -1, title= "Edit SIFT Settings", settings = self.SiftSettings, style = wx.OK)
+        ret=dlg.ShowModel()
+        if ret == wx.ID_OK:
+            self.SiftSettings = dlg.GetSettings()
+            self.SiftSettings.save_settings(self.cfg)
+        dlg.Destroy()
         
         
     def EditMMConfig(self, event = "none"):
@@ -719,7 +732,7 @@ class MosaicPanel(FigureCanvas):
             return False    
         
    
-    def SiftCorrTool(self,window=70,contrastThreshold=.1):
+    def SiftCorrTool(self,window=70,contrastThreshold=.025):
         """function for performing the correction of moving point2 to match the image shown around point1
                   
         keywords)
@@ -806,7 +819,7 @@ class ZVISelectFrame(wx.Frame):
     ID_SAVE_SETTINGS = wx.NewId()
     ID_EDIT_CHANNELS = wx.NewId()
     ID_EDIT_MM_CONFIG = wx.NewId()
-    
+    ID_EDIT_SIFT = wx.NewId()
     
     def __init__(self, parent, title):     
         """default init function for a wx.Frame
@@ -833,7 +846,7 @@ class ZVISelectFrame(wx.Frame):
         options = wx.Menu()   
         transformMenu = wx.Menu()
         Platform_Menu = wx.Menu()
-        Channels_Menu = wx.Menu()
+        Imaging_Menu = wx.Menu()
         
         
         #OPTIONS MENU
@@ -841,7 +854,7 @@ class ZVISelectFrame(wx.Frame):
         self.sort_points = options.Append(self.ID_SORTPOINTS,'Sort positions?','Should the program automatically sort the positions by their X coordinate from right to left?',kind=wx.ITEM_CHECK)
         self.show_numbers = options.Append(self.ID_SHOWNUMBERS,'Show numbers?','Display a number next to each position to show the ordering',kind=wx.ITEM_CHECK)
         self.flipvert = options.Append(self.ID_FLIPVERT,'Flip Image Vertically?','Display the image flipped vertically relative to the way it was meant to be displayed',kind=wx.ITEM_CHECK)
-        self.fullResOpt = options.Append(self.ID_FULLRES,'Load full resolution (speed vs memory)','Rather than loading a 10x downsampled ',kind=wx.ITEM_CHECK)
+        #self.fullResOpt = options.Append(self.ID_FULLRES,'Load full resolution (speed vs memory)','Rather than loading a 10x downsampled ',kind=wx.ITEM_CHECK)
         self.saveSettings = options.Append(self.ID_SAVE_SETTINGS,'Save Settings','Saves current configuration settings to config file that will be loaded automatically',kind=wx.ITEM_NORMAL)
         
         #SET THE INTIAL SETTINGS
@@ -878,17 +891,19 @@ class ZVISelectFrame(wx.Frame):
         'Edit the settings used to set the magnification, rotation,tilt, Z position, and working distance of SEM software in position list',kind=wx.ITEM_NORMAL)
         self.Bind(wx.EVT_MENU, self.EditSmartSEMSettings, id=self.ID_EDIT_SMARTSEM_SETTINGS)
         
-        #CHANNELS MENU
-        self.edit_micromanager_config = Channels_Menu.Append(self.ID_EDIT_MM_CONFIG,'Set MicroManager Configuration',kind=wx.ITEM_NORMAL)
-        self.edit_channels = Channels_Menu.Append(self.ID_EDIT_CHANNELS,'Edit Channels',kind=wx.ITEM_NORMAL)
+        #IMAGING SETTINGS MENU
+        self.edit_micromanager_config = Imaging_Menu.Append(self.ID_EDIT_MM_CONFIG,'Set MicroManager Configuration',kind=wx.ITEM_NORMAL)
+        self.edit_channels = Imaging_Menu.Append(self.ID_EDIT_CHANNELS,'Edit Channels',kind=wx.ITEM_NORMAL)
+        self.edit_SIFT_settings = Imaging_Menu.Append(self.ID_EDIT_SIFT, 'Edit SIFT settings',kind=wx.ITEM_NORMAL)
         self.Bind(wx.EVT_MENU, self.mosaicCanvas.EditMMConfig, id = self.ID_EDIT_MM_CONFIG)
         self.Bind(wx.EVT_MENU, self.mosaicCanvas.EditChannels, id = self.ID_EDIT_CHANNELS)
+        self.Bind(wx.EVT_MENU, self.mosaicCanvas.EditSIFTSettings, id = self.ID_EDIT_SIFT)
         
         
         menubar.Append(options, '&Options')
         menubar.Append(transformMenu,'&Transform')
         menubar.Append(Platform_Menu,'&Platform Options')
-        menubar.Append(Channels_Menu,'&Microscope Settings')
+        menubar.Append(Imaging_Menu,'&Imaging Settings')
         self.SetMenuBar(menubar)
         
     
