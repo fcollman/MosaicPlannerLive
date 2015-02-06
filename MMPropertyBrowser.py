@@ -72,11 +72,11 @@ class MMPropertyBrowser(QtGui.QWidget):
                 propValueItem.currentIndexChanged[str].connect(functools.partial (self.setProperty,device,prop))
                 self.propTable.setCellWidget(i,1,propValueItem)
             elif not readOnly:  
-                devType=self.mmc.getPropertyType(device,prop)
-                if devType == 1:
+                propType=self.mmc.getPropertyType(device,prop)
+                if propType == 1:
                     #then this is a string
                     print "need to fix"
-                elif devType == 2:
+                elif propType == 2:
                     #then this is a float
                     propFloatSpin = QtGui.QDoubleSpinBox(self)
                     propFloatSpin.setDecimals(3)
@@ -95,7 +95,7 @@ class MMPropertyBrowser(QtGui.QWidget):
                     self.propTable.setCellWidget(i,1,propFloatSpin)
                     propFloatSpin.setKeyboardTracking(False)
                     propFloatSpin.valueChanged[str].connect(functools.partial(self.setProperty,device,prop))
-                elif devType == 3:
+                elif propType == 3:
                     #then this is an integer
                     propIntSpin = QtGui.QSpinBox(self)
                     if self.mmc.hasPropertyLimits(device,prop):
