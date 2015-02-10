@@ -58,6 +58,7 @@ class MMPropertyBrowser(QtGui.QWidget):
         self.propTable.setRowCount(len(props)+1)
         self.propTable.setColumnCount(2)
         self.propTable.setHorizontalHeaderLabels(["property","value"])
+        device_type = self.mmc.getDeviceType(device)
         for i,prop in enumerate(props):
             propNameItem = QtGui.QTableWidgetItem(prop)
             propNameItem.setFlags(QtCore.Qt.ItemIsEnabled)
@@ -83,7 +84,7 @@ class MMPropertyBrowser(QtGui.QWidget):
                     if self.mmc.hasPropertyLimits(device,prop):
                         maxval=self.mmc.getPropertyUpperLimit(device,prop)
                         minval=self.mmc.getPropertyLowerLimit(device,prop)
-                        
+     
                     else:
                         maxval=9999999.99
                         minval=-9999999.99
@@ -101,7 +102,10 @@ class MMPropertyBrowser(QtGui.QWidget):
                     if self.mmc.hasPropertyLimits(device,prop):
                         maxval=self.mmc.getPropertyUpperLimit(device,prop)
                         minval=self.mmc.getPropertyLowerLimit(device,prop)
-                    else:
+                    elif (device_type == StateDevice) & (prop == 'State'):
+                    	minval = 0
+                    	maxval=len(self.mmc.getAllowedPropertyValues(device,"Label"))-1
+                    else:	
                         minval=-9999999
                         maxval=9999999
 
@@ -131,7 +135,7 @@ class MMPropertyBrowser(QtGui.QWidget):
         self.propTable.setItem(i,0,propNameItem)   
 
         device_type = self.mmc.getDeviceType(device)
-        propValueText = QtGui.QTableWidgetItem(self.mmc.getDeviceName(device))
+        propValueText = QtGui.QTableWidgetItem(str(device_type))
         propValueText.setFlags(QtCore.Qt.ItemIsEnabled)
         propValueText.setBackground(QtCore.Qt.lightGray)
         self.propTable.setItem(i,1,propValueText)
