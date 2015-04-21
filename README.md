@@ -1,5 +1,6 @@
-MosaicPlannerLive
+MosaicPlannerLive 
 =================
+Forked repo from fcollman for edits 
 
 MosaicPlannerLive is a python based GUI program for acquiring array tomography data using MicroManager as an interface.
 
