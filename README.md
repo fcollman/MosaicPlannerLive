@@ -2,7 +2,8 @@ MosaicPlannerLive
 =================
 Forked repo from fcollman for edits:
 To do:
- - Work out how we want to get large mosaic image that is talked about below. Think we want to find position with live imaging, then load current position as central point and take 3x3 mosiac image around that central point. Then can use the "take 3x3 mosaic on click" to continue the image.  
+
+- Work out how we want to get large mosaic image that is talked about below. Think we want to find position with live imaging, then load current position as central point and take 3x3 mosiac image around that central point. Then can use the "take 3x3 mosaic on click" to continue the image.  
 - There seems to be a bug with the mosaic display, images are displayed with white borders.
 - Work out what is going wrong with the conversion of images. Errors when loading previous images etc. are probably bound up with this. 
 
