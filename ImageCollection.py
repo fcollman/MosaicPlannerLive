@@ -112,7 +112,7 @@ class MyImage():
     
 class ImageCollection():
     
-    def __init__(self,rootpath,imageClass=MyImage,imageSource=None,axis=None):
+    def __init__(self,rootpath,imageClass=MyImage,imageSource=None,axis=None,working_area = Rectangle(-19000,44000,-15000,9000)):
         
         self.rootpath=rootpath #rootpath to save images
         self.imageClass=imageClass #the class of image that this image collection should be composed of,
@@ -126,7 +126,8 @@ class ImageCollection():
         self.matplot_images=[]
         self.minvalue=0
         self.maxvalue=512
-    
+        self.working_area = working_area
+
     def display8bit(self,image, display_min, display_max): 
         image = np.array(image, copy=True)
         image.clip(display_min, display_max, out=image)
@@ -150,8 +151,8 @@ class ImageCollection():
         
     def set_view_home(self,box=None):
         if box==None:
-            self.axis.set_xlim(left=self.bigBox.left,right=self.bigBox.right)
-            self.axis.set_ylim(bottom=self.bigBox.bottom,top=self.bigBox.top)
+            self.axis.set_xlim(left=self.working_area.left,right=self.working_area.right)
+            self.axis.set_ylim(bottom=self.working_area.bottom,top=self.working_area.top)
         else:
             self.axis.set_xlim(left=box.left,right=box.right)
             self.axis.set_ylim(bottom=box.bottom,top=box.top)

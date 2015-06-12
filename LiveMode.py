@@ -40,7 +40,7 @@ class VideoView(QtGui.QWidget):
         # # mmc.setCircularBufferMemoryFootprint(100)
         self.cam=self.mmc.getCameraDevice()
         self.mmc.setExposure(50)
-        self.mmc.setProperty(self.cam, 'Gain', 1)
+        #self.mmc.setProperty(self.cam, 'Gain', 1)
         Nch=len(self.channels)
         startChan=self.channels[Nch-1]
         for ch in self.channels:

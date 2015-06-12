@@ -23,7 +23,8 @@ import OleFileIO_PL,os
 from PIL import Image
 import wx.lib.intctrl
 import numpy as np
-from Settings import MosaicSettings, CameraSettings,SiftSettings,ChangeCameraSettings, ImageSettings, ChangeImageMetadata, SmartSEMSettings, ChangeSEMSettings, ChannelSettings, ChangeChannelSettings, ChangeSiftSettings
+#from Settings import MosaicSettings, CameraSettings,SiftSettings,ChangeCameraSettings, ImageSettings, ChangeImageMetadata, SmartSEMSettings, ChangeSEMSettings, ChannelSettings, ChangeChannelSettings, ChangeSiftSettings
+from Settings import *
 from PositionList import posList
 from MyLasso import MyLasso
 from MosaicImage import MosaicImage
@@ -38,6 +39,8 @@ from pyqtgraph.Qt import QtCore, QtGui
 import sys, traceback
 from libtiff import TIFFimage
 import time
+from MMPropertyBrowser import MMPropertyBrowser
+import threading
 
 class MosaicToolbar(NavBarImproved):
     """A custom toolbar which adds buttons and to interact with a MosaicPanel
@@ -120,13 +123,13 @@ class MosaicToolbar(NavBarImproved):
         carBmp = wx.Image('icons/car-icon.png',wx.BITMAP_TYPE_PNG).ConvertToBitmap()
         
         #add the mutually exclusive/toggleable tools to the toolbar, see superclass for details on how function works
-       
-        self.snapPictureTool = self.add_user_tool('snappic',7,mosaicBmp,True,'take 3x3 mosaic on click')
-        self.selectNear=self.add_user_tool('selectnear',8,selectnearBmp,True,'Add Nearest Point to selection')
-        self.selectTool=self.add_user_tool('select', 9, selectBmp, True, 'Select Points')
-        self.addTool=self.add_user_tool('add', 10, addpointBmp, True, 'Add a Point')     
-        self.oneTool = self.add_user_tool('selectone', 11, oneBmp, True, 'Choose pointLine2D 1') 
-        self.twoTool = self.add_user_tool('selecttwo', 12, twoBmp, True, 'Choose pointLine2D 2')
+        self.moveHereTool = self.add_user_tool('movehere',7,carBmp,True,'move scope here')
+        self.snapPictureTool = self.add_user_tool('snappic',8,mosaicBmp,True,'take 3x3 mosaic on click')
+        self.selectNear=self.add_user_tool('selectnear',9,selectnearBmp,True,'Add Nearest Point to selection')
+        self.selectTool=self.add_user_tool('select', 10, selectBmp, True, 'Select Points')
+        self.addTool=self.add_user_tool('add', 11, addpointBmp, True, 'Add a Point')     
+        self.oneTool = self.add_user_tool('selectone', 12, oneBmp, True, 'Choose pointLine2D 1') 
+        self.twoTool = self.add_user_tool('selecttwo', 13, twoBmp, True, 'Choose pointLine2D 2')
         
         self.AddSeparator()
         self.AddSeparator()
@@ -308,6 +311,9 @@ class MosaicPanel(FigureCanvas):
         self.SiftSettings = SiftSettings()
         self.SiftSettings.load_settings(config)
         
+        self.CorrSettings = CorrSettings()
+        self.CorrSettings.load_settings(config)
+
         #setup a blank position list
         self.posList=posList(self.subplot,mosaic_settings,self.camera_settings)
         #start with no MosaicImage
@@ -320,20 +326,23 @@ class MosaicPanel(FigureCanvas):
         self.lasso = None
         self.lassoLock=False
         
-        #make a sin plot just to see that things are working
-        #self.t = arange(0.0,3.0,0.01)
-        #s = sin(2*pi*self.t)
-        #self.subplot.plot(self.t,s)   
-
         self.canvas.mpl_connect('button_press_event', self.on_press)
         self.canvas.mpl_connect('button_release_event', self.on_release)
         self.canvas.mpl_connect('key_press_event', self.on_key)
-     
+        
+    def handle_close(self,evt=None):
+        print "handling close"
+        if not self.mosaicImage == None:
+            self.mosaicImage.cursor_timer.cancel()
+
     def OnLoad(self,rootPath):
         self.rootPath=rootPath
         
         self.mosaicImage=MosaicImage(self.subplot,self.posone_plot,self.postwo_plot,self.corrplot,self.imgSrc,rootPath)
+        
         self.draw()
+     
+
     def write_slice_metadata(self,filename,ch,xpos,ypos,zpos):
     
         f = open(filename, 'w')
@@ -375,18 +384,23 @@ class MosaicPanel(FigureCanvas):
         self.imgSrc.move_stage(x,y)
         attempts=0
         
-        #wait till autofocus settles
-        while not self.imgSrc.is_hardware_autofocus_done():
-            time.sleep(.1)
-            attempts+=1
-            if attempts>100:
-                print "not auto-focusing correctly.. giving up after 10 seconds"
-                break
-        time.sleep(.1) #wait an extra 100 ms for settle
+        if self.imgSrc.has_hardware_autofocus():
+            #wait till autofocus settles
+            while not self.imgSrc.is_hardware_autofocus_done():
+                time.sleep(.1)
+                attempts+=1
+                if attempts>100:
+                    print "not auto-focusing correctly.. giving up after 10 seconds"
+                    break
+            time.sleep(.1) #wait an extra 100 ms for settle
+            
+            self.imgSrc.set_hardware_autofocus_state(False) #turn off autofocus
         
-        self.imgSrc.set_hardware_autofocus_state(False) #turn off autofocus
+        else:
+            score=self.imgSrc.image_based_autofocus()
+            print score
+
         currZ=self.imgSrc.get_z()
-        
         for k,ch in enumerate(self.channel_settings.channels):
             prot_name=self.channel_settings.prot_names[ch]
             path=os.path.join(outdir,prot_name)
@@ -480,7 +494,14 @@ class MosaicPanel(FigureCanvas):
             self.SiftSettings.save_settings(self.cfg)
         dlg.Destroy()
         
-        
+    def EditSIFTSettings(self, event = "none"):
+        dlg = ChangeCorrSettings(None, -1, title= "Edit Corr Settings", settings = self.CorrSettings, style = wx.OK)
+        ret=dlg.ShowModal()
+        if ret == wx.ID_OK:
+            self.CorrSettings = dlg.GetSettings()
+            self.CorrSettings.save_settings(self.cfg)
+        dlg.Destroy()
+
     def EditMMConfig(self, event = "none"):
                
         fullpath=self.MM_config_file
@@ -495,7 +516,12 @@ class MosaicPanel(FigureCanvas):
         self.cfg.Write('MM_config_file',self.MM_config_file)  
   
         dlg.Destroy()
+    def LaunchMMBrowser(self, event = "none"):
+
+        win = MMPropertyBrowser(self.imgSrc.mmc)
+        win.show()
         
+
     def repaint_image(self,evt):
         """event handler used when the slider bar changes and you want to repaint the MosaicImage with a different color scale"""
         if not self.mosaicImage==None:
@@ -545,6 +571,8 @@ class MosaicPanel(FigureCanvas):
                     self.posList.pos2.setPosition(evt.xdata,evt.ydata)
                     self.mosaicImage.paintPointsOneTwo(self.posList.pos1.getPosition(),self.posList.pos2.getPosition(),window=75)
                 else:
+                    if (mode == 'movehere'):
+                        self.imgSrc.move_stage(evt.xdata,evt.ydata)
                     if (mode == 'selectone'):
                         self.posList.set_pos1_near(evt.xdata,evt.ydata)   
                         if not (self.posList.pos2 == None):
@@ -627,14 +655,14 @@ class MosaicPanel(FigureCanvas):
     def OnStepTool(self,evt=""):
         """handler for when the StepTool is pressed"""
         #we call another steptool function so that the fast forward tool can use the same function
-        goahead=self.StepTool(window=70,delta=30,skip=15)
+        goahead=self.StepTool()
         self.draw()
             
     def OnCorrTool(self,evt=""):
         """handler for when the CorrTool is pressed"""
         #we call another function so the step tool can use the same function
-        #corrval=self.CorrTool(window=70,delta=30,skip=15)
-        inliers=self.SiftCorrTool(window=70)
+        passed=self.CorrTool()
+        #inliers=self.SiftCorrTool(window=70)
         self.draw()
     
     def OnHomeTool(self):
@@ -656,7 +684,7 @@ class MosaicPanel(FigureCanvas):
             if badstreak>2:
                 return
             #adjust the position of point 2 using a fine scale alignment with a small search radius
-            corrval=self.CorrTool(window=100,delta=10,skip=1)
+            corrval=self.CorrTool()
             #each time through the loop we are going to move point 2 but not point 1, but after awhile
             #we expect the correlation to fall off, at which point we will move point 1 to be closer
             # so first lets try moving point 1 to be the closest point to pos2 that we have fixed (which hasn't been marked "bad")
@@ -668,7 +696,7 @@ class MosaicPanel(FigureCanvas):
                     newp1=self.posList.get_prev_pos(newp1)
                 self.posList.set_pos1(newp1) 
                 #try again
-                corrval2=self.CorrTool(window=100,delta=10,skip=1)
+                corrval2=self.CorrTool()
                 if (corrval2<.3):
                     badstreak=badstreak+1
                     #if this fails a second time, lets assume that this point 2 is a messed up one and skip it
@@ -698,13 +726,13 @@ class MosaicPanel(FigureCanvas):
         goahead=True
         #keep doing this till the StepTool says it shouldn't go forward anymore
         while (goahead):
-            goahead=self.StepTool(window=100,delta=75,skip=3)
+            goahead=self.StepTool()
             self.draw()
         #call up a box and make a beep alerting the user for help
         wx.MessageBox('Fast Forward Aborted, Help me','Info')         
                                                   
              
-    def StepTool(self,window,delta,skip):
+    def StepTool(self):
         """function for performing a step, assuming point1 and point2 have been selected
         
         keywords:
@@ -720,16 +748,10 @@ class MosaicPanel(FigureCanvas):
         #if not self.is_pos_on_array(newpos):
         #    return False
         #if things were fine, fine adjust the position 
-        #corrval=self.CorrTool(window,delta,skip)
-        #if corrval>.3:
-        #    return True
-        #else:
-        #    return False            
-        inliers=self.SiftCorrTool(window)
-        if inliers>12:
-            return True
-        else:
-            return False    
+        #corrval=self.CorrTool(window,delta,skip)          
+        #return self.SiftCorrTool(window)
+        return self.CorrTool()
+   
         
    
     def SiftCorrTool(self,window=70):
@@ -741,12 +763,12 @@ class MosaicPanel(FigureCanvas):
         inliers is the number of inliers in the best transformation obtained by this operation
         
         """
-        (dxy_um,inliers)=self.mosaicImage.align_by_sift((self.posList.pos1.x,self.posList.pos1.y),(self.posList.pos2.x,self.posList.pos2.y),SiftSettings=self.SiftSettings)
+        (dxy_um,inliers)=self.mosaicImage.align_by_sift((self.posList.pos1.x,self.posList.pos1.y),(self.posList.pos2.x,self.posList.pos2.y),window = window,SiftSettings=self.SiftSettings)
         (dx_um,dy_um)=dxy_um
         self.posList.pos2.shiftPosition(-dx_um,-dy_um)
-        return inliers
+        return len(inliers)>self.SiftSettings.inlier_thresh
         
-    def CorrTool(self,window,delta,skip):
+    def CorrTool(self):
         """function for performing the correlation correction of two points, identified as point1 and point2
         
         keywords)
@@ -756,12 +778,12 @@ class MosaicPanel(FigureCanvas):
         
         """
         
-        (corrval,dxy_um)=self.mosaicImage.align_by_correlation((self.posList.pos1.x,self.posList.pos1.y),(self.posList.pos2.x,self.posList.pos2.y),window,delta,skip)
+        (corrval,dxy_um)=self.mosaicImage.align_by_correlation((self.posList.pos1.x,self.posList.pos1.y),(self.posList.pos2.x,self.posList.pos2.y),CorrSettings=self.CorrSettings)
         
         (dx_um,dy_um)=dxy_um
         self.posList.pos2.shiftPosition(-dx_um,-dy_um)
         #self.draw()
-        return corrval
+        return corrval>self.CorrSettings.corr_thresh
           
     def OnKeyPress(self,event="none"):
         """function for handling key press events"""
@@ -812,7 +834,7 @@ class ZVISelectFrame(wx.Frame):
     ID_EDIT_SMARTSEM_SETTINGS = wx.NewId()
     ID_SORTPOINTS = wx.NewId()
     ID_SHOWNUMBERS = wx.NewId()
-    ID_SAVETRANSFORM = wx.NewId()
+    ID_SAVETRANSFORM = wx.NewId() 
     ID_EDITTRANSFORM = wx.NewId()
     ID_FLIPVERT = wx.NewId()
     #ID_FULLRES = wx.NewId()
@@ -820,7 +842,9 @@ class ZVISelectFrame(wx.Frame):
     ID_EDIT_CHANNELS = wx.NewId()
     ID_EDIT_MM_CONFIG = wx.NewId()
     ID_EDIT_SIFT = wx.NewId()
-    
+    ID_MM_PROP_BROWSER = wx.NewId()
+
+
     def __init__(self, parent, title):     
         """default init function for a wx.Frame
         
@@ -895,10 +919,14 @@ class ZVISelectFrame(wx.Frame):
         self.edit_micromanager_config = Imaging_Menu.Append(self.ID_EDIT_MM_CONFIG,'Set MicroManager Configuration',kind=wx.ITEM_NORMAL)
         self.edit_channels = Imaging_Menu.Append(self.ID_EDIT_CHANNELS,'Edit Channels',kind=wx.ITEM_NORMAL)
         self.edit_SIFT_settings = Imaging_Menu.Append(self.ID_EDIT_SIFT, 'Edit SIFT settings',kind=wx.ITEM_NORMAL)
+        self.launch_MM_PropBrowser = Imaging_Menu.Append(self.ID_MM_PROP_BROWSER,'Open MicroManager Property Browser',kind = wx.ITEM_NORMAL)
+
+
         self.Bind(wx.EVT_MENU, self.mosaicCanvas.EditMMConfig, id = self.ID_EDIT_MM_CONFIG)
         self.Bind(wx.EVT_MENU, self.mosaicCanvas.EditChannels, id = self.ID_EDIT_CHANNELS)
         self.Bind(wx.EVT_MENU, self.mosaicCanvas.EditSIFTSettings, id = self.ID_EDIT_SIFT)
-        
+        self.Bind(wx.EVT_MENU, self.mosaicCanvas.LaunchMMBrowser, id = self.ID_MM_PROP_BROWSER)
+
         
         menubar.Append(options, '&Options')
         menubar.Append(transformMenu,'&Transform')
@@ -932,7 +960,7 @@ class ZVISelectFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.OnImageCollectLoad,self.imgCollect_load_button)
         #self.Bind(wx.EVT_BUTTON, self.OnMetaLoad,self.meta_load_button)
         #self.Bind(wx.EVT_BUTTON, self.OnEditImageMetadata,self.meta_enter_button)
-       
+        self.Bind(wx.EVT_CLOSE, self.OnClose)
         #define the array picker components 
         self.array_label=wx.StaticText(self,id=wx.ID_ANY,label="array file")
         self.array_filepicker=wx.FilePickerCtrl(self,message='Select an array file',\
@@ -1164,7 +1192,13 @@ class ZVISelectFrame(wx.Frame):
         #    print("%5.5f,%5.5f -> %5.5f,%5.5f (%5.5f, %5.5f)"%(pt.x,pt.y,xp,yp,pts_to[index].x,pts_to[index].y))
         dlg.Destroy()
         
- 
+    def OnClose(self,event):
+        print "closing"
+
+        self.mosaicCanvas.handle_close()
+
+        self.Destroy()
+
 #dirname=sys.argv[1]
 #print dirname
 

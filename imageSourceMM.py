@@ -11,12 +11,30 @@ class imageSource():
      
         self.configFile=configFile
         self.mmc = MMCorePy.CMMCore() 
+        self.mmc.enableStderrLog(True)
+        self.mmc.enableDebugLog(True)
         self.mmc.loadSystemConfiguration(self.configFile)
-
-        self.channelGroupName=channelGroupName
        
+        self.channelGroupName=channelGroupName
+
+        auto_dev = self.mmc.getAutoFocusDevice()
+        assert(auto_dev is not None)
+
+        dev_name = self.mmc.getDeviceName(auto_dev)
+        print "dev_name",dev_name
+
+        if 'SimpleAutofocus' == dev_name:
+            self.has_continuous_focus = False
+        else:
+            self.has_continuous_focus = True
+       
+        print "has_continuous_focus",self.has_continuous_focus
+
         #set the exposure to use
-    
+    def image_based_autofocus(self):
+        self.mmc.fullFocus()
+        return self.mmc.getLastFocusScore()
+
     def get_max_pixel_value(self):
         bit_depth=self.mmc.getImageBitDepth()
         return np.power(2,bit_depth)
@@ -39,9 +57,8 @@ class imageSource():
             self.mmc.enableContinuousFocus(state)
         
     def has_hardware_autofocus(self):
-       #NEED TO IMPLEMENT IF NOT MICROMANAGER
-        #print "need to implement automatic detection of hardware autofocus"
-        return True
+        #NEED TO IMPLEMENT IF NOT MICROMANAGER
+        return self.has_continuous_focus
         
         
     def is_hardware_autofocus_done(self):

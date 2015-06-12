@@ -27,11 +27,12 @@ import Queue
 from CenterRectangle import CenterRectangle
 from matplotlib.lines import Line2D
 from ImageCollection import ImageCollection
-from Settings import SiftSettings
+from Settings import SiftSettings,CorrSettings
 from Rectangle import Rectangle
 import cv2 
 import ransac
-
+from scipy.signal import correlate2d
+from skimage.measure import block_reduce
 #implicity this relies upon matplotlib.axis matplotlib.AxisImage matplotlib.bar 
 
 
@@ -66,20 +67,27 @@ def mycorrelate2d(fixed,moved,skip=1):
     fixed=fixed/fixed.std()
     moved=moved-moved.mean()
     moved=moved/moved.std()
-    ch=np.ceil(deltah*1.0/skip)
-    cw=np.ceil(deltaw*1.0/skip)
+    # ch=np.ceil(deltah*1.0/skip)
+    # cw=np.ceil(deltaw*1.0/skip)
     
-    corrmat=np.zeros((ch,cw))
+    # corrmat=np.zeros((ch,cw))
     
-    #print (fh,fw,mh,mw,ch,cw,skip,deltah,deltaw)
-    for shiftx in range(0,deltaw,skip):
-        for shifty in range(0,deltah,skip):
-            fixcut=fixed[shifty:shifty+mh,shiftx:shiftx+mw]
-            corrmat[shifty/skip,shiftx/skip]=(fixcut*moved).sum()
+    # #print (fh,fw,mh,mw,ch,cw,skip,deltah,deltaw)
+    # for shiftx in range(0,deltaw,skip):
+    #     for shifty in range(0,deltah,skip):
+    #         fixcut=fixed[shifty:shifty+mh,shiftx:shiftx+mw]
+    #         corrmat[shifty/skip,shiftx/skip]=(fixcut*moved).sum()
            
-    corrmat=corrmat/(mh*mw)
-    
-    return corrmat
+    # corrmat=corrmat/(mh*mw)
+    if skip>1:
+        fixed = block_reduce(fixed,block_size = int(skip),func = np.mean,cval=0)
+        moved = block_reduce(fixed,block_size = int(skip),func = np.mean,cval=0)
+        
+    corrmatt = correlate2d(fixed, moved, boundary='fill', mode='valid')
+    #image_product = np.fft.fft2(fixed) * np.fft.fft2(moved).conj()
+    #corrmat = np.fft.fftshift(np.fft.ifft2(image_product))
+
+    return corrmatt
 
 
 #thread for making a cropped version of the big image... not very efficent    
@@ -138,16 +146,16 @@ class MosaicImage():
         
         (x,y)=imgSrc.get_xy()
         bbox=imgSrc.calc_bbox(x,y)
-        self.imgCollection.set_view_home(bbox)
+        self.imgCollection.set_view_home()
         self.imgCollection.loadImageCollection()
         
         
         self.maxvalue=512
-       
-        
+        self.currentPosLine2D=Line2D([x],[y],marker='+',markersize=7,markeredgewidth=1.5,markeredgecolor='g',zorder=100)
+        self.axis.add_line(self.currentPosLine2D) 
         self.axis.set_title('Mosaic Image')
-        
-                  
+        self.update_pos_cursor()
+         
     # def paintImage(self):
         # """plots self.imagematrix in self.axis using self.extent to define the boundaries"""
         # self.Image=self.axis.imshow(self.imagematrix,cmap='gray',extent=self.extent)
@@ -158,7 +166,17 @@ class MosaicImage():
         # self.axis.set_xlabel('X Position (pixels)')
         # self.axis.set_ylabel('Y Position (pixels)')
         # self.Image.set_clim(0,25000)
-    
+       
+
+
+    def update_pos_cursor(self):
+        x,y = self.imgSrc.get_xy()
+        self.currentPosLine2D.set_xdata([x])
+        self.currentPosLine2D.set_ydata([y])
+        self.axis.draw_artist(self.currentPosLine2D)
+        self.cursor_timer = threading.Timer(1, self.update_pos_cursor)
+        self.cursor_timer.start()
+
     def set_maxval(self,maxvalue):
         """set the maximum value in the image colormap"""
         self.maxvalue=maxvalue;
@@ -177,7 +195,7 @@ class MosaicImage():
         if self.twoImage!=None:
             self.twoImage.set_clim(0,self.maxvalue)
     
-    def paintImageCenter(self,cut,theaxis,xc=0,yc=0,skip=1,cmap='gray',scale=1):
+    def paintImageCenter(self,cut,theaxis,xc=0,yc=0,skip=1,cmap='gray',scale=1,interpolation='nearest'):
         """paints an image and redefines the coordinates such that 0,0 is at the center
         
         keywords
@@ -201,7 +219,7 @@ class MosaicImage():
             
         ext=[left,right,bot,top]
 
-        image=theaxis.imshow(cut,cmap=cmap,extent=ext)
+        image=theaxis.imshow(cut,cmap=cmap,extent=ext,interpolation=interpolation)
         
         theaxis.set_xlim(left=xc-dw,right=xc+dw)
         theaxis.set_ylim(bottom=yc+dh,top=yc-dh)
@@ -338,7 +356,7 @@ class MosaicImage():
         keywords)
         x)x position in microns
         y)y position in microns
-        window) size of the patch to cutout, will cutout +/- window in both vertical and horizontal dimensions
+        window) size of the patch to cutout (microns), will cutout +/- window in both vertical and horizontal dimensions
         note.. behavior not well specified at edges, may crash
         
         function uses PIL to read in image and crop it appropriately
@@ -371,7 +389,7 @@ class MosaicImage():
         #return (target_cut,source_cut,mycorrelate2d(target_cut,source_cut,mode='valid'))
         return (one_cut,two_cut,mycorrelate2d(one_cut,two_cut,skip))
        
-    def align_by_correlation(self,xy1,xy2,window=60,delta=40,skip=3):
+    def align_by_correlation(self,xy1,xy2,CorrSettings = CorrSettings()):
         """take two points in the image, and calculate the 2d cross correlation function of the image around those two points
         plots the results in the appropriate axis, and returns the shift which aligns the two points given in microns
         
@@ -387,6 +405,10 @@ class MosaicImage():
         dxy_um) the (x,y) tuple which contains the shift in microns necessary to align point xy2 with point xy1
         
         """
+        window = CorrSettings.window
+        delta = CorrSettings.delta
+        skip = CorrSettings.skip
+
         pixsize=self.imgCollection.get_pixel_size()
         #calculate the cutout patches and the correlation matrix
         (one_cut,two_cut,corrmat)=self.cross_correlate_two_to_one(xy1,xy2,window,delta,skip)
@@ -416,7 +438,8 @@ class MosaicImage():
         #paint the patch around the first point in its axis, with a box of size of the two_cut centered around where we found it
         self.paintImageOne(one_cut,xy=xy1,dxy_pix=dxy_pix, window=window)
         #paint the patch around the second point in its axis
-        self.paintImageTwo(two_cut,xy=xy2)
+
+        self.paintImageTwo(two_cut,xy=xy2,xyp=(xy2[0]-dx_um,xy2[1]-dy_um))
         #paint the correlation matrix in its axis
         self.paintCorrImage(corrmat, dxy_pix,skip)
         return (corrmat.max(),dxy_um)
