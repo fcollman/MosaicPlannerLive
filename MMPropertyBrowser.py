@@ -71,8 +71,6 @@ class MMPropertyBrowser(QtGui.QWidget):
         self.resize(300, 500)
         self._dialog = None
 
-      
-
     def addNameItem(self,text,i,isReadOnly=True,col=0,greyBack = False):
         NameItem = QtGui.QTableWidgetItem(text)
         if isReadOnly:
@@ -193,7 +191,6 @@ class MMPropertyBrowser(QtGui.QWidget):
                 nameItem = self.propTable.item(i, 0)
                 nameItem.setBackground(QtCore.Qt.lightGray)
 
-        
         # tack on one more fake property which shows the device type
         # in the final row.
         i = len(props)
@@ -201,7 +198,6 @@ class MMPropertyBrowser(QtGui.QWidget):
         
         device_type = self.mmc.getDeviceType(device)
         propValueText = self.addNameItem(DeviceDict[device_type],i,True,1,greyBack = True)
-   
 
         if device_type == XYStageDevice:
             self.propTable.setRowCount(len(props) + 3)
@@ -227,7 +223,6 @@ class MMPropertyBrowser(QtGui.QWidget):
         ypos = YPosSpinBox.value()
         self.mmc.setXYPosition(device,xpos,ypos)
         self.mmc.waitForDevice(device)
-
         self.fillPropTable(device)
 
     def setProperty(self, device, prop, value):
@@ -242,11 +237,11 @@ class MMPropertyBrowser(QtGui.QWidget):
         self.mmc.waitForDevice(device)
         self.fillPropTable(device)
 
-    def handleOpenDialog(self):
-        if self._dialog is None:
-            self._dialog = QtGui.QDialog(self)
-            self._dialog.resize(200, 100)
-        self._dialog.show()
+    #def handleOpenDialog(self):
+    #    if self._dialog is None:
+    #        self._dialog = QtGui.QDialog(self)
+    #        self._dialog.resize(200, 100)
+    #    self._dialog.show()
 
     def deviceChanged(self, index):
         device = self.devices[index]

@@ -9,7 +9,7 @@ import time
 
 import MMCorePy
 import cv2
-from pyqtgraph.widgets.RawImageWidget import RawImageGLWidget, RawImageWidget
+from pyqtgraph.widgets.RawImageWidget import RawImageWidget
 import functools
 
 class VideoView(QtGui.QWidget):
@@ -242,6 +242,8 @@ class VideoView(QtGui.QWidget):
     def closeEvent(self,evt):
         self.mmc.stopSequenceAcquisition() 
         evt.accept()
+        self.timer.cancel()
+        self.destroy()
        
     def display8bit(self,image, display_min, display_max): 
         image = np.array(image, copy=True)
@@ -254,7 +256,8 @@ class VideoView(QtGui.QWidget):
         lut = np.arange(2**16, dtype='uint16')
         lut = self.display8bit(lut, display_min, display_max)
         return np.take(lut, image)
-        
+    
+
     def updateData(self):
     
         remcount = self.mmc.getRemainingImageCount()
@@ -262,20 +265,29 @@ class VideoView(QtGui.QWidget):
         if remcount > 0:
             #rgb32 = self.mmc.popNextImage()
             data =  self.mmc.getLastImage()
+
+
             if data.dtype == np.uint16:
                 maxval=self.imgSrc.get_max_pixel_value()
                 data=self.lut_convert16as8bit(data,0,maxval)
-            gray = data.transpose()
-            flipped = np.fliplr(gray)
+
+            data = np.rot90(data)
+            flipx,flipy,trans = self.imgSrc.get_image_flip()
+            if trans:
+                data = np.transpose(data)
+            if flipx:
+                data = np.fliplr(data)
+            if flipy:
+                data = np.flipud(data)
            
             #gray=cv2.equalizeHist(gray)
-            self.img.setImage(flipped,autoLevels=True)
+            self.img.setImage(data,autoLevels=True)
             #cv2.imshow('Video', gray)
         #else:
             #print('No frame')
         
 
-        QtCore.QTimer.singleShot(self.mmc.getExposure(), self.updateData)
+        self.timer = QtCore.QTimer.singleShot(self.mmc.getExposure(), self.updateData)
         #now = ptime.time()
         #fps1 = 1.0 / (now-self.updateTime)
         #self.updateTime = now
@@ -304,3 +316,22 @@ def launchLive(mmc,exposure_times):
         QtGui.QApplication.instance().exec_()
         
     return vidview.getExposureTimes()
+
+if __name__ == '__main__':
+
+    import sys
+    app = QtGui.QApplication(sys.argv)
+
+    mmc = MMCorePy.CMMCore()
+    defaultMMpath = "C:\Program Files\Micro-Manager-1.4"
+    configFile = QtGui.QFileDialog.getOpenFileName(
+        None, "pick a uManager cfg file", defaultMMpath, "*.cfg")
+    configFile = str(configFile.replace("/", "\\"))
+    print configFile
+
+    mmc.loadSystemConfiguration(configFile)
+    print "loaded configuration file"
+    launchLive(mmc,dict([]))
+    app.exec_()
+    mmc.reset()
+    sys.exit()

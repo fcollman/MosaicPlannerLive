@@ -30,7 +30,7 @@ class CorrSettings():
     def save_settings(self,cfg):
         cfg.WriteInt('CorrTool_window',self.window)
         cfg.WriteInt('CorrTool_delta',self.delta)
-        cfg.WriteFloat('CorrTool_skip',self.skip)
+        cfg.WriteInt('CorrTool_skip',self.skip)
         cfg.WriteFloat('CorrTool_corr_thresh',self.corr_thresh)
     
     def load_settings(self,cfg):
@@ -93,7 +93,7 @@ class ChangeCorrSettings(wx.Dialog):
         skip=self.skipIntCtrl.GetValue()
         corr_thresh=self.corr_threshThresholdFloatCtrl.GetValue()
 
-        return CorrSettings(window,delta,skip.corr_thresh)
+        return CorrSettings(window,delta,skip,corr_thresh)
 
 class SiftSettings():
 

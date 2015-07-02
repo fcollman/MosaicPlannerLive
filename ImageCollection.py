@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 from PIL import Image
-from libtiff import TIFFimage
+from tifffile import imsave
 import time
 import json
 from Rectangle import Rectangle
@@ -93,9 +93,8 @@ class MyImage():
     def saveData(self,data):
         #img = Image.fromarray(data)
         #img.save(self.imagePath)
-        tiff = TIFFimage(data, description='')
-        tiff.write_file(self.imagePath, compression='none')
-        del tiff
+        imsave(self.imagePath,data)
+
         
     def contains_rect(self,box):
         return self.boundBox.contains_rect(box)
@@ -112,7 +111,7 @@ class MyImage():
     
 class ImageCollection():
     
-    def __init__(self,rootpath,imageClass=MyImage,imageSource=None,axis=None,working_area = Rectangle(-19000,44000,-15000,9000)):
+    def __init__(self,rootpath,imageClass=MyImage,imageSource=None,axis=None,working_area = Rectangle(left=-30000,right=36000,top=-6100,bottom=16000)):
         
         self.rootpath=rootpath #rootpath to save images
         self.imageClass=imageClass #the class of image that this image collection should be composed of,

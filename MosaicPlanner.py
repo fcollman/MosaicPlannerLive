@@ -37,10 +37,13 @@ from imageSourceMM import imageSource
 import LiveMode
 from pyqtgraph.Qt import QtCore, QtGui
 import sys, traceback
-from libtiff import TIFFimage
+from tifffile import imsave
 import time
 from MMPropertyBrowser import MMPropertyBrowser
 import threading
+from FocusCorrectionPlaneWindow import FocusCorrectionPlaneWindow
+import pickle
+
 
 class MosaicToolbar(NavBarImproved):
     """A custom toolbar which adds buttons and to interact with a MosaicPanel
@@ -106,13 +109,13 @@ class MosaicToolbar(NavBarImproved):
         #import the icons
         selectBmp=wx.Image('icons/lasso-icon.png', wx.BITMAP_TYPE_PNG).ConvertToBitmap()
         addpointBmp=wx.Image('icons/add-icon.bmp', wx.BITMAP_TYPE_BMP).ConvertToBitmap()
-        trashBmp =  wx.Image('icons/delete-icon.png', wx.BITMAP_TYPE_PNG).ConvertToBitmap()             
-        selectnearBmp =  wx.Image('icons/cursor2-icon.png', wx.BITMAP_TYPE_PNG).ConvertToBitmap()   
-        # wx.Image('icons/cursor-icon.bmp', wx.BITMAP_TYPE_BMP).ConvertToBitmap()  
+        trashBmp =  wx.Image('icons/delete-icon.png', wx.BITMAP_TYPE_PNG).ConvertToBitmap()
+        selectnearBmp =  wx.Image('icons/cursor2-icon.png', wx.BITMAP_TYPE_PNG).ConvertToBitmap()
+        # wx.Image('icons/cursor-icon.bmp', wx.BITMAP_TYPE_BMP).ConvertToBitmap()
         oneBmp =wx.Image('icons/one-icon.bmp', wx.BITMAP_TYPE_BMP).ConvertToBitmap()  
         twoBmp =wx.Image('icons/two-icon.bmp', wx.BITMAP_TYPE_BMP).ConvertToBitmap()
         stepBmp = wx.Image('icons/step-icon.png', wx.BITMAP_TYPE_PNG).ConvertToBitmap()  
-        leftcorrBmp = wx.ArtProvider.GetBitmap(wx.ART_GO_BACK,wx.ART_TOOLBAR) 
+        leftcorrBmp = wx.ArtProvider.GetBitmap(wx.ART_GO_BACK,wx.ART_TOOLBAR)
         corrBmp = wx.Image('icons/target-icon.png', wx.BITMAP_TYPE_PNG).ConvertToBitmap()
         ffBmp =  wx.Image('icons/ff-icon.png', wx.BITMAP_TYPE_PNG).ConvertToBitmap()
         smalltargetBmp = wx.Image('icons/small-target-icon.png', wx.BITMAP_TYPE_PNG).ConvertToBitmap()
@@ -122,34 +125,37 @@ class MosaicToolbar(NavBarImproved):
         mosaicBmp = wx.Image('icons/mosaic-icon.png',wx.BITMAP_TYPE_PNG).ConvertToBitmap()
         carBmp = wx.Image('icons/car-icon.png',wx.BITMAP_TYPE_PNG).ConvertToBitmap()
         
+        self.DeleteTool(self.wx_ids['Subplots']) 
+        #self.DeleteTool(self.wx_ids['Pan']) 
         #add the mutually exclusive/toggleable tools to the toolbar, see superclass for details on how function works
-        self.moveHereTool = self.add_user_tool('movehere',7,carBmp,True,'move scope here')
+        self.moveHereTool = self.add_user_tool('movehere',6,carBmp,True,'move scope here')
+        self.snapHereTool = self.add_user_tool('snaphere',7,cameraBmp,True,'snap image at current scope location')
         self.snapPictureTool = self.add_user_tool('snappic',8,mosaicBmp,True,'take 3x3 mosaic on click')
-        self.selectNear=self.add_user_tool('selectnear',9,selectnearBmp,True,'Add Nearest Point to selection')
-        self.selectTool=self.add_user_tool('select', 10, selectBmp, True, 'Select Points')
-        self.addTool=self.add_user_tool('add', 11, addpointBmp, True, 'Add a Point')     
-        self.oneTool = self.add_user_tool('selectone', 12, oneBmp, True, 'Choose pointLine2D 1') 
-        self.twoTool = self.add_user_tool('selecttwo', 13, twoBmp, True, 'Choose pointLine2D 2')
+        self.selectNear = self.add_user_tool('selectnear',9,selectnearBmp,True,'Add Nearest Point to selection')
+        #self.selectTool=self.add_user_tool('select', 10, selectBmp, True, 'Select Points')
+        self.addTool = self.add_user_tool('add', 10, addpointBmp, True, 'Add a Point')
+        self.oneTool = self.add_user_tool('selectone', 11, oneBmp, True, 'Choose pointLine2D 1')
+        self.twoTool = self.add_user_tool('selecttwo', 12, twoBmp, True, 'Choose pointLine2D 2')
         
         self.AddSeparator()
         self.AddSeparator()
         
         #add the simple button click tools
         #self.leftcorrTool=self.AddSimpleTool(self.ON_CORR_LEFT,leftcorrBmp,'do something with correlation','correlation baby!')
-        self.liveModeTool = self.AddSimpleTool(self.ON_LIVE_MODE,cameraBmp,'Enter Live Mode','liveMode')        
+        self.liveModeTool = self.AddSimpleTool(self.ON_LIVE_MODE,cameraBmp,'Enter Live Mode','liveMode')
         self.deleteTool=self.AddSimpleTool(self.ON_DELETE_SELECTED,trashBmp,'Delete selected points','delete points') 
-        self.corrTool=self.AddSimpleTool(self.ON_CORR,corrBmp,'Ajdust pointLine2D 2 with correlation','corrTool') 
-        self.stepTool=self.AddSimpleTool(self.ON_STEP,stepBmp,'Take one step using points 1+2','stepTool')     
-        self.ffTool=self.AddSimpleTool(self.ON_FF,ffBmp,'Auto-take steps till C<.3 or off image','fastforwardTool')       
+        self.corrTool=self.AddSimpleTool(self.ON_CORR,corrBmp,'Ajdust pointLine2D 2 with correlation','corrTool')
+        self.stepTool=self.AddSimpleTool(self.ON_STEP,stepBmp,'Take one step using points 1+2','stepTool')
+        self.ffTool=self.AddSimpleTool(self.ON_FF,ffBmp,'Auto-take steps till C<.3 or off image','fastforwardTool')
         #self.refTool=self.AddSimpleTool(self.ON_,refBmp,'Refine the current set of positions, starting around point 1 and propogating out','refineTool')
         
         #add the toggleable tools
         self.gridTool=self.AddCheckTool(self.ON_GRID,gridBmp,wx.NullBitmap,'toggle rotate boxes')
-        #self.finetuneTool=self.AddSimpleTool(self.ON_FINETUNE,smalltargetBmp,'auto fine tune positions','finetuneTool')  
-        #self.redrawTool=self.AddSimpleTool(self.ON_REDRAW,smalltargetBmp,'redraw canvas','redrawTool')  
+        #self.finetuneTool=self.AddSimpleTool(self.ON_FINETUNE,smalltargetBmp,'auto fine tune positions','finetuneTool')
+        #self.redrawTool=self.AddSimpleTool(self.ON_REDRAW,smalltargetBmp,'redraw canvas','redrawTool')
         self.rotateTool=self.AddCheckTool(self.ON_ROTATE,rotateBmp,wx.NullBitmap,'toggle rotate boxes')
-        #self.AddSimpleTool(self.ON_ROTATE,rotateBmp,'toggle rotate mosaic boxes according to rotation','rotateTool')  
-        self.runAcqTool=self.AddSimpleTool(self.ON_RUN,carBmp,'Acquire AT Data','run_tool')       
+        #self.AddSimpleTool(self.ON_ROTATE,rotateBmp,'toggle rotate mosaic boxes according to rotation','rotateTool')
+        self.runAcqTool=self.AddSimpleTool(self.ON_RUN,carBmp,'Acquire AT Data','run_tool')
         
         #setup the controls for the mosaic
         self.showmagCheck = wx.CheckBox(self)
@@ -169,19 +175,19 @@ class MosaicToolbar(NavBarImproved):
         minstart=0
         maxstart=500
         #self.sliderMinCtrl = wx.lib.intctrl.IntCtrl( self, value=minstart,size=( 30, -1 ))
-        self.slider = wx.Slider(self,value=250,minValue=minstart,maxValue=maxstart,size=( 180, -1),style = wx.SL_SELRANGE)        
+        self.slider = wx.Slider(self,value=250,minValue=minstart,maxValue=maxstart,size=( 180, -1),style = wx.SL_SELRANGE)
         self.sliderMaxCtrl = wx.lib.intctrl.IntCtrl( self, value=maxstart,size=( 60, -1 ))
     
         #add the control for the mosaic
         self.AddControl(wx.StaticText(self,label="Show Mosaic"))
-        self.AddControl(self.showmagCheck)  
+        self.AddControl(self.showmagCheck)
         self.AddControl(wx.StaticText(self,label="Mag"))
-        self.AddControl( self.magChoiceCtrl)         
+        self.AddControl( self.magChoiceCtrl)
         self.AddControl(wx.StaticText(self,label="MosaicX"))
-        self.AddControl(self.mosaicXCtrl)       
-        self.AddControl(wx.StaticText(self,label="MosaicY"))     
-        self.AddControl(self.mosaicYCtrl)       
-        self.AddControl(wx.StaticText(self,label="%Overlap"))      
+        self.AddControl(self.mosaicXCtrl)
+        self.AddControl(wx.StaticText(self,label="MosaicY"))
+        self.AddControl(self.mosaicYCtrl)
+        self.AddControl(wx.StaticText(self,label="%Overlap"))
         self.AddControl(self.overlapCtrl)
         self.AddSeparator()
         #self.AddControl(self.sliderMinCtrl)
@@ -191,7 +197,7 @@ class MosaicToolbar(NavBarImproved):
         #bind event handles for the various tools
         
         #this one i think is inherited... the zoom_tool function
-        self.Bind(wx.EVT_TOOL, self.on_toggle_pan_zoom, self.zoom_tool)    
+        self.Bind(wx.EVT_TOOL, self.on_toggle_pan_zoom, self.zoom_tool)
         # self.Bind(wx.wx.EVT_TOOL,self.canvas.OnHomeTool,self.home_tool)
         self.Bind(wx.EVT_CHECKBOX,self.toggleMosaicVisible,self.showmagCheck)
         self.Bind( wx.lib.agw.floatspin.EVT_FLOATSPIN,self.updateMosaicSettings, self.magChoiceCtrl)
@@ -205,16 +211,16 @@ class MosaicToolbar(NavBarImproved):
         self.Bind(wx.lib.intctrl.EVT_INT,self.updateSliderRange, self.sliderMaxCtrl)
         
         wx.EVT_TOOL(self, self.ON_LIVE_MODE, self.canvas.OnLiveMode)
-        wx.EVT_TOOL(self, self.ON_DELETE_SELECTED, self.canvas.OnDeletePoints)  
-        wx.EVT_TOOL(self, self.ON_CORR, self.canvas.OnCorrTool)        
-        wx.EVT_TOOL(self, self.ON_STEP, self.canvas.OnStepTool)    
+        wx.EVT_TOOL(self, self.ON_DELETE_SELECTED, self.canvas.OnDeletePoints)
+        wx.EVT_TOOL(self, self.ON_CORR, self.canvas.OnCorrTool)
+        wx.EVT_TOOL(self, self.ON_STEP, self.canvas.OnStepTool)
         wx.EVT_TOOL(self, self.ON_RUN, self.canvas.OnRunAcq)
         wx.EVT_TOOL(self, self.ON_FF, self.canvas.OnFastForwardTool)
         wx.EVT_TOOL(self, self.ON_GRID, self.canvas.OnGridTool)
         #wx.EVT_TOOL(self, self.ON_FINETUNE, self.canvas.OnFineTuneTool)
         #wx.EVT_TOOL(self, self.ON_REDRAW, self.canvas.OnRedraw)
         wx.EVT_TOOL(self, self.ON_ROTATE, self.canvas.OnRotateTool)
-        self.app = QtGui.QApplication([])
+        
     
         self.Realize()
     
@@ -228,8 +234,7 @@ class MosaicToolbar(NavBarImproved):
     def updateSliderRange(self,evt=""):
         #self.setSliderMin(self.sliderMinCtrl.GetValue())
         self.setSliderMax(self.sliderMaxCtrl.GetValue())
-        
-        
+         
     def toggleMosaicVisible(self,evt=""):
         """call the set_mosaic_visible function of self.canvas.posList to initiate what is necessary to hide the mosaic box"""
         self.canvas.posList.set_mosaic_visible(self.showmagCheck.IsChecked())
@@ -282,7 +287,7 @@ class MosaicPanel(FigureCanvas):
         self.camera_settings.load_settings(config)
         mosaic_settings=MosaicSettings()
         mosaic_settings.load_settings(config)   
-        self.MM_config_file= str(self.cfg.Read('MM_config_file',"C:\Users\Smithlab\Documents\ASI_LUM_RETIGA_CRISP.cfg"))  
+        self.MM_config_file= str(self.cfg.Read('MM_config_file',""))  
         print self.MM_config_file
         
         #setup the image source
@@ -298,7 +303,7 @@ class MosaicPanel(FigureCanvas):
         channels=self.imgSrc.get_channels()
         self.channel_settings=ChannelSettings(self.imgSrc.get_channels())
         self.channel_settings.load_settings(config)
-        
+        self.imgSrc.set_channel(self.channel_settings.map_chan)
         map_chan=self.channel_settings.map_chan
         if map_chan not in channels: #if the saved settings don't match, call up dialog
             self.EditChannels()
@@ -321,6 +326,22 @@ class MosaicPanel(FigureCanvas):
         #start with relative_motion on, so that keypress calls shift_selected_curved() of posList
         self.relative_motion = True
         
+        self.focusCorrectionList = posList(self.subplot)
+
+        #read saved position list from configuration file
+        pos_list_string = self.cfg.Read('focal_pos_list_pickle',"")
+        #if the saved list is not default blank.. add it to current list
+        print "pos_list",pos_list_string
+        if len(pos_list_string)>0:
+            print "loading saved position list"
+            pl = pickle.loads(pos_list_string)
+            self.focusCorrectionList.add_from_posList(pl)
+        x,y,z = self.focusCorrectionList.getXYZ()
+        if len(x)>2:
+            XYZ = np.column_stack((x,y,z))
+            self.imgSrc.define_focal_plane(np.transpose(XYZ))
+        
+
         #start with no toolbar and no lasso tool
         self.navtoolbar = None
         self.lasso = None
@@ -334,17 +355,14 @@ class MosaicPanel(FigureCanvas):
         print "handling close"
         if not self.mosaicImage == None:
             self.mosaicImage.cursor_timer.cancel()
+        self.imgSrc.mmc.unloadAllDevices()
 
     def OnLoad(self,rootPath):
-        self.rootPath=rootPath
-        
-        self.mosaicImage=MosaicImage(self.subplot,self.posone_plot,self.postwo_plot,self.corrplot,self.imgSrc,rootPath)
-        
+        self.rootPath=rootPath        
+        self.mosaicImage=MosaicImage(self.subplot,self.posone_plot,self.postwo_plot,self.corrplot,self.imgSrc,rootPath,figure=self.figure)       
         self.draw()
-     
-
+        
     def write_slice_metadata(self,filename,ch,xpos,ypos,zpos):
-    
         f = open(filename, 'w')
         channelname=self.channel_settings.prot_names[ch]
         (height,width)=self.imgSrc.get_sensor_size()
@@ -355,7 +373,6 @@ class MosaicPanel(FigureCanvas):
         f.write("Channel\tWidth\tHeight\tMosaicX\tMosaicY\tScaleX\tScaleY\tExposureTime\n")
         f.write("%s\t%d\t%d\t%d\t%d\t%f\t%f\t%f\n" % \
         (channelname, width, height, 1, 1, ScaleFactorX, ScaleFactorY, exp_time))
-        
         f.write("XPositions\tYPositions\tFocusPositions\n")
         f.write("%s\t%s\t%s\n" %(xpos, ypos, zpos))
         
@@ -375,9 +392,7 @@ class MosaicPanel(FigureCanvas):
         for k,ch in enumerate(self.channel_settings.channels):
             if self.channel_settings.usechannels[ch]:
                 f.write(self.channel_settings.prot_names[ch] + "\t" + "%f\t%s\n" % (self.channel_settings.exposure_times[ch],ch))
-        
-
-        
+              
     def MultiDAcq(self,outdir,x,y,slice_index,frame_index=0):
     
         self.imgSrc.set_hardware_autofocus_state(True)
@@ -397,7 +412,7 @@ class MosaicPanel(FigureCanvas):
             self.imgSrc.set_hardware_autofocus_state(False) #turn off autofocus
         
         else:
-            score=self.imgSrc.image_based_autofocus()
+            score=self.imgSrc.image_based_autofocus(chan=self.channel_settings.map_chan)
             print score
 
         currZ=self.imgSrc.get_z()
@@ -414,14 +429,10 @@ class MosaicPanel(FigureCanvas):
                 tif_filepath=os.path.join(path,prot_name+"_S%04d_F%04d.tif"%(slice_index,frame_index))
                 metadata_filepath=os.path.join(path,prot_name+"_S%04d_F%04d_metadata.txt"%(slice_index,frame_index))
                 
-                tiff = TIFFimage(data, description='')
-                tiff.write_file(tif_filepath, compression='none')
-                del tiff
+                imsave(tif_filepath,data)
                 
                 self.write_slice_metadata(metadata_filepath,ch,x,y,z)
-                
-    
-        
+              
     def OnRunAcq(self,event="none"):
         print "running"
         #self.channel_settings
@@ -461,9 +472,7 @@ class MosaicPanel(FigureCanvas):
             else:
                 for j,fpos in enumerate(pos.frameList.slicePositions):
                     self.MultiDAcq(outdir,fpos.x,fpos.y,i,j)
-                    
-                    
-        
+
     def EditChannels(self,event = "none"):
         dlg = ChangeChannelSettings(None, -1, title = "Channel Settings", settings = self.channel_settings,style=wx.OK)
         ret=dlg.ShowModal()
@@ -494,7 +503,7 @@ class MosaicPanel(FigureCanvas):
             self.SiftSettings.save_settings(self.cfg)
         dlg.Destroy()
         
-    def EditSIFTSettings(self, event = "none"):
+    def EditCorrSettings(self, event = "none"):
         dlg = ChangeCorrSettings(None, -1, title= "Edit Corr Settings", settings = self.CorrSettings, style = wx.OK)
         ret=dlg.ShowModal()
         if ret == wx.ID_OK:
@@ -516,11 +525,16 @@ class MosaicPanel(FigureCanvas):
         self.cfg.Write('MM_config_file',self.MM_config_file)  
   
         dlg.Destroy()
-    def LaunchMMBrowser(self, event = "none"):
 
+    def EditFocusCorrectionPlane(self, event = None):
+        global win
+        win = FocusCorrectionPlaneWindow(self.focusCorrectionList,self.imgSrc)
+        win.show()
+
+    def LaunchMMBrowser(self, event = None):
+        global win
         win = MMPropertyBrowser(self.imgSrc.mmc)
         win.show()
-        
 
     def repaint_image(self,evt):
         """event handler used when the slider bar changes and you want to repaint the MosaicImage with a different color scale"""
@@ -546,8 +560,7 @@ class MosaicPanel(FigureCanvas):
                 self.draw()
             if (evt.key == 'd'):
                 self.posList.delete_selected()
-
-        
+  
     def on_press(self, evt):
         """canvas mousedown handler
         """
@@ -572,7 +585,7 @@ class MosaicPanel(FigureCanvas):
                     self.mosaicImage.paintPointsOneTwo(self.posList.pos1.getPosition(),self.posList.pos2.getPosition(),window=75)
                 else:
                     if (mode == 'movehere'):
-                        self.imgSrc.move_stage(evt.xdata,evt.ydata)
+                        self.imgSrc.set_xy(evt.xdata,evt.ydata,self.imgSrc.use_focus_plane)
                     if (mode == 'selectone'):
                         self.posList.set_pos1_near(evt.xdata,evt.ydata)   
                         if not (self.posList.pos2 == None):
@@ -599,8 +612,10 @@ class MosaicPanel(FigureCanvas):
                         (fw,fh)=self.mosaicImage.imgCollection.get_image_size_um()
                         for i in range(-1,2):
                             for j in range(-1,2):
-                                self.mosaicImage.imgCollection.add_covered_point(evt.xdata+(j*fw),evt.ydata+(i*fh))
-                        
+                                self.mosaicImage.imgCollection.add_image_at(evt.xdata+(j*fw),evt.ydata+(i*fh))
+                    elif (mode == 'snaphere'):
+                        self.mosaicImage.imgCollection.add_image_at(evt.xdata,evt.ydata)
+
                 self.draw()
                 
     def on_release(self, evt):
@@ -637,8 +652,6 @@ class MosaicPanel(FigureCanvas):
         self.posList.set_frames_visible(visible)
         self.draw()
      
-   
-        
     def OnDeletePoints(self,event="none"):
         """handlier for handling the Delete tool press"""
         self.posList.delete_selected()
@@ -730,8 +743,7 @@ class MosaicPanel(FigureCanvas):
             self.draw()
         #call up a box and make a beep alerting the user for help
         wx.MessageBox('Fast Forward Aborted, Help me','Info')         
-                                                  
-             
+                                                     
     def StepTool(self):
         """function for performing a step, assuming point1 and point2 have been selected
         
@@ -751,9 +763,7 @@ class MosaicPanel(FigureCanvas):
         #corrval=self.CorrTool(window,delta,skip)          
         #return self.SiftCorrTool(window)
         return self.CorrTool()
-   
-        
-   
+
     def SiftCorrTool(self,window=70):
         """function for performing the correction of moving point2 to match the image shown around point1
                   
@@ -843,7 +853,9 @@ class ZVISelectFrame(wx.Frame):
     ID_EDIT_MM_CONFIG = wx.NewId()
     ID_EDIT_SIFT = wx.NewId()
     ID_MM_PROP_BROWSER = wx.NewId()
-
+    ID_EDIT_CORR = wx.NewId()
+    ID_EDIT_FOCUS_CORRECTION = wx.NewId()
+    ID_USE_FOCUS_CORRECTION = wx.NewId()
 
     def __init__(self, parent, title):     
         """default init function for a wx.Frame
@@ -856,9 +868,7 @@ class ZVISelectFrame(wx.Frame):
         #default metadata info and image file, remove for release
         #default_meta=""
         #default_image=""
-        
-       
-        
+
         #recursively call old init function
         wx.Frame.__init__(self, parent, title=title, size=(1550,885),pos=(5,5))
         self.cfg = wx.Config('settings')
@@ -871,8 +881,7 @@ class ZVISelectFrame(wx.Frame):
         transformMenu = wx.Menu()
         Platform_Menu = wx.Menu()
         Imaging_Menu = wx.Menu()
-        
-        
+           
         #OPTIONS MENU
         self.relative_motion = options.Append(self.ID_RELATIVEMOTION, 'Relative motion?', 'Move points in the ribbon relative to the apparent curvature, else in absolution coordinates',kind=wx.ITEM_CHECK)
         self.sort_points = options.Append(self.ID_SORTPOINTS,'Sort positions?','Should the program automatically sort the positions by their X coordinate from right to left?',kind=wx.ITEM_CHECK)
@@ -887,8 +896,7 @@ class ZVISelectFrame(wx.Frame):
         options.Check(self.ID_SHOWNUMBERS,False)
         options.Check(self.ID_FLIPVERT,self.cfg.ReadBool('flipvert',False))
         #options.Check(self.ID_FULLRES,self.cfg.ReadBool('fullres',False))
-
-        
+ 
         self.edit_transform = options.Append(self.ID_EDIT_CAMERA_SETTINGS,'Edit Camera Properties...','Edit the size of the camera chip and the pixel size',kind=wx.ITEM_NORMAL)
         
         #SETUP THE CALLBACKS
@@ -919,23 +927,26 @@ class ZVISelectFrame(wx.Frame):
         self.edit_micromanager_config = Imaging_Menu.Append(self.ID_EDIT_MM_CONFIG,'Set MicroManager Configuration',kind=wx.ITEM_NORMAL)
         self.edit_channels = Imaging_Menu.Append(self.ID_EDIT_CHANNELS,'Edit Channels',kind=wx.ITEM_NORMAL)
         self.edit_SIFT_settings = Imaging_Menu.Append(self.ID_EDIT_SIFT, 'Edit SIFT settings',kind=wx.ITEM_NORMAL)
+        self.edit_CORR_settings = Imaging_Menu.Append(self.ID_EDIT_CORR,'Edit CorrTool settings',kind=wx.ITEM_NORMAL)
         self.launch_MM_PropBrowser = Imaging_Menu.Append(self.ID_MM_PROP_BROWSER,'Open MicroManager Property Browser',kind = wx.ITEM_NORMAL)
+        self.focus_correction_plane = Imaging_Menu.Append(self.ID_EDIT_FOCUS_CORRECTION,'Edit Focus Correction Plane',kind = wx.ITEM_NORMAL)
+        self.use_focus_correction = Imaging_Menu.Append(self.ID_USE_FOCUS_CORRECTION,'Use Focus Correction?','Use Focus Correction For Mapping',kind=wx.ITEM_CHECK)
 
-
+        self.Bind(wx.EVT_MENU, self.ToggleUseFocusCorrection,id=self.ID_USE_FOCUS_CORRECTION)
         self.Bind(wx.EVT_MENU, self.mosaicCanvas.EditMMConfig, id = self.ID_EDIT_MM_CONFIG)
         self.Bind(wx.EVT_MENU, self.mosaicCanvas.EditChannels, id = self.ID_EDIT_CHANNELS)
         self.Bind(wx.EVT_MENU, self.mosaicCanvas.EditSIFTSettings, id = self.ID_EDIT_SIFT)
+        self.Bind(wx.EVT_MENU, self.mosaicCanvas.EditCorrSettings, id = self.ID_EDIT_CORR)
         self.Bind(wx.EVT_MENU, self.mosaicCanvas.LaunchMMBrowser, id = self.ID_MM_PROP_BROWSER)
+        self.Bind(wx.EVT_MENU, self.mosaicCanvas.EditFocusCorrectionPlane, id = self.ID_EDIT_FOCUS_CORRECTION)
+        Imaging_Menu.Check(self.ID_USE_FOCUS_CORRECTION,self.cfg.ReadBool('use_focus_correction',False))
 
-        
         menubar.Append(options, '&Options')
         menubar.Append(transformMenu,'&Transform')
         menubar.Append(Platform_Menu,'&Platform Options')
         menubar.Append(Imaging_Menu,'&Imaging Settings')
         self.SetMenuBar(menubar)
-        
-    
-      
+
         #setup a file picker for the metadata selector
         #self.meta_label=wx.StaticText(self,id=wx.ID_ANY,label="metadata file")
         #self.meta_filepicker=wx.FilePickerCtrl(self,message='Select a metadata file',\
@@ -969,7 +980,7 @@ class ZVISelectFrame(wx.Frame):
         self.array_filepicker.SetPath(self.cfg.Read('default_arraypath',""))
         
         self.array_load_button=wx.Button(self,id=wx.ID_ANY,label="Load",name="load button")
-        self.array_formatBox=wx.ComboBox(self,id=wx.ID_ANY,value='uManager',\
+        self.array_formatBox=wx.ComboBox(self,id=wx.ID_ANY,value='AxioVision',\
         size=wx.DefaultSize,choices=['uManager','AxioVision','SmartSEM','OMX','ZEN'], name='File Format For Position List')
         self.array_formatBox.SetEditable(False)
         self.array_save_button=wx.Button(self,id=wx.ID_ANY,label="Save",name="save button")
@@ -1023,15 +1034,14 @@ class ZVISelectFrame(wx.Frame):
         #self.sizer.Fit(self)
         self.Show(True)
         
-        
         self.SmartSEMSettings=SmartSEMSettings()
-      
+        self.app = QtGui.QApplication([])
+        #self.app.exec_()
+
         #self.OnImageLoad()
         #self.OnArrayLoad()          
         #self.mosaicCanvas.draw()
-    
 
-        
     def SaveSettings(self,event="none"):
         #save the transform parameters
         self.Transform.save_settings(self.cfg)
@@ -1054,7 +1064,10 @@ class ZVISelectFrame(wx.Frame):
         self.cfg.Write('default_imagepath',self.imgCollectDirPicker.GetPath())
         #self.cfg.Write('default_metadatapath',self.meta_filepicker.GetPath())
         self.cfg.Write('default_arraypath',self.array_filepicker.GetPath())
-        
+
+        focal_pos_lis_string = pickle.dumps(self.mosaicCanvas.focusCorrectionList)
+        self.cfg.Write("focal_pos_list_pickle",focal_pos_lis_string)
+
     def OnKeyPress(self,event="none"):
         """forward the key press event to the mosaicCanvas handler"""
         mpos=wx.GetMousePosition()
@@ -1063,8 +1076,7 @@ class ZVISelectFrame(wx.Frame):
             self.mosaicCanvas.OnKeyPress(event)
         else:
             event.Skip()
-            
-     
+
     def OnArrayLoad(self,event="none"):
         """event handler for the array load button"""
         if self.array_formatBox.GetValue()=='AxioVision':
@@ -1107,11 +1119,9 @@ class ZVISelectFrame(wx.Frame):
             else:
                 self.mosaicCanvas.posList.save_position_list_uM(self.array_filepicker.GetPath(),trans=None)  
 
-                
     def OnImageCollectLoad(self,event):
         path=self.imgCollectDirPicker.GetPath()
         self.mosaicCanvas.OnLoad(path)
-        
         
     def OnArraySaveFrames(self,event):   
         if self.array_formatBox.GetValue()=='AxioVision':
@@ -1130,7 +1140,6 @@ class ZVISelectFrame(wx.Frame):
             else:
                 self.mosaicCanvas.posList.save_frame_list_SmartSEM(self.array_filepicker.GetPath(),SEMS=self.SmartSEMSettings,trans=None)        
         
-    
     def ToggleRelativeMotion(self,event):
         """event handler for handling the toggling of the relative motion"""  
         if self.relative_motion.IsChecked():
@@ -1143,19 +1152,22 @@ class ZVISelectFrame(wx.Frame):
             self.mosaicCanvas.posList.dosort=(True)
         else:
             self.mosaicCanvas.posList.dosort=(False)
-            
+    def ToggleUseFocusCorrection(self,event):
+        """event handler for handling the toggling of using focus correction plane"""  
+        if self.use_focus_correction.IsChecked():
+            "print use focus correction"
+            self.mosaicCanvas.imgSrc.use_focus_plane = True
+        else:
+            "print do not use focus correction"
+            self.mosaicCanvas.imgSrc.use_focus_plane = False
+
     def ToggleShowNumbers(self,event):
         if self.show_numbers.IsChecked():
             self.mosaicCanvas.posList.setNumberVisibility(True)
         else:
             self.mosaicCanvas.posList.setNumberVisibility(False)
         self.mosaicCanvas.draw()
-    
 
-    
- 
-        
-    
     def EditCameraSettings(self,event):
         """event handler for clicking the camera setting menu button"""
         dlg = ChangeCameraSettings(None, -1,
@@ -1196,7 +1208,6 @@ class ZVISelectFrame(wx.Frame):
         print "closing"
 
         self.mosaicCanvas.handle_close()
-
         self.Destroy()
 
 #dirname=sys.argv[1]
