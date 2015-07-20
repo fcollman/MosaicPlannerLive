@@ -436,7 +436,12 @@ class posList():
         for row in reader:         
             if rownum >headerrows-1:
                 if len(row)>0:
-                    newPosition=slicePosition(axis=self.axis,pos_list=self,x=float(row[1]),y=float(row[2]),z=float(row[3]),showNumber=self.shownumbers)
+                    z=row[3]
+                    if len(z)==0:
+                        z=None
+                    else:
+                        z=float(z)
+                    newPosition=slicePosition(axis=self.axis,pos_list=self,x=float(row[1]),y=float(row[2]),z=z,showNumber=self.shownumbers)
                     self.slicePositions.append(newPosition)          
             rownum += 1          
         ifile.close() 
