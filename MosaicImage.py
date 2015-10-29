@@ -389,7 +389,7 @@ class MosaicImage():
         """
         (x1,y1)=xy1
         (x2,y2)=xy2
-        one_cut=self.cutout_window(x1,y1,window)
+        one_cut=self.cutout_window(x1,y1,window+delta)
         two_cut=self.cutout_window(x2,y2,window)
         #return (target_cut,source_cut,mycorrelate2d(target_cut,source_cut,mode='valid'))
         return (one_cut,two_cut,mycorrelate2d(one_cut,two_cut,skip))

@@ -43,6 +43,7 @@ from MMPropertyBrowser import MMPropertyBrowser
 import threading
 from FocusCorrectionPlaneWindow import FocusCorrectionPlaneWindow
 import pickle
+import faulthandler
 
 
 class MosaicToolbar(NavBarImproved):
@@ -1212,7 +1213,7 @@ class ZVISelectFrame(wx.Frame):
 
 #dirname=sys.argv[1]
 #print dirname
-
+faulthandler.enable()
 app = wx.App(False)  
 # Create a new app, don't redirect stdout/stderr to a window.
 frame = ZVISelectFrame(None,"Mosaic Planner") 

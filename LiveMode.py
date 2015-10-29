@@ -6,11 +6,13 @@ import numpy as np
 import pyqtgraph as pg
 import pyqtgraph.ptime as ptime
 import time
-
+from skimage import img_as_ubyte,exposure
 import MMCorePy
 import cv2
 from pyqtgraph.widgets.RawImageWidget import RawImageWidget
 import functools
+from imageSourceMM import imageSource
+
 
 class VideoView(QtGui.QWidget):
     def __init__(self,imgSrc,exposure_times=dict([]),channelGroup="Channels"):
@@ -29,14 +31,14 @@ class VideoView(QtGui.QWidget):
         self.i = 0
         self.updateTime = ptime.time()
         self.fps = 0
-        
+        self.ended = False
         self.updateData()
        
     def init_mmc(self):   
         #filename="C:\Users\Smithlab\Documents\ASI_LUM_RETIGA_CRISP.cfg"
         #self.mmc.loadSystemConfiguration(filename)
-        self.mmc.enableStderrLog(False)
-        self.mmc.enableDebugLog(False)
+        #self.mmc.enableStderrLog(False)
+        #self.mmc.enableDebugLog(False)
         # # mmc.setCircularBufferMemoryFootprint(100)
         self.cam=self.mmc.getCameraDevice()
         self.mmc.setExposure(50)
@@ -126,10 +128,9 @@ class VideoView(QtGui.QWidget):
         else:
             self.isLockedBtn.setText('Focus UnLocked')
             self.isLockedBtn.setDown(False)
-        
-        
         gridlay.addWidget(self.isLockedBtn,Nch+2,0)
-        
+
+
         self.layout.addLayout(gridlay)
         
 
@@ -240,27 +241,37 @@ class VideoView(QtGui.QWidget):
         return channelButtonClicked
         
     def closeEvent(self,evt):
-        self.mmc.stopSequenceAcquisition() 
-        evt.accept()
-        self.timer.cancel()
-        self.destroy()
-       
+        self.mmc.stopSequenceAcquisition()
+        print "stopped acquisition"
+        #if self.timer is not None:
+        #    print "cancelling timer if it exists"
+        #    self.timer.cancel()
+        self.ended = True
+        #self.destroy()
+        return QtGui.QWidget.closeEvent(self,evt)
+        #evt.accept()
+        
+
     def display8bit(self,image, display_min, display_max): 
         image = np.array(image, copy=True)
-        image.clip(display_min, display_max, out=image)
-        image -= display_min
-        image //= (display_max - display_min + 1) / 256.
-        return image.astype(np.uint8)
+        image2=image.clip(display_min, display_max)
+        image2 -= display_min
+        image2 //= (display_max - display_min + 1) / 256.
+        return image2.astype(np.uint8)
 
     def lut_convert16as8bit(self,image, display_min, display_max) :
         lut = np.arange(2**16, dtype='uint16')
-        lut = self.display8bit(lut, display_min, display_max)
-        return np.take(lut, image)
-    
+
+        newlut = self.display8bit(lut, display_min, display_max)
+        print "min to max",np.min(newlut),np.max(newlut)
+        newimage = np.take(newlut, image)
+        print "new image shape",newimage.shape
+        return newimage
 
     def updateData(self):
     
         remcount = self.mmc.getRemainingImageCount()
+        #print 'remcount',remcount
         #remcount=0
         if remcount > 0:
             #rgb32 = self.mmc.popNextImage()
@@ -269,8 +280,14 @@ class VideoView(QtGui.QWidget):
 
             if data.dtype == np.uint16:
                 maxval=self.imgSrc.get_max_pixel_value()
-                data=self.lut_convert16as8bit(data,0,maxval)
+                #print "max val is",maxval
+                #print 'max_before',np.max(data)
+                #data = exposure.rescale_intensity(data,in_range=(0,maxval))
+                #print 'max after rescale',np.max(data)
+                #data = img_as_ubyte(data)
+                #data=self.lut_convert16as8bit(data,0,5000)
 
+                # "maxval",maxval,np.max(data),data.dtype
             data = np.rot90(data)
             flipx,flipy,trans = self.imgSrc.get_image_flip()
             if trans:
@@ -286,14 +303,14 @@ class VideoView(QtGui.QWidget):
         #else:
             #print('No frame')
         
-
-        self.timer = QtCore.QTimer.singleShot(self.mmc.getExposure(), self.updateData)
-        #now = ptime.time()
-        #fps1 = 1.0 / (now-self.updateTime)
-        #self.updateTime = now
-        #self.fps = self.fps * 0.6 + fps1 * 0.4
-        #if self.i == 0:
-        #    print "%0.1f fps" % self.fps
+        if not self.ended:
+            self.timer = QtCore.QTimer.singleShot(self.mmc.getExposure(), self.updateData)
+        now = ptime.time()
+        fps1 = 1.0 / (now-self.updateTime)
+        self.updateTime = now
+        self.fps = self.fps * 0.6 + fps1 * 0.4
+        if self.i == 0:
+            print "%0.1f fps" % self.fps
             
  
 #def myExitHandler(mmc): 
@@ -314,24 +331,28 @@ def launchLive(mmc,exposure_times):
     
     if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
         QtGui.QApplication.instance().exec_()
-        
+
     return vidview.getExposureTimes()
 
 if __name__ == '__main__':
 
     import sys
+    import faulthandler
     app = QtGui.QApplication(sys.argv)
+    faulthandler.enable()
 
-    mmc = MMCorePy.CMMCore()
+    #mmc = MMCorePy.CMMCore()
     defaultMMpath = "C:\Program Files\Micro-Manager-1.4"
     configFile = QtGui.QFileDialog.getOpenFileName(
         None, "pick a uManager cfg file", defaultMMpath, "*.cfg")
     configFile = str(configFile.replace("/", "\\"))
     print configFile
-
-    mmc.loadSystemConfiguration(configFile)
+    imgSrc = imageSource(configFile)
+    #mmc.loadSystemConfiguration(configFile)
     print "loaded configuration file"
-    launchLive(mmc,dict([]))
-    app.exec_()
-    mmc.reset()
+    launchLive(imgSrc,dict([]))
+    #app.exec_()
+    print "got out of the event loop"
+    imgSrc.mmc.reset()
+    print "reset micromanager core"
     sys.exit()

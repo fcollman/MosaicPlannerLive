@@ -22,8 +22,8 @@ class CorrSettings():
 
     def __init__(self,window=100,delta=75,skip = 3,corr_thresh = .3):
     
-        self.window=window
-        self.delta=delta
+        self.window = window
+        self.delta = delta
         self.skip = skip
         self.corr_thresh  = corr_thresh
         

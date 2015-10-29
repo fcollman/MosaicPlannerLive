@@ -274,7 +274,7 @@ class ImageCollection():
         theimg=self.axis.imshow(data,cmap='gray',extent=[bbox.left,bbox.right,bbox.bottom,bbox.top])
         self.matplot_images.append(theimg)
         #make sure all the other images stay in the field of view
-        self.set_view_home()
+        #self.set_view_home()
         theimg.set_clim(0,self.maxvalue)
         
         self.axis.set_xlabel('X Position (um)')

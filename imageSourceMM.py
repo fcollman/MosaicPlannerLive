@@ -78,7 +78,7 @@ class imageSource():
 
     def get_max_pixel_value(self):
         bit_depth=self.mmc.getImageBitDepth()
-        return np.power(2,bit_depth)
+        return np.power(2,bit_depth)-1
         
     def set_exposure(self,exp_msec):
       #NEED TO IMPLEMENT IF NOT MICROMANAGER
