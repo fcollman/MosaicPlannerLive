@@ -11,8 +11,9 @@ class imageSource():
      
         self.configFile=configFile
         self.mmc = MMCorePy.CMMCore() 
-        self.mmc.enableStderrLog(True)
+        self.mmc.enableStderrLog(False)
         self.mmc.enableDebugLog(True)
+        self.mmc.setPrimaryLogFile('CoreLog.txt')
         self.mmc.loadSystemConfiguration(self.configFile)
        
         self.channelGroupName=channelGroupName
@@ -105,14 +106,14 @@ class imageSource():
     def is_hardware_autofocus_done(self):
       #NEED TO IMPLEMENT IF NOT MICROMANAGER
         #hardware autofocus assumes the focus score is <1 when focused
-        score=self.mmc.getCurrentFocusScore()
-        if abs(score)<1:
-            print "locked on"
-            return True
-        else:
-            print "score %f not locked on"%score
-            return False
-        
+        #score=self.mmc.getCurrentFocusScore()
+        #if abs(score)<1:
+        #    print "locked on"
+        #    return True
+        #else:
+        #    print "score %f not locked on"%score
+        #    return False
+        return self.mmc.isContinuousFocusLocked()
         
 
     
@@ -120,7 +121,12 @@ class imageSource():
         #do not need to re-implement
         #moves scope to x,y - focus scope - snap picture
         #using the configured exposure time
-    
+
+        print "is continuous focus enabled",self.mmc.isContinuousFocusEnabled()
+        print "is continuous focus locked",self.mmc.isContinuousFocusLocked()
+
+
+
         #move stage to x,y
         self.set_xy(x,y)
         if self.use_focus_plane:

@@ -354,8 +354,8 @@ class MosaicPanel(FigureCanvas):
         
     def handle_close(self,evt=None):
         print "handling close"
-        if not self.mosaicImage == None:
-            self.mosaicImage.cursor_timer.cancel()
+        #if not self.mosaicImage == None:
+        #    self.mosaicImage.cursor_timer.cancel()
         self.imgSrc.mmc.unloadAllDevices()
 
     def OnLoad(self,rootPath):
@@ -416,6 +416,7 @@ class MosaicPanel(FigureCanvas):
             score=self.imgSrc.image_based_autofocus(chan=self.channel_settings.map_chan)
             print score
 
+        time.sleep(.05)
         currZ=self.imgSrc.get_z()
         for k,ch in enumerate(self.channel_settings.channels):
             prot_name=self.channel_settings.prot_names[ch]
