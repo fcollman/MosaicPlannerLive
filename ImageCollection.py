@@ -195,7 +195,7 @@ class ImageCollection():
             if thedata.dtype == np.uint16:
                 print "converting"
                 maxval=self.imageSource.get_max_pixel_value()
-                thedata=self.lut_convert16as8bit(thedata,0,maxval)
+                thedata=self.lut_convert16as8bit(thedata,0,5000)
             
         except:
             #todo handle this better

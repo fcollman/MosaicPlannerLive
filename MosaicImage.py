@@ -639,12 +639,16 @@ class MosaicImage():
             
             return ((0.0,0.0),0)
         
-    def paintPointsOneTwo(self,xy1,xy2,window):
+    def paintPointsOneTwo(self,xy1,xy2,window=None):
         (x1,y1)=xy1
         (x2,y2)=xy2
         print "getting p1 window at ",x1,y1
         print "getting p2 window at ",x2,y2
-        
+        fw,fh=self.imgCollection.get_image_size_um()
+        if window is None:
+            min_dim = min(fw,fh)
+            window = min_dim*.8/2
+
         one_cut=self.cutout_window(x1,y1,window)
         two_cut=self.cutout_window(x2,y2,window)
         self.paintImageOne(one_cut,xy1)

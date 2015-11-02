@@ -288,7 +288,7 @@ class VideoView(QtGui.QWidget):
                 #data=self.lut_convert16as8bit(data,0,5000)
 
                 # "maxval",maxval,np.max(data),data.dtype
-            data = np.rot90(data)
+            
             flipx,flipy,trans = self.imgSrc.get_image_flip()
             if trans:
                 data = np.transpose(data)
@@ -296,7 +296,7 @@ class VideoView(QtGui.QWidget):
                 data = np.fliplr(data)
             if flipy:
                 data = np.flipud(data)
-           
+            data = np.rot90(data,k=3)
             #gray=cv2.equalizeHist(gray)
             self.img.setImage(data,autoLevels=True)
             #cv2.imshow('Video', gray)

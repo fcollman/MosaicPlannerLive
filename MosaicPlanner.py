@@ -581,21 +581,21 @@ class MosaicPanel(FigureCanvas):
                 #call the appropriate function
                 if (evt.inaxes == self.mosaicImage.one_axis):
                     self.posList.pos1.setPosition(evt.xdata,evt.ydata)
-                    self.mosaicImage.paintPointsOneTwo(self.posList.pos1.getPosition(),self.posList.pos2.getPosition(),window=75)
+                    self.mosaicImage.paintPointsOneTwo(self.posList.pos1.getPosition(),self.posList.pos2.getPosition())
                 elif (evt.inaxes == self.mosaicImage.two_axis):
                     self.posList.pos2.setPosition(evt.xdata,evt.ydata)
-                    self.mosaicImage.paintPointsOneTwo(self.posList.pos1.getPosition(),self.posList.pos2.getPosition(),window=75)
+                    self.mosaicImage.paintPointsOneTwo(self.posList.pos1.getPosition(),self.posList.pos2.getPosition())
                 else:
                     if (mode == 'movehere'):
                         self.imgSrc.set_xy(evt.xdata,evt.ydata,self.imgSrc.use_focus_plane)
                     if (mode == 'selectone'):
                         self.posList.set_pos1_near(evt.xdata,evt.ydata)   
                         if not (self.posList.pos2 == None):
-                            self.mosaicImage.paintPointsOneTwo(self.posList.pos1.getPosition(),self.posList.pos2.getPosition(),window=75)             
+                            self.mosaicImage.paintPointsOneTwo(self.posList.pos1.getPosition(),self.posList.pos2.getPosition())             
                     if (mode == 'selecttwo'):
                         self.posList.set_pos2_near(evt.xdata,evt.ydata) 
                         if not (self.posList.pos1 == None):
-                            self.mosaicImage.paintPointsOneTwo(self.posList.pos1.getPosition(),self.posList.pos2.getPosition(),window=75)   
+                            self.mosaicImage.paintPointsOneTwo(self.posList.pos1.getPosition(),self.posList.pos2.getPosition())   
                     if (mode == 'selectnear'):
                         pos=self.posList.get_position_nearest(evt.xdata,evt.ydata) 
                         if not evt.key=='shift':

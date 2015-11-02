@@ -244,7 +244,7 @@ class imageSource():
         
         top = y - fh/2;
         bottom = y + fh/2;
-        
+        print "fw,fh",fw,fh
        
         return Rectangle(left,right,top,bottom)
         
@@ -256,6 +256,7 @@ class imageSource():
         self.mmc.snapImage()
         data = self.mmc.getImage()
         (flipx,flipy,trans) = self.get_image_flip()
+        print "flx,y,trans",flipx,flipy,trans
         if trans:
             data = np.transpose(data)    
         if flipx:
@@ -272,7 +273,7 @@ class imageSource():
         width = self.mmc.getImageWidth()
     
         #return the height and width in pixels
-        return (height,width)
+        return (width,height)
         
     def move_stage(self,x,y):
         #need to implement if not MICROMANAGER
@@ -304,8 +305,8 @@ class imageSource():
         #which way is up?
         
         cam=self.mmc.getCameraDevice()
-        flip_x = int(self.mmc.getProperty(cam,"TransposeMirrorX"))==0
-        flip_y = int(self.mmc.getProperty(cam,"TransposeMirrorY"))==0
-        trans = int(self.mmc.getProperty(cam,"TransposeXY"))
+        flip_x = int(self.mmc.getProperty(cam,"TransposeMirrorX"))==1
+        flip_y = int(self.mmc.getProperty(cam,"TransposeMirrorY"))==1
+        trans = int(self.mmc.getProperty(cam,"TransposeXY"))==1
 
         return (flip_x,flip_y,trans) 
