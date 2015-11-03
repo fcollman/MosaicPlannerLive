@@ -34,6 +34,7 @@ import ransac
 from scipy.signal import correlate2d
 from skimage.measure import block_reduce
 import norm_xcorr
+from skimage.feature import register_translation
 #implicity this relies upon matplotlib.axis matplotlib.AxisImage matplotlib.bar 
 
 
@@ -416,17 +417,35 @@ class MosaicImage():
 
         pixsize=self.imgCollection.get_pixel_size()
         #calculate the cutout patches and the correlation matrix
-        (one_cut,two_cut,corrmat)=self.cross_correlate_two_to_one(xy1,xy2,window,delta,skip)
+        #(one_cut,two_cut,corrmat)=self.cross_correlate_two_to_one(xy1,xy2,window,delta,skip)
+        (x1,y1)=xy1
+        (x2,y2)=xy2
+        one_cut=self.cutout_window(x1,y1,window)
+        two_cut=self.cutout_window(x2,y2,window)
+        
+        one_shape=one_cut.shape
+        two_shape=two_cut.shape
+        min_height = min(one_shape[0],two_shape[0])
+        min_width = min(one_shape[1],two_shape[1])
+        one_cut=one_cut[0:min_height,0:min_width]
+        two_cut=two_cut[0:min_height,0:min_width]
+        
+
+        print "one_cut,two_cut.shape",one_cut.shape,two_cut.shape
+        pix_shift, error, diffphase=register_translation(one_cut,two_cut,upsample_factor=20)
+        
+        dy_pix,dx_pix = pix_shift
+
         #find the peak of the matrix
-        maxind=corrmat.argmax()
-        (h,w)=corrmat.shape
+        #maxind=corrmat.argmax()
+        #(h,w)=corrmat.shape
         #determine the indices of that peak
-        (max_i,max_j)=np.unravel_index(maxind,corrmat.shape)
+        #(max_i,max_j)=np.unravel_index(maxind,corrmat.shape)
         
         
         #calculate the shift for that index in pixels
-        dy_pix=int((max_i-(h/2))*skip)
-        dx_pix=int((max_j-(w/2))*skip)
+        #dy_pix=int((max_i-(h/2))*skip)
+        #dx_pix=int((max_j-(w/2))*skip)
         #convert those indices into microns
         
         
@@ -436,18 +455,18 @@ class MosaicImage():
         dxy_pix=(dx_pix,dy_pix)
         dxy_um=(dx_um,dy_um)
         #calculate what the maximal correlation was
-        corrval=corrmat.max()
+        #corrval=corrmat.max()
         
-        print "(correlation,(dx,dy))="
-        print (corrval,dxy_pix)
+        #print "(correlation,(dx,dy))="
+        #print (corrval,dxy_pix)
         #paint the patch around the first point in its axis, with a box of size of the two_cut centered around where we found it
-        self.paintImageOne(one_cut,xy=xy1,dxy_pix=dxy_pix, window=window)
+        self.paintImageOne(one_cut,xy=xy1,dxy_pix=dxy_pix)
         #paint the patch around the second point in its axis
 
         self.paintImageTwo(two_cut,xy=xy2,xyp=(xy2[0]-dx_um,xy2[1]-dy_um))
         #paint the correlation matrix in its axis
-        self.paintCorrImage(corrmat, dxy_pix,skip)
-        return (corrmat.max(),dxy_um)
+        #self.paintCorrImage(corrmat, dxy_pix,skip)
+        return (.4,dxy_um)
         
     def explore_match(self,img1, kp1,img2,kp2, status = None, H = None):
         h1, w1 = img1.shape[:2]
@@ -515,7 +534,8 @@ class MosaicImage():
         (x2,y2)=xy2
         one_cut=self.cutout_window(x1,y1,window)
         two_cut=self.cutout_window(x2,y2,window)
-        
+
+
         #one_cuta=np.minimum(one_cut*256.0/self.maxvalue,255.0).astype(np.uint8)
         #two_cuta=np.minimum(two_cut*256.0/self.maxvalue,255.0).astype(np.uint8)
         one_cuta = np.copy(one_cut)
