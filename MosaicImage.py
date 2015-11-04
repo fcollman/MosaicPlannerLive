@@ -432,7 +432,7 @@ class MosaicImage():
         
 
         print "one_cut,two_cut.shape",one_cut.shape,two_cut.shape
-        pix_shift, error, diffphase=register_translation(one_cut,two_cut,upsample_factor=20)
+        pix_shift, error, diffphase = register_translation(one_cut,two_cut,upsample_factor=20)
         
         dy_pix,dx_pix = pix_shift
 

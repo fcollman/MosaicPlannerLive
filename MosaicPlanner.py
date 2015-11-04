@@ -44,6 +44,8 @@ import threading
 from FocusCorrectionPlaneWindow import FocusCorrectionPlaneWindow
 import pickle
 import faulthandler
+import datetime
+
 
 
 class MosaicToolbar(NavBarImproved):
@@ -395,20 +397,22 @@ class MosaicPanel(FigureCanvas):
                 f.write(self.channel_settings.prot_names[ch] + "\t" + "%f\t%s\n" % (self.channel_settings.exposure_times[ch],ch))
               
     def MultiDAcq(self,outdir,x,y,slice_index,frame_index=0):
-    
+
+        print datetime.datetime.now().time()," starting multiDAcq, autofocus on"
         self.imgSrc.set_hardware_autofocus_state(True)
+        print datetime.datetime.now().time()," starting stage move"
         self.imgSrc.move_stage(x,y)
         attempts=0
-        
+        print datetime.datetime.now().time()," starting autofocus"
         if self.imgSrc.has_hardware_autofocus():
             #wait till autofocus settles
             while not self.imgSrc.is_hardware_autofocus_done():
-                time.sleep(.1)
+                time.sleep(.05)
                 attempts+=1
                 if attempts>100:
                     print "not auto-focusing correctly.. giving up after 10 seconds"
                     break
-            time.sleep(.1) #wait an extra 100 ms for settle
+
             
             self.imgSrc.set_hardware_autofocus_state(False) #turn off autofocus
         
@@ -416,9 +420,10 @@ class MosaicPanel(FigureCanvas):
             score=self.imgSrc.image_based_autofocus(chan=self.channel_settings.map_chan)
             print score
 
-        time.sleep(.05)
+        print datetime.datetime.now().time()," starting multichannel acq"
         currZ=self.imgSrc.get_z()
         for k,ch in enumerate(self.channel_settings.channels):
+            print datetime.datetime.now().time()," start channel",ch
             prot_name=self.channel_settings.prot_names[ch]
             path=os.path.join(outdir,prot_name)
             if self.channel_settings.usechannels[ch]:

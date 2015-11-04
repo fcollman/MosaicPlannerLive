@@ -176,10 +176,10 @@ class imageSource():
         if use_focus_plane:
             z  = self.get_focal_z(x,y)
             self.set_z(z)
-        if flipx==1:
-            x = -x
-        if flipy == 1:
-            y = -y
+        #if flipx==1:
+        #    x = -x
+        #if flipy == 1:
+        #    y = -y
         
         stg=self.mmc.getXYStageDevice()
         self.mmc.setXYPosition(stg,x,y)
@@ -203,10 +203,10 @@ class imageSource():
         x=self.mmc.getXPosition(xystg)
         y=self.mmc.getYPosition(xystg)
         
-        if flipx:
-            x = -x
-        if flipy:
-            y = -y
+        #if flipx:
+        #    x = -x
+        #if flipy:
+        #    y = -y
 
         return (x,y)
     def get_z(self):
@@ -255,14 +255,14 @@ class imageSource():
         #snap a picture, and return the data as a numpy 2d array
         self.mmc.snapImage()
         data = self.mmc.getImage()
-        (flipx,flipy,trans) = self.get_image_flip()
-        print "flx,y,trans",flipx,flipy,trans
-        if trans:
-            data = np.transpose(data)    
-        if flipx:
-            data=np.fliplr(data)
-        if flipy:
-            data=np.flipud(data)
+
+        #(flipx,flipy,trans) = self.get_image_flip()
+        #if trans:
+        #    data = np.transpose(data)
+        #if flipx:
+        #    data=np.fliplr(data)
+        #if flipy:
+        #    data=np.flipud(data)
         return data
     
     
