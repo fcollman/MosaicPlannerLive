@@ -131,7 +131,7 @@ class ImageCollection():
         image = np.array(image, copy=True)
         image.clip(display_min, display_max, out=image)
         image -= display_min
-        image //= (display_max - display_min + 1) / 256.
+        image = image / ((display_max - display_min + 1) / 256.)
         return image.astype(np.uint8)
 
     def lut_convert16as8bit(self,image, display_min, display_max) :
