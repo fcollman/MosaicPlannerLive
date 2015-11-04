@@ -312,7 +312,17 @@ class posList():
         #use the slope to the left for these points we are fixing up
         theta[badones]=theta[badones-1]   
         return theta
-    
+
+    def getXYZ(self):
+        xpos=[]
+        ypos=[]
+        zpos=[]
+        for pos in self.slicePositions:
+            xpos.append(pos.x)
+            ypos.append(pos.y) 
+            zpos.append(pos.z)       
+        return (np.array(xpos),np.array(ypos),np.array(zpos))   
+
     def __getXYS(self):
         """get the current position list as a series of numpy vectors
         
@@ -337,8 +347,7 @@ class posList():
         
         returns (xpos,ypos,select)
         xpos)a N element long numpy vector of the x coordinate in microns
-        ypos)a N element long numpy vector of the y coordinate in microns
-        select)a N element long numpy vector where 1.0 means it is selected and 0.0 means it is not selected"""
+        ypos)a N element long numpy vector of the y coordinate in microns"""
         points=[]
 
         for pos in self.slicePositions:
@@ -346,7 +355,7 @@ class posList():
  
         return points                 
               
-    def add_position(self,x,y,edgecolor='g',withpoint=True,selected=False):
+    def add_position(self,x,y,edgecolor='g',withpoint=True,selected=False,z=None):
         """add a new position to the position list
         
         keywords:
@@ -357,12 +366,20 @@ class posList():
 
         
         """
-        newPosition=slicePosition(axis=self.axis,pos_list=self,x=x,y=y,edgecolor=edgecolor,withpoint=withpoint,showNumber=self.shownumbers,selected=selected)
+        newPosition=slicePosition(axis=self.axis,pos_list=self,x=x,y=y,z=z,edgecolor=edgecolor,withpoint=withpoint,showNumber=self.shownumbers,selected=selected)
         self.slicePositions.append(newPosition)  
         self.__sort_points()
         self.updateNumbers()
         return newPosition
     
+    def delete_position(self,i):
+        assert (i>=0)
+        assert (i<len(self.slicePositions))
+
+        pos=self.slicePositions.pop(i)
+        pos.destroy()
+        del pos
+
     def delete_selected(self):
         """delete all the points from the position list that are currently selected"""
         #accomplish this by making a new list, and copying over the points you are saving from the old list, then replacing the old attribute
@@ -391,7 +408,13 @@ class posList():
         elif format=='SmartSEM':
             SEMsetting=self.add_from_file_SmartSEM(file)
             self.SmartSEMSettings=SEMsetting  
-                                              
+    def add_from_posList(self,posList):
+        for pos in posList.slicePositions:
+            newPosition=slicePosition(axis=self.axis,pos_list=self,x=pos.x,y=pox.y,z=pos.z,
+                showNumber=pos.shownumbers,edgecolor=pos.edgecolor,withpoint=pos.withpoint,
+                selected=pos.selected,number=pos.number)
+            self.slicePositions.append(newPosition)  
+
     def add_from_file(self,filename):
         """add points to the position list from a file, currently only implementing axiovision positionlist format
         
@@ -413,7 +436,12 @@ class posList():
         for row in reader:         
             if rownum >headerrows-1:
                 if len(row)>0:
-                    newPosition=slicePosition(axis=self.axis,pos_list=self,x=float(row[1]),y=float(row[2]),showNumber=self.shownumbers)
+                    z=row[3]
+                    if len(z)==0:
+                        z=None
+                    else:
+                        z=float(z)
+                    newPosition=slicePosition(axis=self.axis,pos_list=self,x=float(row[1]),y=float(row[2]),z=z,showNumber=self.shownumbers)
                     self.slicePositions.append(newPosition)          
             rownum += 1          
         ifile.close() 
@@ -524,10 +552,10 @@ class posList():
             #"Comments","PositionX","PositionY","PositionZ","Color","Classification"
             #"1000000",-29541.755,6144.1,0.000000," blue "," blue"
             if trans == None:
-                writer.writerow(["%d"%(100000+index),pos.x,pos.y,0," blue "," blue "])
+                writer.writerow(["%d"%(100000+index),pos.x,pos.y,pos.z," blue "," blue "])
             else:
                 (xt,yt)=trans.transform(pos.x,pos.y)
-                writer.writerow(["%d"%(100000+index),xt,yt,0," blue "," blue "])
+                writer.writerow(["%d"%(100000+index),xt,yt,pos.z," blue "," blue "])
     
     
     def save_position_list_uM(self,filename,trans=None):
@@ -848,7 +876,8 @@ class slicePosition():
         
     def __paintPoint(self):
         """paint the point for this position, initializing the pointLine2d attribute and adding it to the axis"""
-        if not self.axis: return None
+        if not self.axis:
+            return None
         print self.axis
         if self.selected:
             color='r'

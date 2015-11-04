@@ -18,20 +18,100 @@
 #===============================================================================
 import wx
 
+class CorrSettings():
+
+    def __init__(self,window=100,delta=75,skip = 3,corr_thresh = .3):
+    
+        self.window = window
+        self.delta = delta
+        self.skip = skip
+        self.corr_thresh  = corr_thresh
+        
+    def save_settings(self,cfg):
+        cfg.WriteInt('CorrTool_window',self.window)
+        cfg.WriteInt('CorrTool_delta',self.delta)
+        cfg.WriteInt('CorrTool_skip',self.skip)
+        cfg.WriteFloat('CorrTool_corr_thresh',self.corr_thresh)
+    
+    def load_settings(self,cfg):
+        self.window=cfg.ReadInt('CorrTool_window',100)
+        self.delta=cfg.ReadInt('CorrTool_delta',75)
+        self.skip = cfg.ReadInt('CorrTool_skip',3)
+        self.corr_thresh = cfg.ReadFloat('CorrTool_corr_thresh',.3)
+
+class ChangeCorrSettings(wx.Dialog):
+    def __init__(self, parent, id, title, settings,style):
+        wx.Dialog.__init__(self, parent, id, title,style=wx.DEFAULT_DIALOG_STYLE, size=(420, -1))   
+        vbox =wx.BoxSizer(wx.VERTICAL)
+        
+        self.settings = settings
+        self.windowTxt = wx.StaticText(self,label="window in pixels to cutout")
+        self.windowIntCtrl = wx.lib.intctrl.IntCtrl( self, value=settings.window,size=(50,-1))
+        self.deltaTxt = wx.StaticText(self,label="delta (in pixels) to search for maximum")
+        self.deltaIntCtrl = wx.lib.intctrl.IntCtrl( self, value=settings.delta,size=(50,-1))
+        self.skipTxt = wx.StaticText(self,label="number of pixels to skip when searching")
+        self.skipIntCtrl = wx.lib.intctrl.IntCtrl( self, value=settings.skip,size=(50,-1))
+        
+
+        self.corr_threshThresholdTxt = wx.StaticText(self,label="correlation threshold to accept match (0.0-1.0)")
+        self.corr_threshThresholdFloatCtrl = wx.lib.agw.floatspin.FloatSpin(self, 
+                                       value=settings.corr_thresh,
+                                       min_val=0,
+                                       max_val=1.0,
+                                       increment=.01,
+                                       digits=2,
+                                       name='',
+                                       size=(95,-1)) 
+        hbox1 = wx.BoxSizer(wx.HORIZONTAL)
+        hbox2 = wx.BoxSizer(wx.HORIZONTAL)
+        
+        hbox1.Add(self.windowIntCtrl)
+        hbox1.Add(self.deltaIntCtrl)
+        hbox1.Add(self.skipIntCtrl)
+        hbox1.Add(self.corr_threshThresholdFloatCtrl)
+        
+        hbox2.Add(self.windowTxt)
+        hbox2.Add(self.deltaTxt)
+        hbox2.Add(self.skipTxt)
+        hbox2.Add(self.corr_threshThresholdTxt)   
+
+        hbox3 = wx.BoxSizer(wx.HORIZONTAL)      
+        ok_button = wx.Button(self,wx.ID_OK,'OK')
+        cancel_button = wx.Button(self,wx.ID_CANCEL,'Cancel')
+        hbox3.Add(ok_button)
+        hbox3.Add(cancel_button)
+        
+        vbox.Add(hbox1)
+        vbox.Add(hbox2)
+        vbox.Add(hbox3)
+
+        self.SetSizer(vbox)
+        
+    def GetSettings(self):
+        window=self.windowIntCtrl.GetValue()
+        delta=self.deltaIntCtrl.GetValue()
+        skip=self.skipIntCtrl.GetValue()
+        corr_thresh=self.corr_threshThresholdFloatCtrl.GetValue()
+
+        return CorrSettings(window,delta,skip,corr_thresh)
+
 class SiftSettings():
 
-    def __init__(self,contrastThreshold=.05,numFeatures=1000):
+    def __init__(self,contrastThreshold=.05,numFeatures=1000,inlier_thresh = 12):
     
         self.contrastThreshold=contrastThreshold
         self.numFeatures=numFeatures
+        self.inlier_thresh = inlier_thresh
         
     def save_settings(self,cfg):
         cfg.WriteInt('numFeatures',self.numFeatures)
+        cfg.WriteInt('inlier_thresh',self.inlier_thresh)
         cfg.WriteFloat('contrastThreshold',self.contrastThreshold)
     
     def load_settings(self,cfg):
         self.numFeatures=cfg.ReadInt('numFeatures',1000)
         self.contrastThreshold=cfg.ReadFloat('contrastThreshold',0.5)
+        self.inlier_thresh = cfg.ReadInt('inlier_thresh',12)
         
 class ChangeSiftSettings(wx.Dialog):
     def __init__(self, parent, id, title, settings,style):
@@ -41,6 +121,8 @@ class ChangeSiftSettings(wx.Dialog):
         self.settings=settings
         self.numFeatureTxt=wx.StaticText(self,label="max features")
         self.numFeatureIntCtrl = wx.lib.intctrl.IntCtrl( self, value=settings.numFeatures,size=(50,-1))
+        self.inlierThreshTxt=wx.StaticText(self,label="minimum inliers for match")
+        self.inlierThreshIntCtrl = wx.lib.intctrl.IntCtrl( self, value=settings.inlier_thresh,size=(50,-1))
         
         self.contrastThresholdTxt = wx.StaticText(self,label="contrast threshold")
         self.contrastThresholdFloatCtrl = wx.lib.agw.floatspin.FloatSpin(self, 
@@ -56,9 +138,12 @@ class ChangeSiftSettings(wx.Dialog):
         
         hbox1.Add(self.numFeatureTxt)
         hbox1.Add(self.numFeatureIntCtrl)
+        hbox1.Add(self.inlierThreshIntCtrl)
         
         hbox2.Add(self.contrastThresholdTxt)
         hbox2.Add(self.contrastThresholdFloatCtrl)
+        hbox2.Add(self.inlierThreshTxt)
+
         
        
 
@@ -77,8 +162,8 @@ class ChangeSiftSettings(wx.Dialog):
     def GetSettings(self):
         numFeatures = self.numFeatureIntCtrl.GetValue()
         contrastThreshold = self.contrastThresholdFloatCtrl.GetValue()
-        
-        return SiftSettings(contrastThreshold,numFeatures)
+        inlier_thresh = self.inlierThreshIntCtrl.GetValue()
+        return SiftSettings(contrastThreshold,numFeatures,inlier_thresh)
         
         
 class CameraSettings():
