@@ -155,7 +155,32 @@ class ImageCollection():
         else:
             self.axis.set_xlim(left=box.left,right=box.right)
             self.axis.set_ylim(bottom=box.bottom,top=box.top)
-        
+
+    def crop_to_images(self):
+        if not self.images:
+            self.axis.set_xlim(left=self.working_area.left,right=self.working_area.right)
+            self.axis.set_ylim(bottom=self.working_area.bottom,top=self.working_area.top)
+        else:
+            flag = 1
+            for image in self.images:
+                if flag:
+                    self.bxleft = image.boundBox.left
+                    self.bxright = image.boundBox.right
+                    self.bxtop = image.boundBox.top
+                    self.bxbottom = image.boundBox.bottom
+                    flag = 0
+                if self.bxleft > image.boundBox.left:
+                    self.bxleft = image.boundBox.left
+                if self.bxright < image.boundBox.right:
+                    self.bxright = image.boundBox.right
+                if self.bxtop > image.boundBox.top:
+                    self.bxtop = image.boundBox.top
+                if self.bxbottom < image.boundBox.bottom:
+                    self.bxbottom = image.boundBox.bottom
+
+            self.axis.set_xlim(left=self.bxleft,right=self.bxright)
+            self.axis.set_ylim(bottom=self.bxbottom,top=self.bxtop)
+
     def get_cutout(self,box):
         #from the collection of images return the pixels contained by the Rectangle box
         #look for an image which contains the desired cutout
@@ -187,6 +212,10 @@ class ImageCollection():
         
         self.add_image_at(x,y)
         return False
+
+    def ohSnap(self):
+        (x, y) = self.imageSource.get_xy()
+        self.add_image_at(x,y)
         
     def add_image_at(self,x,y):
         #go get an image at x,y

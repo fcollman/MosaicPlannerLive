@@ -35,6 +35,8 @@ from scipy.signal import correlate2d
 from skimage.measure import block_reduce
 import norm_xcorr
 from skimage.feature import register_translation
+from scipy.signal import correlate
+from skimage.feature.register_translation import _upsampled_dft
 #implicity this relies upon matplotlib.axis matplotlib.AxisImage matplotlib.bar 
 
 
@@ -190,6 +192,9 @@ class MosaicImage():
     
     def set_view_home(self):
         self.imgCollection.set_view_home()
+
+    def crop_to_images(self):
+        self.imgCollection.crop_to_images()
         
     def repaint(self):
         """sets the new clim for the Image using self.maxvalue as the new maximum value"""
@@ -329,7 +334,7 @@ class MosaicImage():
             self.two_axis_center.set_xdata([xp])
             self.two_axis_center.set_ydata([yp])
     
-    def paintCorrImage(self,corrmat,dxy_pix,skip):
+    def paintCorrImage(self,corrmat,dxy_pix,skip=1):
         """paints an image in the self.corr_axis, with 0,0 at the center and rescaled by skip, plotting a point at dxy_pix
         
         keywords)
@@ -394,7 +399,7 @@ class MosaicImage():
         two_cut=self.cutout_window(x2,y2,window)
         #return (target_cut,source_cut,mycorrelate2d(target_cut,source_cut,mode='valid'))
         return (one_cut,two_cut,mycorrelate2d(one_cut,two_cut,skip))
-       
+
     def align_by_correlation(self,xy1,xy2,CorrSettings = CorrSettings()):
         """take two points in the image, and calculate the 2d cross correlation function of the image around those two points
         plots the results in the appropriate axis, and returns the shift which aligns the two points given in microns
@@ -429,11 +434,26 @@ class MosaicImage():
         min_width = min(one_shape[1],two_shape[1])
         one_cut=one_cut[0:min_height,0:min_width]
         two_cut=two_cut[0:min_height,0:min_width]
-        
+        one_cut = one_cut - np.mean(one_cut)
+        two_cut = two_cut - np.mean(two_cut)
+
 
         print "one_cut,two_cut.shape",one_cut.shape,two_cut.shape
         pix_shift, error, diffphase = register_translation(one_cut,two_cut,upsample_factor=20)
-        
+
+        src_image = np.array(one_cut, dtype=np.complex128, copy=False)
+        target_image = np.array(two_cut, dtype=np.complex128, copy=False)
+
+        f1 = np.std(one_cut)
+        f2 = np.std(two_cut)
+        normfactor = f1*f2*one_cut.size
+
+        src_freq = np.fft.fftn(src_image)
+        target_freq = np.fft.fftn(target_image)
+        shape = src_freq.shape
+        image_product = src_freq * target_freq.conj()
+        corrmat = np.fft.ifftn(image_product)
+
         dy_pix,dx_pix = pix_shift
 
         #find the peak of the matrix
@@ -455,18 +475,22 @@ class MosaicImage():
         dxy_pix=(dx_pix,dy_pix)
         dxy_um=(dx_um,dy_um)
         #calculate what the maximal correlation was
-        #corrval=corrmat.max()
+        corrval=corrmat.real.max()/normfactor
         
-        #print "(correlation,(dx,dy))="
-        #print (corrval,dxy_pix)
+        print "(correlation,(dx,dy))=  ",
+        print (corrval,dxy_pix)
+
         #paint the patch around the first point in its axis, with a box of size of the two_cut centered around where we found it
         self.paintImageOne(one_cut,xy=xy1,dxy_pix=dxy_pix)
-        #paint the patch around the second point in its axis
 
+        #paint the patch around the second point in its axis
         self.paintImageTwo(two_cut,xy=xy2,xyp=(xy2[0]-dx_um,xy2[1]-dy_um))
+
         #paint the correlation matrix in its axis
-        #self.paintCorrImage(corrmat, dxy_pix,skip)
-        return (.4,dxy_um)
+        self.paintCorrImage(np.fft.fftshift(corrmat.real/normfactor), dxy_pix)
+
+
+        return (corrval,dxy_um)
         
     def explore_match(self,img1, kp1,img2,kp2, status = None, H = None):
         h1, w1 = img1.shape[:2]
