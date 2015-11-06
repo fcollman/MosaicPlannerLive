@@ -39,6 +39,7 @@ from scipy.signal import correlate
 from skimage.feature.register_translation import _upsampled_dft
 #implicity this relies upon matplotlib.axis matplotlib.AxisImage matplotlib.bar
 
+import math
 import time
 
 
@@ -402,6 +403,39 @@ class MosaicImage():
         #return (target_cut,source_cut,mycorrelate2d(target_cut,source_cut,mode='valid'))
         return (one_cut,two_cut,mycorrelate2d(one_cut,two_cut,skip))
 
+    def _cross_correlation_shift(self, fixed_cutout, to_shift_cutout):
+        '''
+        :param one_cut: cutout around point 1
+        :param two_cut: cutout around point 2
+        :return: corrmatt, corval, dx_pix, dy_pix
+        '''
+        src_image = np.array(fixed_cutout, dtype=np.complex128, copy=False)
+        target_image = np.array(to_shift_cutout, dtype=np.complex128, copy=False)
+        f1 = np.std(fixed_cutout)
+        f2 = np.std(to_shift_cutout)
+        normfactor = f1*f2*fixed_cutout.size
+        src_freq = np.fft.fftn(src_image)
+        target_freq = np.fft.fftn(target_image)
+        shape = src_freq.shape
+        image_product = src_freq * target_freq.conj()
+        corrmat = np.fft.ifftn(image_product)
+        corrmat = np.fft.fftshift(corrmat.real/normfactor)
+        #find the peak of the matrix
+        maxind=corrmat.argmax()
+        (h,w)=corrmat.shape
+        #determine the indices of that peak
+        (max_i,max_j)=np.unravel_index(maxind,corrmat.shape)
+
+        #calculate the shift for that index in pixels
+        dy_pix=int((max_i-(h/2)))
+        dx_pix=int((max_j-(w/2)))
+
+        #calculate what the maximal correlation was
+        corrval=corrmat.max()
+
+        return corrmatt, corrval, dx_pix, dy_pix
+
+
     def align_by_correlation(self,xy1,xy2,CorrSettings = CorrSettings()):
         """take two points in the image, and calculate the 2d cross correlation function of the image around those two points
         plots the results in the appropriate axis, and returns the shift which aligns the two points given in microns
@@ -429,50 +463,33 @@ class MosaicImage():
         #(one_cut,two_cut,corrmat)=self.cross_correlate_two_to_one(xy1,xy2,window,delta,skip)
         (x1,y1)=xy1
         (x2,y2)=xy2
-        one_cut=self.cutout_window(x1,y1,window)
-        two_cut=self.cutout_window(x2,y2,window)
-        
+        one_cut=self.cutout_window(x1,y1,window,)
+        two_cut=self.cutout_window(x2,y2,window,)
+
         one_shape=one_cut.shape
         two_shape=two_cut.shape
+        print 'one_shape,two_shape ',one_shape,two_shape
         min_height = min(one_shape[0],two_shape[0])
         min_width = min(one_shape[1],two_shape[1])
+
+        #min_height = 2**int(math.log(min_height, 2))
+        #min_width = min_height # now constrained to have equal pixels!
+        #print 'minwh ',min_height,min_width
+
         one_cut=one_cut[0:min_height,0:min_width]
         two_cut=two_cut[0:min_height,0:min_width]
         one_cut = one_cut - np.mean(one_cut)
         two_cut = two_cut - np.mean(two_cut)
 
-        print("---1. %s seconds  ---" % (time.time() - start_time))
-        print "one_cut,two_cut.shape",one_cut.shape,two_cut.shape
-        #pix_shift, error, diffphase = register_translation(one_cut,two_cut,upsample_factor=20)
-        #dy_pix,dx_pix = pix_shift
+        corrmatt, corrval, dx_pix, dy_pix = self._cross_correlation_shift(one_cut,two_cut)
 
-        src_image = np.array(one_cut, dtype=np.complex128, copy=False)
-        target_image = np.array(two_cut, dtype=np.complex128, copy=False)
-        f1 = np.std(one_cut)
-        f2 = np.std(two_cut)
-        normfactor = f1*f2*one_cut.size
-        src_freq = np.fft.fftn(src_image)
-        target_freq = np.fft.fftn(target_image)
-        shape = src_freq.shape
-        image_product = src_freq * target_freq.conj()
-        corrmat = np.fft.ifftn(image_product)
-        corrmat = np.fft.fftshift(corrmat.real/normfactor)
-        #find the peak of the matrix
-        maxind=corrmat.argmax()
-        (h,w)=corrmat.shape
-        #determine the indices of that peak
-        (max_i,max_j)=np.unravel_index(maxind,corrmat.shape)
-        #calculate the shift for that index in pixels
-        dy_pix=int((max_i-(h/2)))
-        dx_pix=int((max_j-(w/2)))
-        #convert those indices into microns
+        #convert dy_pix and dx_pix into microns
         dy_um=dy_pix*pixsize
         dx_um=dx_pix*pixsize
         #pack up the shifts into tuples
         dxy_pix=(dx_pix,dy_pix)
         dxy_um=(dx_um,dy_um)
-        #calculate what the maximal correlation was
-        corrval=corrmat.real.max()
+
         print("---2. %s seconds  ---" % (time.time() - start_time))
         print "(correlation,(dx,dy))=  ",
         print (corrval,dxy_pix)

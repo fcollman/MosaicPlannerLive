@@ -181,8 +181,6 @@ class ImageCollection():
             if image.contains_rect(box):
                 return image.get_cutout(box)
 
-            
-        
         #TODO
         #if you don't find the cutout in one image, see if you can get it from two
         
