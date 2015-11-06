@@ -37,7 +37,9 @@ import norm_xcorr
 from skimage.feature import register_translation
 from scipy.signal import correlate
 from skimage.feature.register_translation import _upsampled_dft
-#implicity this relies upon matplotlib.axis matplotlib.AxisImage matplotlib.bar 
+#implicity this relies upon matplotlib.axis matplotlib.AxisImage matplotlib.bar
+
+import time
 
 
 #my custom 2d correlation function for numpy 2d matrices.. 
@@ -193,8 +195,8 @@ class MosaicImage():
     def set_view_home(self):
         self.imgCollection.set_view_home()
 
-    def crop_to_images(self):
-        self.imgCollection.crop_to_images()
+    def crop_to_images(self,evt):
+        self.imgCollection.crop_to_images(evt)
         
     def repaint(self):
         """sets the new clim for the Image using self.maxvalue as the new maximum value"""
@@ -416,6 +418,8 @@ class MosaicImage():
         dxy_um) the (x,y) tuple which contains the shift in microns necessary to align point xy2 with point xy1
         
         """
+        start_time = time.time()
+
         window = CorrSettings.window
         delta = CorrSettings.delta
         skip = CorrSettings.skip
@@ -437,59 +441,50 @@ class MosaicImage():
         one_cut = one_cut - np.mean(one_cut)
         two_cut = two_cut - np.mean(two_cut)
 
-
+        print("---1. %s seconds  ---" % (time.time() - start_time))
         print "one_cut,two_cut.shape",one_cut.shape,two_cut.shape
-        pix_shift, error, diffphase = register_translation(one_cut,two_cut,upsample_factor=20)
+        #pix_shift, error, diffphase = register_translation(one_cut,two_cut,upsample_factor=20)
+        #dy_pix,dx_pix = pix_shift
 
         src_image = np.array(one_cut, dtype=np.complex128, copy=False)
         target_image = np.array(two_cut, dtype=np.complex128, copy=False)
-
         f1 = np.std(one_cut)
         f2 = np.std(two_cut)
         normfactor = f1*f2*one_cut.size
-
         src_freq = np.fft.fftn(src_image)
         target_freq = np.fft.fftn(target_image)
         shape = src_freq.shape
         image_product = src_freq * target_freq.conj()
         corrmat = np.fft.ifftn(image_product)
-
-        dy_pix,dx_pix = pix_shift
-
+        corrmat = np.fft.fftshift(corrmat.real/normfactor)
         #find the peak of the matrix
-        #maxind=corrmat.argmax()
-        #(h,w)=corrmat.shape
+        maxind=corrmat.argmax()
+        (h,w)=corrmat.shape
         #determine the indices of that peak
-        #(max_i,max_j)=np.unravel_index(maxind,corrmat.shape)
-        
-        
+        (max_i,max_j)=np.unravel_index(maxind,corrmat.shape)
         #calculate the shift for that index in pixels
-        #dy_pix=int((max_i-(h/2))*skip)
-        #dx_pix=int((max_j-(w/2))*skip)
+        dy_pix=int((max_i-(h/2)))
+        dx_pix=int((max_j-(w/2)))
         #convert those indices into microns
-        
-        
         dy_um=dy_pix*pixsize
         dx_um=dx_pix*pixsize
         #pack up the shifts into tuples
         dxy_pix=(dx_pix,dy_pix)
         dxy_um=(dx_um,dy_um)
         #calculate what the maximal correlation was
-        corrval=corrmat.real.max()/normfactor
-        
+        corrval=corrmat.real.max()
+        print("---2. %s seconds  ---" % (time.time() - start_time))
         print "(correlation,(dx,dy))=  ",
         print (corrval,dxy_pix)
 
         #paint the patch around the first point in its axis, with a box of size of the two_cut centered around where we found it
         self.paintImageOne(one_cut,xy=xy1,dxy_pix=dxy_pix)
-
         #paint the patch around the second point in its axis
         self.paintImageTwo(two_cut,xy=xy2,xyp=(xy2[0]-dx_um,xy2[1]-dy_um))
-
         #paint the correlation matrix in its axis
-        self.paintCorrImage(np.fft.fftshift(corrmat.real/normfactor), dxy_pix)
+        self.paintCorrImage(corrmat, dxy_pix)
 
-
+        print("---3. %s seconds ---" % (time.time() - start_time))
         return (corrval,dxy_um)
         
     def explore_match(self,img1, kp1,img2,kp2, status = None, H = None):
