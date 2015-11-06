@@ -17,7 +17,6 @@
 # 
 #===============================================================================
 import wx
-
 class CorrSettings():
 
     def __init__(self,window=100,delta=75,skip = 3,corr_thresh = .3):
@@ -41,16 +40,16 @@ class CorrSettings():
 
 class ChangeCorrSettings(wx.Dialog):
     def __init__(self, parent, id, title, settings,style):
-        wx.Dialog.__init__(self, parent, id, title,style=wx.DEFAULT_DIALOG_STYLE, size=(420, -1))   
+        wx.Dialog.__init__(self, parent, id, title,style=wx.DEFAULT_DIALOG_STYLE, size=(420, -1))
         vbox =wx.BoxSizer(wx.VERTICAL)
         
         self.settings = settings
-        self.windowTxt = wx.StaticText(self,label="window in pixels to cutout")
+        self.windowTxt = wx.StaticText(self,label="window in microns to cutout")
         self.windowIntCtrl = wx.lib.intctrl.IntCtrl( self, value=settings.window,size=(50,-1))
-        self.deltaTxt = wx.StaticText(self,label="delta (in pixels) to search for maximum")
-        self.deltaIntCtrl = wx.lib.intctrl.IntCtrl( self, value=settings.delta,size=(50,-1))
-        self.skipTxt = wx.StaticText(self,label="number of pixels to skip when searching")
-        self.skipIntCtrl = wx.lib.intctrl.IntCtrl( self, value=settings.skip,size=(50,-1))
+        #self.deltaTxt = wx.StaticText(self,label="delta (in pixels) to search for maximum")
+        #self.deltaIntCtrl = wx.lib.intctrl.IntCtrl( self, value=settings.delta,size=(50,-1))
+        #self.skipTxt = wx.StaticText(self,label="number of pixels to skip when searching")
+        #self.skipIntCtrl = wx.lib.intctrl.IntCtrl( self, value=settings.skip,size=(50,-1))
         
 
         self.corr_threshThresholdTxt = wx.StaticText(self,label="correlation threshold to accept match (0.0-1.0)")
@@ -66,13 +65,13 @@ class ChangeCorrSettings(wx.Dialog):
         hbox2 = wx.BoxSizer(wx.HORIZONTAL)
         
         hbox1.Add(self.windowIntCtrl)
-        hbox1.Add(self.deltaIntCtrl)
-        hbox1.Add(self.skipIntCtrl)
-        hbox1.Add(self.corr_threshThresholdFloatCtrl)
-        
-        hbox2.Add(self.windowTxt)
-        hbox2.Add(self.deltaTxt)
-        hbox2.Add(self.skipTxt)
+        hbox1.Add(self.windowTxt)
+        #hbox1.Add(self.deltaIntCtrl)
+        #hbox1.Add(self.skipIntCtrl)
+
+        #hbox2.Add(self.deltaTxt)
+        #hbox2.Add(self.skipTxt)
+        hbox2.Add(self.corr_threshThresholdFloatCtrl)
         hbox2.Add(self.corr_threshThresholdTxt)   
 
         hbox3 = wx.BoxSizer(wx.HORIZONTAL)      
@@ -123,7 +122,7 @@ class ChangeSiftSettings(wx.Dialog):
         self.numFeatureIntCtrl = wx.lib.intctrl.IntCtrl( self, value=settings.numFeatures,size=(50,-1))
         self.inlierThreshTxt=wx.StaticText(self,label="minimum inliers for match")
         self.inlierThreshIntCtrl = wx.lib.intctrl.IntCtrl( self, value=settings.inlier_thresh,size=(50,-1))
-        
+
         self.contrastThresholdTxt = wx.StaticText(self,label="contrast threshold")
         self.contrastThresholdFloatCtrl = wx.lib.agw.floatspin.FloatSpin(self, 
                                        value=settings.contrastThreshold,

@@ -57,6 +57,11 @@ class MyImage():
 
 
     def get_cutout(self,box):
+        '''
+        Expected that the int() will occasionally produce rounding error -
+        making cutout size unstable.
+        '''
+
         if self.boundBox.contains_rect(box):
             #load image from file
             #todo
@@ -155,7 +160,20 @@ class ImageCollection():
         else:
             self.axis.set_xlim(left=box.left,right=box.right)
             self.axis.set_ylim(bottom=box.bottom,top=box.top)
-        
+
+    def crop_to_images(self,evt):
+        if not self.images:
+            self.axis.set_xlim(left=self.working_area.left,right=self.working_area.right)
+            self.axis.set_ylim(bottom=self.working_area.bottom,top=self.working_area.top)
+        else:
+
+            self.boundary = self.get_image_size_um()[0]
+            self.axis.set_xlim(left=self.bigBox.left-self.boundary,right=self.bigBox.right+self.boundary)
+            self.axis.set_ylim(bottom=self.bigBox.bottom+self.boundary,top=self.bigBox.top-self.boundary)
+
+            #self.axis.set_xlim(left=self.bigBox.left,right=self.bigBox.right)
+            #self.axis.set_ylim(bottom=self.bigBox.bottom,top=self.bigBox.top)
+
     def get_cutout(self,box):
         #from the collection of images return the pixels contained by the Rectangle box
         #look for an image which contains the desired cutout
@@ -163,8 +181,6 @@ class ImageCollection():
             if image.contains_rect(box):
                 return image.get_cutout(box)
 
-            
-        
         #TODO
         #if you don't find the cutout in one image, see if you can get it from two
         
@@ -187,6 +203,10 @@ class ImageCollection():
         
         self.add_image_at(x,y)
         return False
+
+    def ohSnap(self):
+        (x, y) = self.imageSource.get_xy()
+        self.add_image_at(x,y)
         
     def add_image_at(self,x,y):
         #go get an image at x,y

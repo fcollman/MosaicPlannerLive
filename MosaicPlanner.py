@@ -97,6 +97,8 @@ class MosaicToolbar(NavBarImproved):
     SHOWMAG = wx.NewId()
     ON_ACQGRID = wx.NewId()
     ON_RUN = wx.NewId()
+    ON_SNAP = wx.NewId()
+    ON_CROP = wx.NewId()
     
     def __init__(self, plotCanvas):  
         """initializes this object
@@ -126,30 +128,41 @@ class MosaicToolbar(NavBarImproved):
         gridBmp = wx.Image('icons/grid-icon.png', wx.BITMAP_TYPE_PNG).ConvertToBitmap()
         cameraBmp = wx.Image('icons/camera-icon.png',wx.BITMAP_TYPE_PNG).ConvertToBitmap()
         mosaicBmp = wx.Image('icons/mosaic-icon.png',wx.BITMAP_TYPE_PNG).ConvertToBitmap()
+        #mosaicBmp = wx.Image('icons/new/mosaic_camera.png',wx.BITMAP_TYPE_PNG).ConvertToBitmap()
         carBmp = wx.Image('icons/car-icon.png',wx.BITMAP_TYPE_PNG).ConvertToBitmap()
-        
+        cropBmp = wx.Image('icons/new/crop.png',wx.BITMAP_TYPE_PNG).ConvertToBitmap()
+        snapBmp = wx.Image('icons/new/snap.png',wx.BITMAP_TYPE_PNG).ConvertToBitmap()
+        cameraBmp = wx.Image('icons/new/camera.png',wx.BITMAP_TYPE_PNG).ConvertToBitmap()
+        liveBmp = wx.Image('icons/new/livemode.png',wx.BITMAP_TYPE_PNG).ConvertToBitmap()
+        batmanBmp = wx.Image('icons/new/batman.png',wx.BITMAP_TYPE_PNG).ConvertToBitmap()
+
         self.DeleteTool(self.wx_ids['Subplots']) 
         #self.DeleteTool(self.wx_ids['Pan']) 
         #add the mutually exclusive/toggleable tools to the toolbar, see superclass for details on how function works
         self.moveHereTool = self.add_user_tool('movehere',6,carBmp,True,'move scope here')
-        self.snapHereTool = self.add_user_tool('snaphere',7,cameraBmp,True,'snap image at current scope location')
+        self.snapHereTool = self.add_user_tool('snaphere',7,cameraBmp,True,'move scope and snap image here')
         self.snapPictureTool = self.add_user_tool('snappic',8,mosaicBmp,True,'take 3x3 mosaic on click')
         self.selectNear = self.add_user_tool('selectnear',9,selectnearBmp,True,'Add Nearest Point to selection')
         #self.selectTool=self.add_user_tool('select', 10, selectBmp, True, 'Select Points')
         self.addTool = self.add_user_tool('add', 10, addpointBmp, True, 'Add a Point')
         self.oneTool = self.add_user_tool('selectone', 11, oneBmp, True, 'Choose pointLine2D 1')
         self.twoTool = self.add_user_tool('selecttwo', 12, twoBmp, True, 'Choose pointLine2D 2')
+
         
         self.AddSeparator()
         self.AddSeparator()
         
         #add the simple button click tools
         #self.leftcorrTool=self.AddSimpleTool(self.ON_CORR_LEFT,leftcorrBmp,'do something with correlation','correlation baby!')
-        self.liveModeTool = self.AddSimpleTool(self.ON_LIVE_MODE,cameraBmp,'Enter Live Mode','liveMode')
+        self.liveModeTool = self.AddSimpleTool(self.ON_LIVE_MODE,liveBmp,'Enter Live Mode','liveMode')
         self.deleteTool=self.AddSimpleTool(self.ON_DELETE_SELECTED,trashBmp,'Delete selected points','delete points') 
         self.corrTool=self.AddSimpleTool(self.ON_CORR,corrBmp,'Ajdust pointLine2D 2 with correlation','corrTool')
         self.stepTool=self.AddSimpleTool(self.ON_STEP,stepBmp,'Take one step using points 1+2','stepTool')
         self.ffTool=self.AddSimpleTool(self.ON_FF,ffBmp,'Auto-take steps till C<.3 or off image','fastforwardTool')
+
+        self.snapNowTool = self.AddSimpleTool(self.ON_SNAP,snapBmp,'Take a snap now','snapHereTool')
+        self.onCropTool = self.AddSimpleTool(self.ON_CROP,cropBmp,'Crop field of view','cropTool')
+
         #self.refTool=self.AddSimpleTool(self.ON_,refBmp,'Refine the current set of positions, starting around point 1 and propogating out','refineTool')
         
         #add the toggleable tools
@@ -158,7 +171,7 @@ class MosaicToolbar(NavBarImproved):
         #self.redrawTool=self.AddSimpleTool(self.ON_REDRAW,smalltargetBmp,'redraw canvas','redrawTool')
         self.rotateTool=self.AddCheckTool(self.ON_ROTATE,rotateBmp,wx.NullBitmap,'toggle rotate boxes')
         #self.AddSimpleTool(self.ON_ROTATE,rotateBmp,'toggle rotate mosaic boxes according to rotation','rotateTool')
-        self.runAcqTool=self.AddSimpleTool(self.ON_RUN,carBmp,'Acquire AT Data','run_tool')
+        self.runAcqTool=self.AddSimpleTool(self.ON_RUN,batmanBmp,'Acquire AT Data','run_tool')
         
         #setup the controls for the mosaic
         self.showmagCheck = wx.CheckBox(self)
@@ -223,6 +236,9 @@ class MosaicToolbar(NavBarImproved):
         #wx.EVT_TOOL(self, self.ON_FINETUNE, self.canvas.OnFineTuneTool)
         #wx.EVT_TOOL(self, self.ON_REDRAW, self.canvas.OnRedraw)
         wx.EVT_TOOL(self, self.ON_ROTATE, self.canvas.OnRotateTool)
+
+        wx.EVT_TOOL(self, self.ON_SNAP, self.canvas.OnSnapTool)
+        wx.EVT_TOOL(self, self.ON_CROP, self.canvas.OnCropTool)
         
     
         self.Realize()
@@ -684,13 +700,21 @@ class MosaicPanel(FigureCanvas):
         passed=self.CorrTool()
         #inliers=self.SiftCorrTool(window=70)
         self.draw()
+
+    def OnSnapTool(self,evt=""):
+        #takes snap straight away
+        self.mosaicImage.imgCollection.ohSnap()
+        self.draw()
     
     def OnHomeTool(self):
         """handler which overrides the usual behavior of the home button, just resets the zoom on the main subplot for the mosaicImage"""
         self.mosaicImage.set_view_home()
-        
         self.draw()
-           
+
+    def OnCropTool(self,evt=""):
+        self.mosaicImage.crop_to_images(evt)
+        self.draw()
+
     def OnFineTuneTool(self,evt=""): 
         print "fine tune tool not yet implemented, should do something to make fine adjustments to current position list"
         #this is a list of positions which we forbid from being point 1, our anchor points
