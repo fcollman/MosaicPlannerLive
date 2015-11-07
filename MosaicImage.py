@@ -39,7 +39,7 @@ from scipy.signal import correlate
 from skimage.feature.register_translation import _upsampled_dft
 #implicity this relies upon matplotlib.axis matplotlib.AxisImage matplotlib.bar
 
-import math
+from bisect import bisect_right
 import time
 
 
@@ -433,8 +433,26 @@ class MosaicImage():
         #calculate what the maximal correlation was
         corrval=corrmat.max()
 
-        return corrmatt, corrval, dx_pix, dy_pix
+        return corrmat, corrval, dx_pix, dy_pix
 
+    def _get_faster_pixel_dimension(self,current_dimension):
+        '''
+        Uses a list of pre-calculated dimensions to cut the image size down
+        to one that is faster for np.fft.fftn(). Dimensions are from kn^2.
+        :param current_dimension:
+        :return: new dimension
+        '''
+        better_dimensions = [80,   84,   88,   92,   96,  104,  110,  112,  120,  128,  130,
+        132,  136,  140,  152,  156,  160,  168,  176,  184,  192,  208,
+        220,  224,  240,  256,  260,  264,  272,  280,  304,  312,  320,
+        336,  352,  368,  384,  416,  440,  448,  480,  512,  520,  528,
+        544,  560,  608,  624,  640,  672,  704,  736,  768,  832,  880,
+        896,  960, 1024, 1040, 1056, 1088, 1120, 1216, 1248, 1280, 1344,
+        1408, 1472, 1536, 1664, 1760, 1792, 1920, 2048]
+
+        pos = bisect_right(better_dimensions, current_dimension)-1
+        print 'pos',pos
+        return better_dimensions[pos]
 
     def align_by_correlation(self,xy1,xy2,CorrSettings = CorrSettings()):
         """take two points in the image, and calculate the 2d cross correlation function of the image around those two points
@@ -468,20 +486,21 @@ class MosaicImage():
 
         one_shape=one_cut.shape
         two_shape=two_cut.shape
+        print("---cutout a . %s seconds  ---" % (time.time() - start_time))
         print 'one_shape,two_shape ',one_shape,two_shape
         min_height = min(one_shape[0],two_shape[0])
-        min_width = min(one_shape[1],two_shape[1])
+        new_dim = self._get_faster_pixel_dimension(min_height)
+        print new_dim
+        #min_width = min(one_shape[1],two_shape[1])
 
-        #min_height = 2**int(math.log(min_height, 2))
-        #min_width = min_height # now constrained to have equal pixels!
-        #print 'minwh ',min_height,min_width
-
-        one_cut=one_cut[0:min_height,0:min_width]
-        two_cut=two_cut[0:min_height,0:min_width]
+        one_cut=one_cut[0:new_dim,0:new_dim]
+        two_cut=two_cut[0:new_dim,0:new_dim]
         one_cut = one_cut - np.mean(one_cut)
         two_cut = two_cut - np.mean(two_cut)
+        print 'new dimensions ',one_cut.shape,two_cut.shape
+        print("---cutout ended. %s seconds  ---" % (time.time() - start_time))
 
-        corrmatt, corrval, dx_pix, dy_pix = self._cross_correlation_shift(one_cut,two_cut)
+        corrmat, corrval, dx_pix, dy_pix = self._cross_correlation_shift(one_cut,two_cut)
 
         #convert dy_pix and dx_pix into microns
         dy_um=dy_pix*pixsize
@@ -490,7 +509,7 @@ class MosaicImage():
         dxy_pix=(dx_pix,dy_pix)
         dxy_um=(dx_um,dy_um)
 
-        print("---2. %s seconds  ---" % (time.time() - start_time))
+        print("---correlation ended. %s seconds  ---" % (time.time() - start_time))
         print "(correlation,(dx,dy))=  ",
         print (corrval,dxy_pix)
 
@@ -501,7 +520,7 @@ class MosaicImage():
         #paint the correlation matrix in its axis
         self.paintCorrImage(corrmat, dxy_pix)
 
-        print("---3. %s seconds ---" % (time.time() - start_time))
+        print("---painting ended %s seconds ---" % (time.time() - start_time))
         return (corrval,dxy_um)
         
     def explore_match(self,img1, kp1,img2,kp2, status = None, H = None):

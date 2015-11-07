@@ -378,7 +378,8 @@ class MosaicPanel(FigureCanvas):
 
     def OnLoad(self,rootPath):
         self.rootPath=rootPath        
-        self.mosaicImage=MosaicImage(self.subplot,self.posone_plot,self.postwo_plot,self.corrplot,self.imgSrc,rootPath,figure=self.figure)       
+        self.mosaicImage=MosaicImage(self.subplot,self.posone_plot,self.postwo_plot,self.corrplot,self.imgSrc,rootPath,figure=self.figure)
+        self.OnCropTool()
         self.draw()
         
     def write_slice_metadata(self,filename,ch,xpos,ypos,zpos):
