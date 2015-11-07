@@ -6,7 +6,7 @@ from Rectangle import Rectangle
 
 class imageSource():
     
-    def __init__(self,configFile,channelGroupName='Channels',use_focus_plane  = False,focus_points=None):
+    def __init__(self,configFile,channelGroupName='Channels',use_focus_plane  = False,focus_points=None,transpose_xy = False):
       #NEED TO IMPLEMENT IF NOT MICROMANAGER
      
         self.configFile=configFile
@@ -17,7 +17,7 @@ class imageSource():
         self.mmc.loadSystemConfiguration(self.configFile)
        
         self.channelGroupName=channelGroupName
-
+        self.transpose_xy = transpose_xy
         auto_dev = self.mmc.getAutoFocusDevice()
         assert(auto_dev is not None)
 
@@ -140,7 +140,6 @@ class imageSource():
                 attempts=0
                 failure=False
                 while not self.is_hardware_autofocus_done():
-                    time.sleep(.1)
                     attempts+=1
                     if attempts>100:
                         failure=True
@@ -176,6 +175,10 @@ class imageSource():
         if use_focus_plane:
             z  = self.get_focal_z(x,y)
             self.set_z(z)
+        if self.transpose_xy:
+            xt = x
+            x = y
+            y = xt
         #if flipx==1:
         #    x = -x
         #if flipy == 1:
@@ -202,7 +205,12 @@ class imageSource():
 
         x=self.mmc.getXPosition(xystg)
         y=self.mmc.getYPosition(xystg)
-        
+
+        if self.transpose_xy:
+            xt = x
+            x = y
+            y = xt
+
         #if flipx:
         #    x = -x
         #if flipy:
@@ -256,13 +264,13 @@ class imageSource():
         self.mmc.snapImage()
         data = self.mmc.getImage()
 
-        #(flipx,flipy,trans) = self.get_image_flip()
-        #if trans:
-        #    data = np.transpose(data)
-        #if flipx:
-        #    data=np.fliplr(data)
-        #if flipy:
-        #    data=np.flipud(data)
+        (flipx,flipy,trans) = self.get_image_flip()
+        if trans:
+            data = np.transpose(data)
+        if flipx:
+            data=np.fliplr(data)
+        if flipy:
+            data=np.flipud(data)
         return data
     
     

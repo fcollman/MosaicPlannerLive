@@ -433,7 +433,7 @@ class MosaicImage():
         #calculate what the maximal correlation was
         corrval=corrmat.max()
 
-        return corrmatt, corrval, dx_pix, dy_pix
+        return corrmat, corrval, dx_pix, dy_pix
 
 
     def align_by_correlation(self,xy1,xy2,CorrSettings = CorrSettings()):
@@ -480,8 +480,8 @@ class MosaicImage():
         two_cut=two_cut[0:min_height,0:min_width]
         one_cut = one_cut - np.mean(one_cut)
         two_cut = two_cut - np.mean(two_cut)
-
-        corrmatt, corrval, dx_pix, dy_pix = self._cross_correlation_shift(one_cut,two_cut)
+        print("---cutout ended. %s seconds  ---" % (time.time() - start_time))
+        corrmat, corrval, dx_pix, dy_pix = self._cross_correlation_shift(one_cut,two_cut)
 
         #convert dy_pix and dx_pix into microns
         dy_um=dy_pix*pixsize
@@ -490,7 +490,7 @@ class MosaicImage():
         dxy_pix=(dx_pix,dy_pix)
         dxy_um=(dx_um,dy_um)
 
-        print("---2. %s seconds  ---" % (time.time() - start_time))
+        print("---correlation ended. %s seconds  ---" % (time.time() - start_time))
         print "(correlation,(dx,dy))=  ",
         print (corrval,dxy_pix)
 
@@ -501,7 +501,7 @@ class MosaicImage():
         #paint the correlation matrix in its axis
         self.paintCorrImage(corrmat, dxy_pix)
 
-        print("---3. %s seconds ---" % (time.time() - start_time))
+        print("---painting ended %s seconds ---" % (time.time() - start_time))
         return (corrval,dxy_um)
         
     def explore_match(self,img1, kp1,img2,kp2, status = None, H = None):

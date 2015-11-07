@@ -88,11 +88,11 @@ class ChangeCorrSettings(wx.Dialog):
         
     def GetSettings(self):
         window=self.windowIntCtrl.GetValue()
-        delta=self.deltaIntCtrl.GetValue()
-        skip=self.skipIntCtrl.GetValue()
+        #delta=self.deltaIntCtrl.GetValue()
+        #skip=self.skipIntCtrl.GetValue()
         corr_thresh=self.corr_threshThresholdFloatCtrl.GetValue()
 
-        return CorrSettings(window,delta,skip,corr_thresh)
+        return CorrSettings(window=window,corr_thresh=corr_thresh)
 
 class SiftSettings():
 
