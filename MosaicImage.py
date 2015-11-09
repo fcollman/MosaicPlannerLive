@@ -41,7 +41,7 @@ from skimage.feature.register_translation import _upsampled_dft
 
 from bisect import bisect_right
 import time
-
+from bisect import bisect_right
 
 #my custom 2d correlation function for numpy 2d matrices.. 
 def mycorrelate2d(fixed,moved,skip=1):
@@ -464,8 +464,8 @@ class MosaicImage():
         '''
         cut_height = cutout.shape[0]-dim
         cut_width = cutout.shape[1]-dim
-        top_pix = floor(cut_height/2)
-        left_pix = floor(cut_width/2)
+        top_pix = np.floor(cut_height/2.0)
+        left_pix = np.floor(cut_width/2.0)
         cutout_central = cutout[top_pix:top_pix+dim,left_pix:left_pix+dim]
         return  cutout_central
 
@@ -484,8 +484,6 @@ class MosaicImage():
         cutout2_fix = self.get_central_region(cutout2,new_dim)
 
         return (cutout1_fix,cutout2_fix)
-
-
 
     def align_by_correlation(self,xy1,xy2,CorrSettings = CorrSettings()):
         """take two points in the image, and calculate the 2d cross correlation function of the image around those two points
@@ -519,7 +517,7 @@ class MosaicImage():
 
 
         print("---cutout a . %s seconds  ---" % (time.time() - start_time))
-        print 'one_shape,two_shape ',one_shape,two_shape
+        print 'one_shape,two_shape ',one_cut.shape,two_cut.shape
         one_cut,two_cut = self.fix_cutout_size(one_cut,two_cut)
 
         one_cut = one_cut - np.mean(one_cut)
