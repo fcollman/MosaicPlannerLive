@@ -41,7 +41,7 @@ from skimage.feature.register_translation import _upsampled_dft
 
 import math
 import time
-
+from bisect import bisect_right
 
 #my custom 2d correlation function for numpy 2d matrices.. 
 def mycorrelate2d(fixed,moved,skip=1):
@@ -436,6 +436,56 @@ class MosaicImage():
         return corrmat, corrval, dx_pix, dy_pix
 
 
+    def _get_faster_pixel_dimension(self,current_dimension):
+        '''
+        Uses a list of pre-calculated dimensions to cut the image size down
+        to one that is faster for np.fft.fftn(). Dimensions are all integers of the form
+        k*2^n for small k.
+        :param current_dimension:
+        :return: new dimension
+        '''
+        better_dimensions = [80,   84,   88,   92,   96,  104,  110,  112,  120,  128,  130,
+        132,  136,  140,  152,  156,  160,  168,  176,  184,  192,  208,
+        220,  224,  240,  256,  260,  264,  272,  280,  304,  312,  320,
+        336,  352,  368,  384,  416,  440,  448,  480,  512,  520,  528,
+        544,  560,  608,  624,  640,  672,  704,  736,  768,  832,  880,
+        896,  960, 1024, 1040, 1056, 1088, 1120, 1216, 1248, 1280, 1344,
+        1408, 1472, 1536, 1664, 1760, 1792, 1920, 2048]
+
+        pos = bisect_right(better_dimensions, current_dimension)-1
+        print 'pos',pos
+        return better_dimensions[pos]
+
+    def get_central_region(self,cutout,dim):
+        '''
+
+        :param cutout: a 2d numpy array, could be non square
+        :param dim: an integer dimensional
+        :return: cutout_central, the central dim x dim region of cutout
+        '''
+        cut_height = cutout.shape[0]-dim
+        cut_width = cutout.shape[1]-dim
+        top_pix = np.floor(cut_height/2.0)
+        left_pix = np.floor(cut_width/2.0)
+        cutout_central = cutout[top_pix:top_pix+dim,left_pix:left_pix+dim]
+        return  cutout_central
+
+    def fix_cutout_size(self,cutout1,cutout2):
+        '''
+
+        :param cutout1,2: two 2d numpy array representing a windowed cutouts around a point of interest,
+        should be in the range of 100-2048 pixels in height/width
+        :return: cutout1_fix,cutout2_fix: the a 2d numpy arrays that are square, and have been cropped to be of a size
+        that will be relatively fast to calculate a 2d FFT of.
+        '''
+        min_dim = min(cutout1.shape[0],cutout1.shape[1],cutout2.shape[0],cutout2.shape[1])
+        new_dim = self._get_faster_pixel_dimension(min_dim)
+
+        cutout1_fix = self.get_central_region(cutout1,new_dim)
+        cutout2_fix = self.get_central_region(cutout2,new_dim)
+
+        return (cutout1_fix,cutout2_fix)
+
     def align_by_correlation(self,xy1,xy2,CorrSettings = CorrSettings()):
         """take two points in the image, and calculate the 2d cross correlation function of the image around those two points
         plots the results in the appropriate axis, and returns the shift which aligns the two points given in microns
@@ -466,22 +516,18 @@ class MosaicImage():
         one_cut=self.cutout_window(x1,y1,window,)
         two_cut=self.cutout_window(x2,y2,window,)
 
-        one_shape=one_cut.shape
-        two_shape=two_cut.shape
-        print 'one_shape,two_shape ',one_shape,two_shape
-        min_height = min(one_shape[0],two_shape[0])
-        min_width = min(one_shape[1],two_shape[1])
 
-        #min_height = 2**int(math.log(min_height, 2))
-        #min_width = min_height # now constrained to have equal pixels!
-        #print 'minwh ',min_height,min_width
+        print("---cutout a . %s seconds  ---" % (time.time() - start_time))
+        print 'one_shape,two_shape ',one_cut.shape,two_cut.shape
+        one_cut,two_cut = self.fix_cutout_size(one_cut,two_cut)
 
-        one_cut=one_cut[0:min_height,0:min_width]
-        two_cut=two_cut[0:min_height,0:min_width]
         one_cut = one_cut - np.mean(one_cut)
         two_cut = two_cut - np.mean(two_cut)
+        print 'new dimensions ',one_cut.shape,two_cut.shape
         print("---cutout ended. %s seconds  ---" % (time.time() - start_time))
+
         corrmat, corrval, dx_pix, dy_pix = self._cross_correlation_shift(one_cut,two_cut)
+
 
         #convert dy_pix and dx_pix into microns
         dy_um=dy_pix*pixsize

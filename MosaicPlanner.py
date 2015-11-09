@@ -378,6 +378,7 @@ class MosaicPanel(FigureCanvas):
 
     def OnLoad(self,rootPath):
         self.rootPath=rootPath
+        print "transpose toggle state",self.imgSrc.transpose_xy
         self.mosaicImage=MosaicImage(self.subplot,self.posone_plot,self.postwo_plot,self.corrplot,self.imgSrc,rootPath,figure=self.figure)
         self.draw()
 
@@ -923,12 +924,7 @@ class ZVISelectFrame(wx.Frame):
         #self.fullResOpt = options.Append(self.ID_FULLRES,'Load full resolution (speed vs memory)','Rather than loading a 10x downsampled ',kind=wx.ITEM_CHECK)
         self.saveSettings = options.Append(self.ID_SAVE_SETTINGS,'Save Settings','Saves current configuration settings to config file that will be loaded automatically',kind=wx.ITEM_NORMAL)
         self.transpose_xy = options.Append(self.ID_TRANSPOSE_XY,'Transpose XY','Flips the x,y display so the vertical ribbons run horizontally',kind=wx.ITEM_CHECK)
-        #SET THE INTIAL SETTINGS
-        options.Check(self.ID_RELATIVEMOTION,self.cfg.ReadBool('relativemotion',True))
-        options.Check(self.ID_SORTPOINTS,True)
-        options.Check(self.ID_SHOWNUMBERS,False)
-        options.Check(self.ID_FLIPVERT,self.cfg.ReadBool('flipvert',False))
-        options.Check(self.ID_TRANSPOSE_XY,self.cfg.ReadBool('transposexy',False))
+
 
         #options.Check(self.ID_FULLRES,self.cfg.ReadBool('fullres',False))
 
@@ -942,6 +938,14 @@ class ZVISelectFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.EditCameraSettings, id=self.ID_EDIT_CAMERA_SETTINGS)
         self.Bind(wx.EVT_MENU, self.ToggleTransposeXY, id = self.ID_TRANSPOSE_XY)
 
+
+        #SET THE INTIAL SETTINGS
+        options.Check(self.ID_RELATIVEMOTION,self.cfg.ReadBool('relativemotion',True))
+        options.Check(self.ID_SORTPOINTS,True)
+        options.Check(self.ID_SHOWNUMBERS,False)
+        options.Check(self.ID_FLIPVERT,self.cfg.ReadBool('flipvert',False))
+        options.Check(self.ID_TRANSPOSE_XY,self.cfg.ReadBool('transposexy',False))
+        self.ToggleTransposeXY()
         #TRANSFORM MENU
         self.save_transformed = transformMenu.Append(self.ID_SAVETRANSFORM,'Save Transformed?',\
         'Rather than save the coordinates in the original space, save a transformed set of coordinates according to transform configured in set_transform...',kind=wx.ITEM_CHECK)
@@ -1079,6 +1083,8 @@ class ZVISelectFrame(wx.Frame):
         #self.OnArrayLoad()
         #self.mosaicCanvas.draw()
     def ToggleTransposeXY(self,evt=None):
+        print "toggle called",self.transpose_xy.IsChecked()
+
         self.mosaicCanvas.imgSrc.transpose_xy = self.transpose_xy.IsChecked()
 
 
