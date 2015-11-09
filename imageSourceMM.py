@@ -122,8 +122,8 @@ class imageSource():
         #moves scope to x,y - focus scope - snap picture
         #using the configured exposure time
 
-        print "is continuous focus enabled",self.mmc.isContinuousFocusEnabled()
-        print "is continuous focus locked",self.mmc.isContinuousFocusLocked()
+        #print "is continuous focus enabled",self.mmc.isContinuousFocusEnabled()
+        #print "is continuous focus locked",self.mmc.isContinuousFocusLocked()
 
 
 
