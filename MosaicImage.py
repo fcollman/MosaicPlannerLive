@@ -39,7 +39,6 @@ from scipy.signal import correlate
 from skimage.feature.register_translation import _upsampled_dft
 #implicity this relies upon matplotlib.axis matplotlib.AxisImage matplotlib.bar
 
-from bisect import bisect_right
 import time
 from bisect import bisect_right
 

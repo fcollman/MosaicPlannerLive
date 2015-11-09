@@ -380,6 +380,7 @@ class MosaicPanel(FigureCanvas):
         self.rootPath=rootPath
         print "transpose toggle state",self.imgSrc.transpose_xy
         self.mosaicImage=MosaicImage(self.subplot,self.posone_plot,self.postwo_plot,self.corrplot,self.imgSrc,rootPath,figure=self.figure)
+        self.OnCropTool()
         self.draw()
 
     def write_slice_metadata(self,filename,ch,xpos,ypos,zpos):
