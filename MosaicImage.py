@@ -39,7 +39,6 @@ from scipy.signal import correlate
 from skimage.feature.register_translation import _upsampled_dft
 #implicity this relies upon matplotlib.axis matplotlib.AxisImage matplotlib.bar
 
-import math
 import time
 from bisect import bisect_right
 
@@ -354,7 +353,8 @@ class MosaicImage():
             self.corrImage=self.paintImageCenter(corrmat, self.corr_axis,skip=skip,cmap='jet')             
             self.maxcorrPoint,=self.corr_axis.plot(dx,dy,'ro')
 
-            self.colorbar=self.corr_axis.figure.colorbar(self.corrImage,shrink=.9)
+            self.colorbar=self.corr_axis.figure.colorbar(self.corrImage,shrink=.9, ticks = [0.2,0.4,0.6,0.8,1.0])
+            self.corrImage.set_clim(vmin = 0.0, vmax = 1.0)
             self.corr_axis.set_title('Cross Correlation')
             self.corr_axis.set_ylabel('Pixels shifted')
           
@@ -435,7 +435,6 @@ class MosaicImage():
 
         return corrmat, corrval, dx_pix, dy_pix
 
-
     def _get_faster_pixel_dimension(self,current_dimension):
         '''
         Uses a list of pre-calculated dimensions to cut the image size down
@@ -513,8 +512,8 @@ class MosaicImage():
         #(one_cut,two_cut,corrmat)=self.cross_correlate_two_to_one(xy1,xy2,window,delta,skip)
         (x1,y1)=xy1
         (x2,y2)=xy2
-        one_cut=self.cutout_window(x1,y1,window,)
-        two_cut=self.cutout_window(x2,y2,window,)
+        one_cut=self.cutout_window(x1,y1,window)
+        two_cut=self.cutout_window(x2,y2,window)
 
 
         print("---cutout a . %s seconds  ---" % (time.time() - start_time))
@@ -527,7 +526,6 @@ class MosaicImage():
         print("---cutout ended. %s seconds  ---" % (time.time() - start_time))
 
         corrmat, corrval, dx_pix, dy_pix = self._cross_correlation_shift(one_cut,two_cut)
-
 
         #convert dy_pix and dx_pix into microns
         dy_um=dy_pix*pixsize
