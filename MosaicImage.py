@@ -438,7 +438,8 @@ class MosaicImage():
     def _get_faster_pixel_dimension(self,current_dimension):
         '''
         Uses a list of pre-calculated dimensions to cut the image size down
-        to one that is faster for np.fft.fftn(). Dimensions are from kn^2.
+        to one that is faster for np.fft.fftn(). Dimensions are all integers of the form
+        k*2^n for small k.
         :param current_dimension:
         :return: new dimension
         '''
@@ -453,6 +454,38 @@ class MosaicImage():
         pos = bisect_right(better_dimensions, current_dimension)-1
         print 'pos',pos
         return better_dimensions[pos]
+
+    def get_central_region(self,cutout,dim):
+        '''
+
+        :param cutout: a 2d numpy array, could be non square
+        :param dim: an integer dimensional
+        :return: cutout_central, the central dim x dim region of cutout
+        '''
+        cut_height = cutout.shape[0]-dim
+        cut_width = cutout.shape[1]-dim
+        top_pix = floor(cut_height/2)
+        left_pix = floor(cut_width/2)
+        cutout_central = cutout[top_pix:top_pix+dim,left_pix:left_pix+dim]
+        return  cutout_central
+
+    def fix_cutout_size(self,cutout1,cutout2):
+        '''
+
+        :param cutout1,2: two 2d numpy array representing a windowed cutouts around a point of interest,
+        should be in the range of 100-2048 pixels in height/width
+        :return: cutout1_fix,cutout2_fix: the a 2d numpy arrays that are square, and have been cropped to be of a size
+        that will be relatively fast to calculate a 2d FFT of.
+        '''
+        min_dim = min(cutout1.shape[0],cutout1.shape[1],cutout2.shape[0],cutout2.shape[1])
+        new_dim = self._get_faster_pixel_dimension(min_dim)
+
+        cutout1_fix = self.get_central_region(cutout1,new_dim)
+        cutout2_fix = self.get_central_region(cutout2,new_dim)
+
+        return (cutout1_fix,cutout2_fix)
+
+
 
     def align_by_correlation(self,xy1,xy2,CorrSettings = CorrSettings()):
         """take two points in the image, and calculate the 2d cross correlation function of the image around those two points
@@ -481,20 +514,14 @@ class MosaicImage():
         #(one_cut,two_cut,corrmat)=self.cross_correlate_two_to_one(xy1,xy2,window,delta,skip)
         (x1,y1)=xy1
         (x2,y2)=xy2
-        one_cut=self.cutout_window(x1,y1,window,)
-        two_cut=self.cutout_window(x2,y2,window,)
+        one_cut=self.cutout_window(x1,y1,window)
+        two_cut=self.cutout_window(x2,y2,window)
 
-        one_shape=one_cut.shape
-        two_shape=two_cut.shape
+
         print("---cutout a . %s seconds  ---" % (time.time() - start_time))
         print 'one_shape,two_shape ',one_shape,two_shape
-        min_height = min(one_shape[0],two_shape[0])
-        new_dim = self._get_faster_pixel_dimension(min_height)
-        print new_dim
-        #min_width = min(one_shape[1],two_shape[1])
+        one_cut,two_cut = self.fix_cutout_size(one_cut,two_cut)
 
-        one_cut=one_cut[0:new_dim,0:new_dim]
-        two_cut=two_cut[0:new_dim,0:new_dim]
         one_cut = one_cut - np.mean(one_cut)
         two_cut = two_cut - np.mean(two_cut)
         print 'new dimensions ',one_cut.shape,two_cut.shape
