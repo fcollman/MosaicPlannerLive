@@ -353,7 +353,8 @@ class MosaicImage():
             self.corrImage=self.paintImageCenter(corrmat, self.corr_axis,skip=skip,cmap='jet')             
             self.maxcorrPoint,=self.corr_axis.plot(dx,dy,'ro')
 
-            self.colorbar=self.corr_axis.figure.colorbar(self.corrImage,shrink=.9)
+            self.colorbar=self.corr_axis.figure.colorbar(self.corrImage,shrink=.9, ticks = [0.2,0.4,0.6,0.8,1.0])
+            self.corrImage.set_clim(vmin = 0.0, vmax = 1.0)
             self.corr_axis.set_title('Cross Correlation')
             self.corr_axis.set_ylabel('Pixels shifted')
           
