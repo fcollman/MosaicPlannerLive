@@ -187,7 +187,8 @@ class CameraSettings():
 
 class ChannelSettings():
     """simple struct for containing the parameters for the microscope"""
-    def __init__(self,channels,exposure_times=dict([]),zoffsets=dict([]),usechannels=dict([]),prot_names=dict([]),map_chan=None,def_exposure=100,def_offset=0.0):
+    def __init__(self,channels,exposure_times=dict([]),zoffsets=dict([]),usechannels=dict([]),prot_names=dict([]),map_chan=None,def_exposure=100,def_offset=0.0,
+                 zstack_delta = 1.0, zstack_number = 3.0, zstack_flag = True):
         #def_exposure is default exposure time in msec
        
         
@@ -199,6 +200,12 @@ class ChannelSettings():
         self.zoffsets=zoffsets
         self.usechannels=usechannels
         self.prot_names=prot_names
+
+        self.zstack_flag = zstack_flag
+        self.zstack_delta = zstack_delta
+        self.zstack_number = int(zstack_number + (1 - zstack_number % 2))
+
+
         
         if map_chan is None:
             for ch in self.channels:

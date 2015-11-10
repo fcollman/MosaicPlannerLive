@@ -440,23 +440,33 @@ class MosaicPanel(FigureCanvas):
 
         print datetime.datetime.now().time()," starting multichannel acq"
         currZ=self.imgSrc.get_z()
-        for k,ch in enumerate(self.channel_settings.channels):
-            print datetime.datetime.now().time()," start channel",ch
-            prot_name=self.channel_settings.prot_names[ch]
-            path=os.path.join(outdir,prot_name)
-            if self.channel_settings.usechannels[ch]:
-                z=currZ+self.channel_settings.zoffsets[ch]
-                self.imgSrc.set_z(z)
-                self.imgSrc.set_exposure(self.channel_settings.exposure_times[ch])
-                self.imgSrc.set_channel(ch)
-                data=self.imgSrc.snap_image()
 
-                tif_filepath=os.path.join(path,prot_name+"_S%04d_F%04d.tif"%(slice_index,frame_index))
-                metadata_filepath=os.path.join(path,prot_name+"_S%04d_F%04d_metadata.txt"%(slice_index,frame_index))
+        if self.channel_settings.zstack_flag:
+            furthest_distance = self.channel_settings.zstack_delta * (self.channel_settings.zstack_number-1)/2
+            zplanes_to_visit = [(currZ-furthest_distance) + i*self.channel_settings.zstack_delta for i in range(self.channel_settings.zstack_number)]
+        else:
+            zplanes_to_visit = [currZ]
+        print 'zplanes_to_visit : ',zplanes_to_visit
 
-                imsave(tif_filepath,data)
+        for z_index,zplane in enumerate(zplanes_to_visit):
+            print z_index, zplane
+            for k,ch in enumerate(self.channel_settings.channels):
+                print datetime.datetime.now().time()," start channel",ch
+                prot_name=self.channel_settings.prot_names[ch]
+                path=os.path.join(outdir,prot_name)
+                if self.channel_settings.usechannels[ch]:
+                    z = zplane + self.channel_settings.zoffsets[ch]
+                    self.imgSrc.set_z(z)
+                    self.imgSrc.set_exposure(self.channel_settings.exposure_times[ch])
+                    self.imgSrc.set_channel(ch)
+                    data=self.imgSrc.snap_image()
 
-                self.write_slice_metadata(metadata_filepath,ch,x,y,z)
+                    tif_filepath=os.path.join(path,prot_name+"_S%04d_F%04d_Z%02d.tif"%(slice_index,frame_index,z_index))
+                    metadata_filepath=os.path.join(path,prot_name+"_S%04d_F%04d_Z%02d_metadata.txt"%(slice_index,frame_index,z_index))
+
+                    imsave(tif_filepath,data)
+
+                    self.write_slice_metadata(metadata_filepath,ch,x,y,z)
 
     def OnRunAcq(self,event="none"):
         print "running"
