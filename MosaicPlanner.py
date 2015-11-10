@@ -46,7 +46,8 @@ import pickle
 import faulthandler
 import datetime
 
-
+from mosaicthreading import MosaicThread
+from threading import Thread
 
 class MosaicToolbar(NavBarImproved):
     """A custom toolbar which adds buttons and to interact with a MosaicPanel
@@ -732,6 +733,8 @@ class MosaicPanel(FigureCanvas):
     def OnSnapTool(self,evt=""):
         #takes snap straight away
         self.mosaicImage.imgCollection.ohSnap()
+        if self.mosaicImage.imgCollection.imgCount == 1:
+            self.OnCropTool()
         self.draw()
 
     def OnHomeTool(self):
@@ -794,14 +797,19 @@ class MosaicPanel(FigureCanvas):
         self.draw()
 
     def OnFastForwardTool(self,event):
-        """handler for the FastForwardTool"""
-        goahead=True
-        #keep doing this till the StepTool says it shouldn't go forward anymore
-        while (goahead):
-            goahead=self.StepTool()
-            self.draw()
-        #call up a box and make a beep alerting the user for help
-        wx.MessageBox('Fast Forward Aborted, Help me','Info')
+
+        def antifreeze():
+            """handler for the FastForwardTool"""
+            goahead=True
+            #keep doing this till the StepTool says it shouldn't go forward anymore
+            while (goahead):
+                goahead=self.StepTool()
+                self.OnCropTool()
+                self.draw()
+            #call up a box and make a beep alerting the user for help
+            wx.MessageBox('Fast Forward Aborted, Help me','Info')
+        t = Thread(target=antifreeze())
+        t.start
 
     def StepTool(self):
         """function for performing a step, assuming point1 and point2 have been selected

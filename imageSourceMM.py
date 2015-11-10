@@ -3,6 +3,7 @@ import MMCorePy
 from PIL import Image
 import time
 from Rectangle import Rectangle
+import wx
 
 class imageSource():
     
@@ -126,6 +127,7 @@ class imageSource():
         #print "is continuous focus locked",self.mmc.isContinuousFocusLocked()
         if not self.mmc.isContinuousFocusLocked():
             print 'CRISP is not locked'
+            wx.MessageBox('CRISP is not locked, Help me',)
             return
 
 
