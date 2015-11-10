@@ -124,7 +124,9 @@ class imageSource():
 
         #print "is continuous focus enabled",self.mmc.isContinuousFocusEnabled()
         #print "is continuous focus locked",self.mmc.isContinuousFocusLocked()
-
+        if not self.mmc.isContinuousFocusLocked():
+            print 'CRISP is not locked'
+            return
 
 
         #move stage to x,y
