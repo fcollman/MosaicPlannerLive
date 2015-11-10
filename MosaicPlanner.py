@@ -46,7 +46,6 @@ import pickle
 import faulthandler
 import datetime
 
-from mosaicthreading import MosaicThread
 from threading import Thread
 
 class MosaicToolbar(NavBarImproved):
