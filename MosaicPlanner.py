@@ -338,6 +338,10 @@ class MosaicPanel(FigureCanvas):
         self.CorrSettings = CorrSettings()
         self.CorrSettings.load_settings(config)
 
+        # load Zstack settings
+        self.zstack_settings = ZstackSettings()
+        self.zstack_settings.load_settings(config)
+
         #setup a blank position list
         self.posList=posList(self.subplot,mosaic_settings,self.camera_settings)
         #start with no MosaicImage
@@ -440,23 +444,35 @@ class MosaicPanel(FigureCanvas):
 
         print datetime.datetime.now().time()," starting multichannel acq"
         currZ=self.imgSrc.get_z()
-        for k,ch in enumerate(self.channel_settings.channels):
-            print datetime.datetime.now().time()," start channel",ch
-            prot_name=self.channel_settings.prot_names[ch]
-            path=os.path.join(outdir,prot_name)
-            if self.channel_settings.usechannels[ch]:
-                z=currZ+self.channel_settings.zoffsets[ch]
-                self.imgSrc.set_z(z)
-                self.imgSrc.set_exposure(self.channel_settings.exposure_times[ch])
-                self.imgSrc.set_channel(ch)
-                data=self.imgSrc.snap_image()
 
-                tif_filepath=os.path.join(path,prot_name+"_S%04d_F%04d.tif"%(slice_index,frame_index))
-                metadata_filepath=os.path.join(path,prot_name+"_S%04d_F%04d_metadata.txt"%(slice_index,frame_index))
+        print 'flag is,',self.zstack_settings.zstack_flag
 
-                imsave(tif_filepath,data)
+        if self.zstack_settings.zstack_flag:
+            furthest_distance = self.zstack_settings.zstack_delta * (self.zstack_settings.zstack_number-1)/2
+            zplanes_to_visit = [(currZ-furthest_distance) + i*self.zstack_settings.zstack_delta for i in range(self.zstack_settings.zstack_number)]
+        else:
+            zplanes_to_visit = [currZ]
+            print 'no zstack!'
+        print 'zplanes_to_visit : ',zplanes_to_visit
 
-                self.write_slice_metadata(metadata_filepath,ch,x,y,z)
+        for z_index,zplane in enumerate(zplanes_to_visit):
+            for k,ch in enumerate(self.channel_settings.channels):
+                print datetime.datetime.now().time()," start channel",ch, " zplane", zplane
+                prot_name=self.channel_settings.prot_names[ch]
+                path=os.path.join(outdir,prot_name)
+                if self.channel_settings.usechannels[ch]:
+                    z = zplane + self.channel_settings.zoffsets[ch]
+                    self.imgSrc.set_z(z)
+                    self.imgSrc.set_exposure(self.channel_settings.exposure_times[ch])
+                    self.imgSrc.set_channel(ch)
+                    data=self.imgSrc.snap_image()
+
+                    tif_filepath=os.path.join(path,prot_name+"_S%04d_F%04d_Z%02d.tif"%(slice_index,frame_index,z_index))
+                    metadata_filepath=os.path.join(path,prot_name+"_S%04d_F%04d_Z%02d_metadata.txt"%(slice_index,frame_index,z_index))
+
+                    imsave(tif_filepath,data)
+
+                    self.write_slice_metadata(metadata_filepath,ch,x,y,z)
 
     def OnRunAcq(self,event="none"):
         print "running"
@@ -551,6 +567,15 @@ class MosaicPanel(FigureCanvas):
         self.cfg.Write('MM_config_file',self.MM_config_file)
 
         dlg.Destroy()
+
+    def EditZstackSettings(self,event = "none"):
+        dlg = ChangeZstackSettings(None, -1, title= "Edit Ztack Settings", settings = self.zstack_settings, style = wx.OK)
+        ret=dlg.ShowModal()
+        if ret == wx.ID_OK:
+            self.zstack_settings = dlg.GetSettings()
+            self.zstack_settings.save_settings(self.cfg)
+        dlg.Destroy()
+
 
     def EditFocusCorrectionPlane(self, event = None):
         global win
@@ -891,6 +916,7 @@ class ZVISelectFrame(wx.Frame):
     ID_EDIT_FOCUS_CORRECTION = wx.NewId()
     ID_USE_FOCUS_CORRECTION = wx.NewId()
     ID_TRANSPOSE_XY = wx.NewId()
+    ID_EDIT_ZSTACK = wx.NewId()
 
     def __init__(self, parent, title):
         """default init function for a wx.Frame
@@ -966,6 +992,7 @@ class ZVISelectFrame(wx.Frame):
 
         #IMAGING SETTINGS MENU
         self.edit_micromanager_config = Imaging_Menu.Append(self.ID_EDIT_MM_CONFIG,'Set MicroManager Configuration',kind=wx.ITEM_NORMAL)
+        self.edit_zstack_settings = Imaging_Menu.Append(self.ID_EDIT_ZSTACK,'Edit Zstack settings', kind = wx.ITEM_NORMAL)
         self.edit_channels = Imaging_Menu.Append(self.ID_EDIT_CHANNELS,'Edit Channels',kind=wx.ITEM_NORMAL)
         self.edit_SIFT_settings = Imaging_Menu.Append(self.ID_EDIT_SIFT, 'Edit SIFT settings',kind=wx.ITEM_NORMAL)
         self.edit_CORR_settings = Imaging_Menu.Append(self.ID_EDIT_CORR,'Edit CorrTool settings',kind=wx.ITEM_NORMAL)
@@ -975,6 +1002,7 @@ class ZVISelectFrame(wx.Frame):
 
 
         self.Bind(wx.EVT_MENU, self.ToggleUseFocusCorrection,id=self.ID_USE_FOCUS_CORRECTION)
+        self.Bind(wx.EVT_MENU, self.mosaicCanvas.EditZstackSettings,id=self.ID_EDIT_ZSTACK)
         self.Bind(wx.EVT_MENU, self.mosaicCanvas.EditMMConfig, id = self.ID_EDIT_MM_CONFIG)
         self.Bind(wx.EVT_MENU, self.mosaicCanvas.EditChannels, id = self.ID_EDIT_CHANNELS)
         self.Bind(wx.EVT_MENU, self.mosaicCanvas.EditSIFTSettings, id = self.ID_EDIT_SIFT)

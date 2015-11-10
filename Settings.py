@@ -17,6 +17,70 @@
 # 
 #===============================================================================
 import wx
+
+class ZstackSettings():
+
+    def __init__(self,zstack_delta = 1.0, zstack_number = 3.0, zstack_flag = True):
+        self.zstack_flag = zstack_flag
+        self.zstack_delta = zstack_delta
+        self.zstack_number = int(zstack_number + (1 - zstack_number % 2))
+
+    def save_settings(self,cfg):
+        cfg.WriteFloat('zstack_delta/',self.zstack_delta)
+        cfg.WriteBool('zstack_flag/',self.zstack_flag)
+        cfg.WriteInt('zstack_number/',self.zstack_number)
+
+    def load_settings(self,cfg):
+        self.zstack_delta = cfg.ReadFloat('zstack_delta/')
+        self.zstack_flag = cfg.ReadBool('zstack_flag/')
+        self.zstack_number = cfg.ReadInt('zstack_number/')
+
+class ChangeZstackSettings(wx.Dialog):
+    def __init__(self, parent, id, title, settings,style):
+        wx.Dialog.__init__(self, parent, id, title,style=wx.DEFAULT_DIALOG_STYLE, size=(420, -1))
+        vbox =wx.BoxSizer(wx.VERTICAL)
+
+        self.settings = settings
+        self.zflagtxt = wx.StaticText(self,label="Take Z stacks?")
+        self.checkBox = wx.CheckBox(self)
+        self.checkBox.SetValue(settings.zstack_flag)
+        self.znumberTxt = wx.StaticText(self,label="number of images to take (forced to be odd for middle=current)")
+        self.znumberIntCtrl = wx.lib.intctrl.IntCtrl( self, value=settings.zstack_number,size=(50,-1))
+        self.zdeltaTxt = wx.StaticText(self,label="z step between images (microns)")
+        self.zdeltaFloatCtrl = wx.lib.agw.floatspin.FloatSpin(self,
+                                       value=settings.zstack_delta,
+                                       min_val=0,
+                                       max_val=10.0,
+                                       increment=.01,
+                                       digits=2,
+                                       name='',
+                                       size=(95,-1))
+        ok_button = wx.Button(self,wx.ID_OK,'OK')
+        cancel_button = wx.Button(self,wx.ID_CANCEL,'Cancel')
+        hbox1 = wx.BoxSizer(wx.HORIZONTAL)
+        hbox2 = wx.BoxSizer(wx.HORIZONTAL)
+        hbox3 = wx.BoxSizer(wx.HORIZONTAL)
+        hbox4 = wx.BoxSizer(wx.HORIZONTAL)
+        hbox1.Add(self.zflagtxt)
+        hbox1.Add(self.checkBox)
+        hbox2.Add(self.znumberIntCtrl)
+        hbox2.Add(self.znumberTxt)
+        hbox3.Add(self.zdeltaFloatCtrl)
+        hbox3.Add(self.zdeltaTxt)
+        hbox4.Add(ok_button)
+        hbox4.Add(cancel_button)
+        vbox.Add(hbox1)
+        vbox.Add(hbox2)
+        vbox.Add(hbox3)
+        vbox.Add(hbox4)
+        self.SetSizer(vbox)
+
+    def GetSettings(self):
+        flag        = self.checkBox.GetValue()
+        stacksize   = self.znumberIntCtrl.GetValue()
+        delta       = self.zdeltaFloatCtrl.GetValue()
+        return ZstackSettings(zstack_delta = delta,zstack_number = stacksize,zstack_flag = flag)
+
 class CorrSettings():
 
     def __init__(self,window=100,delta=75,skip = 3,corr_thresh = .3):
@@ -187,7 +251,7 @@ class CameraSettings():
 
 class ChannelSettings():
     """simple struct for containing the parameters for the microscope"""
-    def __init__(self,channels,exposure_times=dict([]),zoffsets=dict([]),usechannels=dict([]),prot_names=dict([]),map_chan=None,def_exposure=100,def_offset=0.0):
+    def __init__(self,channels,exposure_times=dict([]),zoffsets=dict([]),usechannels=dict([]),prot_names=dict([]),map_chan=None,def_exposure=100,def_offset=0.0,):
         #def_exposure is default exposure time in msec
        
         
@@ -199,7 +263,7 @@ class ChannelSettings():
         self.zoffsets=zoffsets
         self.usechannels=usechannels
         self.prot_names=prot_names
-        
+
         if map_chan is None:
             for ch in self.channels:
                 if 'dapi' in ch.lower():
@@ -217,7 +281,8 @@ class ChannelSettings():
             cfg.WriteFloat('ZOffsets/'+ch,self.zoffsets[ch])
             cfg.WriteBool('UseChannel/'+ch,self.usechannels[ch])
             cfg.Write('ProteinNames/'+ch,self.prot_names[ch])
-            
+
+
     def load_settings(self,cfg):
         for ch in self.channels:
             self.exposure_times[ch]=cfg.ReadInt('Exposures/'+ch, self.def_exposure)
@@ -236,7 +301,7 @@ class ChangeChannelSettings(wx.Dialog):
         Nch=len(settings.channels)
         print Nch
         
-        gridSizer=wx.FlexGridSizer(rows=Nch+1,cols=6,vgap=5,hgap=5)
+        gridSizer=wx.FlexGridSizer(rows=Nch+3,cols=6,vgap=5,hgap=5)
         
       
         gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label="chan"),border=5)
@@ -245,8 +310,7 @@ class ChangeChannelSettings(wx.Dialog):
         gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label="exposure"),border=5)
         gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label="map?"),border=5)
         gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label="zoffset     "),border=5)
-        
-        
+
         self.ProtNameCtrls=[]
         self.UseCtrls=[]
         self.ExposureCtrls=[]
