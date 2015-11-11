@@ -813,7 +813,7 @@ class MosaicPanel(FigureCanvas):
             #call up a box and make a beep alerting the user for help
             wx.MessageBox('Fast Forward Aborted, Help me','Info')
         t = Thread(target=antifreeze())
-        t.start
+        t.start()
 
     def StepTool(self):
         """function for performing a step, assuming point1 and point2 have been selected
