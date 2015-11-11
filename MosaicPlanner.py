@@ -420,16 +420,16 @@ class MosaicPanel(FigureCanvas):
 
     def MultiDAcq(self,outdir,x,y,slice_index,frame_index=0):
 
-        print datetime.datetime.now().time()," starting multiDAcq, autofocus on"
+        #print datetime.datetime.now().time()," starting multiDAcq, autofocus on"
         self.imgSrc.set_hardware_autofocus_state(True)
-        print datetime.datetime.now().time()," starting stage move"
+        #print datetime.datetime.now().time()," starting stage move"
         self.imgSrc.move_stage(x,y)
         attempts=0
-        print datetime.datetime.now().time()," starting autofocus"
+        #print datetime.datetime.now().time()," starting autofocus"
         if self.imgSrc.has_hardware_autofocus():
             #wait till autofocus settles
             while not self.imgSrc.is_hardware_autofocus_done():
-                time.sleep(.05)
+                #time.sleep(.05)
                 attempts+=1
                 if attempts>100:
                     print "not auto-focusing correctly.. giving up after 10 seconds"
@@ -442,10 +442,10 @@ class MosaicPanel(FigureCanvas):
             score=self.imgSrc.image_based_autofocus(chan=self.channel_settings.map_chan)
             print score
 
-        print datetime.datetime.now().time()," starting multichannel acq"
+        #print datetime.datetime.now().time()," starting multichannel acq"
         currZ=self.imgSrc.get_z()
 
-        print 'flag is,',self.zstack_settings.zstack_flag
+        #print 'flag is,',self.zstack_settings.zstack_flag
 
         if self.zstack_settings.zstack_flag:
             furthest_distance = self.zstack_settings.zstack_delta * (self.zstack_settings.zstack_number-1)/2
@@ -453,11 +453,11 @@ class MosaicPanel(FigureCanvas):
         else:
             zplanes_to_visit = [currZ]
             print 'no zstack!'
-        print 'zplanes_to_visit : ',zplanes_to_visit
+        #print 'zplanes_to_visit : ',zplanes_to_visit
 
         for z_index,zplane in enumerate(zplanes_to_visit):
             for k,ch in enumerate(self.channel_settings.channels):
-                print datetime.datetime.now().time()," start channel",ch, " zplane", zplane
+                #print datetime.datetime.now().time()," start channel",ch, " zplane", zplane
                 prot_name=self.channel_settings.prot_names[ch]
                 path=os.path.join(outdir,prot_name)
                 if self.channel_settings.usechannels[ch]:
