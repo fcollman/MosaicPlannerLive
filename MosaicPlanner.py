@@ -482,9 +482,14 @@ class MosaicPanel(FigureCanvas):
 
         #get an output directory
         dlg=wx.DirDialog(self,message="Pick output directory",defaultPath= os.path.split(self.rootPath)[0])
-        dlg.ShowModal()
+        button_pressed = dlg.ShowModal()
+        if button_pressed == wx.ID_CANCEL:
+            wx.MessageBox("You didn't enter a save directory... \n Aborting aquisition")
+            return None
+
         outdir=dlg.GetPath()
         dlg.Destroy()
+        print outdir, 'is outdir'
 
         #setup output directories
         for k,ch in enumerate(self.channel_settings.channels):
