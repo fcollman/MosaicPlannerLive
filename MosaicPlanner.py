@@ -802,18 +802,14 @@ class MosaicPanel(FigureCanvas):
 
     def OnFastForwardTool(self,event):
 
-        def antifreeze():
-            """handler for the FastForwardTool"""
-            goahead=True
-            #keep doing this till the StepTool says it shouldn't go forward anymore
-            while (goahead):
-                goahead=self.StepTool()
-                self.OnCropTool()
-                self.draw()
-            #call up a box and make a beep alerting the user for help
-            wx.MessageBox('Fast Forward Aborted, Help me','Info')
-        t = Thread(target=antifreeze())
-        t.start
+        goahead=True
+        #keep doing this till the StepTool says it shouldn't go forward anymore
+        while (goahead):
+            goahead=self.StepTool()
+            self.OnCropTool()
+            self.draw()
+        #call up a box and make a beep alerting the user for help
+        wx.MessageBox('Fast Forward Aborted, Help me','Info')
 
     def StepTool(self):
         """function for performing a step, assuming point1 and point2 have been selected
