@@ -13,8 +13,8 @@ class imageSource():
         self.configFile=configFile
         self.mmc = MMCorePy.CMMCore() 
         self.mmc.enableStderrLog(False)
-        self.mmc.enableDebugLog(False)
-        self.mmc.setPrimaryLogFile('CoreLog.txt')
+        self.mmc.enableDebugLog(True)
+        self.mmc.setPrimaryLogFile('CoreLogProcessSpeed_PipeSave.txt')
         self.mmc.loadSystemConfiguration(self.configFile)
        
         self.channelGroupName=channelGroupName
@@ -268,6 +268,7 @@ class imageSource():
         self.mmc.snapImage()
         data = self.mmc.getImage()
 
+
         (flipx,flipy,trans) = self.get_image_flip()
         if trans:
             data = np.transpose(data)
@@ -276,6 +277,7 @@ class imageSource():
         if flipy:
             data=np.flipud(data)
         return data
+
     
     
     def get_sensor_size(self):
