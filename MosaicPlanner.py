@@ -307,9 +307,6 @@ class MosaicToolbar(NavBarImproved):
     def setSliderMax(self,max=500):
         self.slider.SetMax(max)
 
-
-
-
 class MosaicPanel(FigureCanvas):
     """A panel that extends the matplotlib class FigureCanvas for plotting all the plots, and handling all the GUI interface events
     """
@@ -408,7 +405,7 @@ class MosaicPanel(FigureCanvas):
     def handle_close(self,evt=None):
         print "handling close"
         #if not self.mosaicImage == None:
-        #    self.mosaicImage.cursor_prr.cancel()
+        #    self.mosaicImage.cursor_timer.cancel()
         self.imgSrc.mmc.unloadAllDevices()
 
     def OnLoad(self,rootPath):
