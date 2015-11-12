@@ -49,7 +49,7 @@ from threading import Thread
 import multiprocessing as mp
 STOP_TOKEN = 'STOP!!!'
 
-def file_save_process(queue,stop_token):
+def file_save_process(queue,stop_token, metadata_dictionary):
     while True:
         token=queue.get()
         if token == stop_token:
@@ -59,16 +59,16 @@ def file_save_process(queue,stop_token):
             tif_filepath=os.path.join(path,prot_name+"_S%04d_F%04d_Z%02d.tif"%(slice_index,frame_index,z_index))
             metadata_filepath=os.path.join(path,prot_name+"_S%04d_F%04d_Z%02d_metadata.txt"%(slice_index,frame_index,z_index))
             imsave(tif_filepath,data)
+            write_slice_metadata(metadata_filepath,ch,x,y,z,metadata_dictionary)
 
-    #write_slice_metadata(metadata_filepath,ch,x,y,z)
 
-def write_slice_metadata(filename,ch,xpos,ypos,zpos):
+def write_slice_metadata(filename,ch,xpos,ypos,zpos, meta_dict):
     f = open(filename, 'w')
-    channelname = self.channel_settings.prot_names[ch]
-    (height,width)=self.imgSrc.get_sensor_size()
-    ScaleFactorX=self.imgSrc.get_pixel_size()
-    ScaleFactorY=self.imgSrc.get_pixel_size()
-    exp_time=self.channel_settings.exposure_times[ch]
+    channelname   = meta_dict['channelname'][ch]
+    (height,width)= meta_dict['(height,width)']
+    ScaleFactorX  = meta_dict['ScaleFactorX']
+    ScaleFactorY  = meta_dict['ScaleFactorY']
+    exp_time      = meta_dict['exp_time'][ch]
 
     f.write("Channel\tWidth\tHeight\tMosaicX\tMosaicY\tScaleX\tScaleY\tExposureTime\n")
     f.write("%s\t%d\t%d\t%d\t%d\t%f\t%f\t%f\n" % \
@@ -480,27 +480,26 @@ class MosaicPanel(FigureCanvas):
             zplanes_to_visit = [(currZ-furthest_distance) + i*self.zstack_settings.zstack_delta for i in range(self.zstack_settings.zstack_number)]
         else:
             zplanes_to_visit = [currZ]
-            print 'no zstack!'
         #print 'zplanes_to_visit : ',zplanes_to_visit
 
-        for z_index,zplane in enumerate(zplanes_to_visit):
+        for z_index, zplane in enumerate(zplanes_to_visit):
             for k,ch in enumerate(self.channel_settings.channels):
                 #print datetime.datetime.now().time()," start channel",ch, " zplane", zplane
                 prot_name=self.channel_settings.prot_names[ch]
                 path=os.path.join(outdir,prot_name)
                 if self.channel_settings.usechannels[ch]:
-                    ti = time.clock()*1000
-                    print time.clock(),'start'
+                    #ti = time.clock()*1000
+                    #print time.clock(),'start'
                     z = zplane + self.channel_settings.zoffsets[ch]
                     self.imgSrc.set_z(z)
                     self.imgSrc.set_exposure(self.channel_settings.exposure_times[ch])
                     self.imgSrc.set_channel(ch)
-                    t2 = time.clock()*1000
-                    print time.clock(),t2-ti, 'ms to get to snap image from start'
+                    #t2 = time.clock()*1000
+                    #print time.clock(),t2-ti, 'ms to get to snap image from start'
                     data=self.imgSrc.snap_image()
-                    t3 = time.clock()*1000
-                    print time.clock(),t3-t2, 'ms to snap image'
-                    self.dataQueue.put((slice_index,frame_index, z_index, prot_name,path,data,ch,x,y,z))
+                    #t3 = time.clock()*1000
+                    #print time.clock(),t3-t2, 'ms to snap image'
+                    self.dataQueue.put((slice_index,frame_index, z_index, prot_name,path,data,ch,x,y,z,))
 
 
     def OnRunAcq(self,event="none"):
@@ -518,8 +517,15 @@ class MosaicPanel(FigureCanvas):
 
         outdir=dlg.GetPath()
         dlg.Destroy()
-        print outdir, 'is outdir'
 
+
+        metadata_dictionary = {
+        'channelname'    : self.channel_settings.prot_names,
+        '(height,width)' : self.imgSrc.get_sensor_size(),
+        'ScaleFactorX'   : self.imgSrc.get_pixel_size(),
+        'ScaleFactorY'   : self.imgSrc.get_pixel_size(),
+        'exp_time'       : self.channel_settings.exposure_times,
+        }
         #setup output directories
         for k,ch in enumerate(self.channel_settings.channels):
             if self.channel_settings.usechannels[ch]:
@@ -541,7 +547,7 @@ class MosaicPanel(FigureCanvas):
 
 
         self.dataQueue = mp.Queue()
-        self.saveProcess =  mp.Process(target=file_save_process,args=(self.dataQueue,STOP_TOKEN))
+        self.saveProcess =  mp.Process(target=file_save_process,args=(self.dataQueue,STOP_TOKEN, metadata_dictionary))
         self.saveProcess.start()
 
         #loop over positions
