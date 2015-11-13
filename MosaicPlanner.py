@@ -45,8 +45,36 @@ from FocusCorrectionPlaneWindow import FocusCorrectionPlaneWindow
 import pickle
 import faulthandler
 import datetime
+from threading import Thread
+import multiprocessing as mp
+STOP_TOKEN = 'STOP!!!'
+
+def file_save_process(queue,stop_token, metadata_dictionary):
+    while True:
+        token=queue.get()
+        if token == stop_token:
+            return
+        else:
+            (slice_index,frame_index, z_index, prot_name,path,data,ch,x,y,z)=token
+            tif_filepath=os.path.join(path,prot_name+"_S%04d_F%04d_Z%02d.tif"%(slice_index,frame_index,z_index))
+            metadata_filepath=os.path.join(path,prot_name+"_S%04d_F%04d_Z%02d_metadata.txt"%(slice_index,frame_index,z_index))
+            imsave(tif_filepath,data)
+            write_slice_metadata(metadata_filepath,ch,x,y,z,metadata_dictionary)
 
 
+def write_slice_metadata(filename,ch,xpos,ypos,zpos, meta_dict):
+    f = open(filename, 'w')
+    channelname   = meta_dict['channelname'][ch]
+    (height,width)= meta_dict['(height,width)']
+    ScaleFactorX  = meta_dict['ScaleFactorX']
+    ScaleFactorY  = meta_dict['ScaleFactorY']
+    exp_time      = meta_dict['exp_time'][ch]
+
+    f.write("Channel\tWidth\tHeight\tMosaicX\tMosaicY\tScaleX\tScaleY\tExposureTime\n")
+    f.write("%s\t%d\t%d\t%d\t%d\t%f\t%f\t%f\n" % \
+    (channelname, width, height, 1, 1, ScaleFactorX, ScaleFactorY, exp_time))
+    f.write("XPositions\tYPositions\tFocusPositions\n")
+    f.write("%s\t%s\t%s\n" %(xpos, ypos, zpos))
 
 class MosaicToolbar(NavBarImproved):
     """A custom toolbar which adds buttons and to interact with a MosaicPanel
@@ -134,7 +162,9 @@ class MosaicToolbar(NavBarImproved):
         snapBmp = wx.Image('icons/new/snap.png',wx.BITMAP_TYPE_PNG).ConvertToBitmap()
         cameraBmp = wx.Image('icons/new/camera.png',wx.BITMAP_TYPE_PNG).ConvertToBitmap()
         liveBmp = wx.Image('icons/new/livemode.png',wx.BITMAP_TYPE_PNG).ConvertToBitmap()
-        batmanBmp = wx.Image('icons/new/batman.png',wx.BITMAP_TYPE_PNG).ConvertToBitmap()
+        #batmanBmp = wx.Image('icons/new/batman.png',wx.BITMAP_TYPE_PNG).ConvertToBitmap()
+        batmanBmp = wx.Image('icons/new/1446777170_Check.png',wx.BITMAP_TYPE_PNG).ConvertToBitmap()
+        
 
         self.DeleteTool(self.wx_ids['Subplots'])
         #self.DeleteTool(self.wx_ids['Pan'])
@@ -420,16 +450,16 @@ class MosaicPanel(FigureCanvas):
 
     def MultiDAcq(self,outdir,x,y,slice_index,frame_index=0):
 
-        print datetime.datetime.now().time()," starting multiDAcq, autofocus on"
+        #print datetime.datetime.now().time()," starting multiDAcq, autofocus on"
         self.imgSrc.set_hardware_autofocus_state(True)
-        print datetime.datetime.now().time()," starting stage move"
+        #print datetime.datetime.now().time()," starting stage move"
         self.imgSrc.move_stage(x,y)
         attempts=0
-        print datetime.datetime.now().time()," starting autofocus"
+        #print datetime.datetime.now().time()," starting autofocus"
         if self.imgSrc.has_hardware_autofocus():
             #wait till autofocus settles
             while not self.imgSrc.is_hardware_autofocus_done():
-                time.sleep(.05)
+                #time.sleep(.05)
                 attempts+=1
                 if attempts>100:
                     print "not auto-focusing correctly.. giving up after 10 seconds"
@@ -442,37 +472,37 @@ class MosaicPanel(FigureCanvas):
             score=self.imgSrc.image_based_autofocus(chan=self.channel_settings.map_chan)
             print score
 
-        print datetime.datetime.now().time()," starting multichannel acq"
+        #print datetime.datetime.now().time()," starting multichannel acq"
         currZ=self.imgSrc.get_z()
 
-        print 'flag is,',self.zstack_settings.zstack_flag
+        #print 'flag is,',self.zstack_settings.zstack_flag
 
         if self.zstack_settings.zstack_flag:
             furthest_distance = self.zstack_settings.zstack_delta * (self.zstack_settings.zstack_number-1)/2
             zplanes_to_visit = [(currZ-furthest_distance) + i*self.zstack_settings.zstack_delta for i in range(self.zstack_settings.zstack_number)]
         else:
             zplanes_to_visit = [currZ]
-            print 'no zstack!'
-        print 'zplanes_to_visit : ',zplanes_to_visit
+        #print 'zplanes_to_visit : ',zplanes_to_visit
 
-        for z_index,zplane in enumerate(zplanes_to_visit):
+        for z_index, zplane in enumerate(zplanes_to_visit):
             for k,ch in enumerate(self.channel_settings.channels):
-                print datetime.datetime.now().time()," start channel",ch, " zplane", zplane
+                #print datetime.datetime.now().time()," start channel",ch, " zplane", zplane
                 prot_name=self.channel_settings.prot_names[ch]
                 path=os.path.join(outdir,prot_name)
                 if self.channel_settings.usechannels[ch]:
+                    #ti = time.clock()*1000
+                    #print time.clock(),'start'
                     z = zplane + self.channel_settings.zoffsets[ch]
                     self.imgSrc.set_z(z)
                     self.imgSrc.set_exposure(self.channel_settings.exposure_times[ch])
                     self.imgSrc.set_channel(ch)
+                    #t2 = time.clock()*1000
+                    #print time.clock(),t2-ti, 'ms to get to snap image from start'
                     data=self.imgSrc.snap_image()
+                    #t3 = time.clock()*1000
+                    #print time.clock(),t3-t2, 'ms to snap image'
+                    self.dataQueue.put((slice_index,frame_index, z_index, prot_name,path,data,ch,x,y,z,))
 
-                    tif_filepath=os.path.join(path,prot_name+"_S%04d_F%04d_Z%02d.tif"%(slice_index,frame_index,z_index))
-                    metadata_filepath=os.path.join(path,prot_name+"_S%04d_F%04d_Z%02d_metadata.txt"%(slice_index,frame_index,z_index))
-
-                    imsave(tif_filepath,data)
-
-                    self.write_slice_metadata(metadata_filepath,ch,x,y,z)
 
     def OnRunAcq(self,event="none"):
         print "running"
@@ -482,10 +512,22 @@ class MosaicPanel(FigureCanvas):
 
         #get an output directory
         dlg=wx.DirDialog(self,message="Pick output directory",defaultPath= os.path.split(self.rootPath)[0])
-        dlg.ShowModal()
+        button_pressed = dlg.ShowModal()
+        if button_pressed == wx.ID_CANCEL:
+            wx.MessageBox("You didn't enter a save directory... \n Aborting aquisition")
+            return None
+
         outdir=dlg.GetPath()
         dlg.Destroy()
 
+
+        metadata_dictionary = {
+        'channelname'    : self.channel_settings.prot_names,
+        '(height,width)' : self.imgSrc.get_sensor_size(),
+        'ScaleFactorX'   : self.imgSrc.get_pixel_size(),
+        'ScaleFactorY'   : self.imgSrc.get_pixel_size(),
+        'exp_time'       : self.channel_settings.exposure_times,
+        }
         #setup output directories
         for k,ch in enumerate(self.channel_settings.channels):
             if self.channel_settings.usechannels[ch]:
@@ -505,6 +547,11 @@ class MosaicPanel(FigureCanvas):
             self.imgSrc.move_stage(currpos.x,currpos.y)
             currpos=self.posList.get_prev_pos(currpos)
 
+
+        self.dataQueue = mp.Queue()
+        self.saveProcess =  mp.Process(target=file_save_process,args=(self.dataQueue,STOP_TOKEN, metadata_dictionary))
+        self.saveProcess.start()
+
         #loop over positions
         for i,pos in enumerate(self.posList.slicePositions):
             #turn on autofocus
@@ -513,6 +560,12 @@ class MosaicPanel(FigureCanvas):
             else:
                 for j,fpos in enumerate(pos.frameList.slicePositions):
                     self.MultiDAcq(outdir,fpos.x,fpos.y,i,j)
+
+        self.dataQueue.put(STOP_TOKEN)
+        self.saveProcess.join()
+        print "save process ended"
+
+
 
     def EditChannels(self,event = "none"):
         dlg = ChangeChannelSettings(None, -1, title = "Channel Settings", settings = self.channel_settings,style=wx.OK)
@@ -732,6 +785,8 @@ class MosaicPanel(FigureCanvas):
     def OnSnapTool(self,evt=""):
         #takes snap straight away
         self.mosaicImage.imgCollection.ohSnap()
+        if self.mosaicImage.imgCollection.imgCount == 1:
+            self.OnCropTool()
         self.draw()
 
     def OnHomeTool(self):
@@ -794,11 +849,12 @@ class MosaicPanel(FigureCanvas):
         self.draw()
 
     def OnFastForwardTool(self,event):
-        """handler for the FastForwardTool"""
+
         goahead=True
         #keep doing this till the StepTool says it shouldn't go forward anymore
         while (goahead):
             goahead=self.StepTool()
+            self.OnCropTool()
             self.draw()
         #call up a box and make a beep alerting the user for help
         wx.MessageBox('Fast Forward Aborted, Help me','Info')
@@ -1285,12 +1341,13 @@ class ZVISelectFrame(wx.Frame):
         self.mosaicCanvas.handle_close()
         self.Destroy()
 
-#dirname=sys.argv[1]
-#print dirname
-faulthandler.enable()
-app = wx.App(False)
-# Create a new app, don't redirect stdout/stderr to a window.
-frame = ZVISelectFrame(None,"Mosaic Planner")
-# A Frame is a top-level window.
-app.MainLoop()
-QtGui.QApplication.quit()
+if __name__ == '__main__':
+    #dirname=sys.argv[1]
+    #print dirname
+    faulthandler.enable()
+    app = wx.App(False)
+    # Create a new app, don't redirect stdout/stderr to a window.
+    frame = ZVISelectFrame(None,"Mosaic Planner")
+    # A Frame is a top-level window.
+    app.MainLoop()
+    QtGui.QApplication.quit()

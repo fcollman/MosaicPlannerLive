@@ -45,7 +45,7 @@ IntProperty = 3
 
 class MMPropertyBrowser(QtGui.QWidget):
 
-    def __init__(self, mmc,debug=True):
+    def __init__(self, mmc,debug=False):
         r"""MMPropertyBrowser(mmc)
         mmc is a micromanager core object"""
 
