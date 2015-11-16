@@ -191,7 +191,7 @@ class imageSource():
         stg=self.mmc.getXYStageDevice()
         self.mmc.setXYPosition(stg,x,y)
         self.mmc.waitForDevice(stg)
-        print self.get_xy()
+        #print self.get_xy()
         
 
 
@@ -265,8 +265,11 @@ class imageSource():
         #NEED TO IMPLEMENT IF NOT MICROMANAGER
         #with microscope in current configuration
         #snap a picture, and return the data as a numpy 2d array
+
         self.mmc.snapImage()
         data = self.mmc.getImage()
+
+
 
 
         (flipx,flipy,trans) = self.get_image_flip()

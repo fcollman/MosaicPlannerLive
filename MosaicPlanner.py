@@ -474,7 +474,7 @@ class MosaicPanel(FigureCanvas):
 
         #print datetime.datetime.now().time()," starting multichannel acq"
         currZ=self.imgSrc.get_z()
-
+        presentZ = currZ
         #print 'flag is,',self.zstack_settings.zstack_flag
 
         if self.zstack_settings.zstack_flag:
@@ -493,7 +493,9 @@ class MosaicPanel(FigureCanvas):
                     #ti = time.clock()*1000
                     #print time.clock(),'start'
                     z = zplane + self.channel_settings.zoffsets[ch]
-                    self.imgSrc.set_z(z)
+                    if not z == presentZ:
+                        self.imgSrc.set_z(z)
+                        presentZ = z
                     self.imgSrc.set_exposure(self.channel_settings.exposure_times[ch])
                     self.imgSrc.set_channel(ch)
                     #t2 = time.clock()*1000
