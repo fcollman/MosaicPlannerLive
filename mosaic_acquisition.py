@@ -18,21 +18,24 @@
 #===============================================================================
 
 import multiprocessing as mp
+import wx
+import os
+
 from imageSourceMM import imageSource
 
 STOP_TOKEN = 'STOP!!!'
 
-def acquisition_process(MM_config_file,metadata_dictionary,positions_etc):
+def acquisition_process(MM_config_file,metadata_dictionary,positions_etc,config):
     '''
     Handler function for setting up the process to run the mosaic aquisition.
     '''
-    MosaicAquisition(MM_config_file,metadata_dictionary, positions_etc)
+    MosaicAquisition(MM_config_file,metadata_dictionary, positions_etc, config)
 
 
 
 class MosaicAquisition()
 
-    def __init__(self, MM_config_file, metadata_dictionary, positions_etc):
+    def __init__(self, MM_config_file, metadata_dictionary, positions_etc,config):
 
         self.imgSrc=None
         if self.imgSrc is None:
@@ -52,6 +55,11 @@ class MosaicAquisition()
                 else:
                     for j,fpos in enumerate(pos.frameList.slicePositions):
                         self.multiDAcq(outdir,fpos.x,fpos.y,i,j)
+
+        self.config = wx.Config('settings') # ? or just config
+        self.channel_settings=ChannelSettings(self.imgSrc.get_channels())
+        self.channel_settings.load_settings(self.config)
+        self.imgSrc.set_channel(self.channel_settings.map_chan)
 
         self.dataQueue.put(STOP_TOKEN)
         self.saveProcess.join()
@@ -77,11 +85,11 @@ class MosaicAquisition()
 
         currZ=self.imgSrc.get_z()
 
-        if self.zstack_settings.zstack_flag:
-            furthest_distance = self.zstack_settings.zstack_delta * (self.zstack_settings.zstack_number-1)/2
-            zplanes_to_visit = [(currZ-furthest_distance) + i*self.zstack_settings.zstack_delta for i in range(self.zstack_settings.zstack_number)]
-        else:
-            zplanes_to_visit = [currZ]
+        #if self.zstack_settings.zstack_flag:
+        #    furthest_distance = self.zstack_settings.zstack_delta * (self.zstack_settings.zstack_number-1)/2
+        #    zplanes_to_visit = [(currZ-furthest_distance) + i*self.zstack_settings.zstack_delta for i in range(self.zstack_settings.zstack_number)]
+        #else:
+        zplanes_to_visit = [currZ]
 
         for z_index, zplane in enumerate(zplanes_to_visit):
             for k,ch in enumerate(self.channel_settings.channels):

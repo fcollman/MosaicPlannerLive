@@ -551,9 +551,14 @@ class MosaicPanel(FigureCanvas):
             currpos=self.posList.get_prev_pos(currpos)
 
         whatisthis = self.posList.slicePositions #pos.frameList.slicePositions
-        self.runProcess = mp.Process(target = acquisition_process(metadata_dictionary,whatisthis))
+
+        self.runProcess = mp.Process(target = acquisition_process(self.MM_config_file,
+                                                                  metadata_dictionary,
+                                                                  whatisthis,
+                                                                  config)
         self.runProcess.start()
 
+        '''
         self.dataQueue = mp.Queue()
         self.saveProcess =  mp.Process(target=file_save_process,args=(self.dataQueue,STOP_TOKEN, metadata_dictionary))
         self.saveProcess.start()
@@ -570,7 +575,9 @@ class MosaicPanel(FigureCanvas):
         self.dataQueue.put(STOP_TOKEN)
         self.saveProcess.join()
         print "save process ended"
-
+        '''
+        wx.MessageBox('Nailed it','Info')
+        self.runProcess.join()
 
 
     def EditChannels(self,event = "none"):
