@@ -47,6 +47,9 @@ import faulthandler
 import datetime
 from threading import Thread
 import multiprocessing as mp
+
+from mosaic_acquisition import acquisition_process
+
 STOP_TOKEN = 'STOP!!!'
 
 def file_save_process(queue,stop_token, metadata_dictionary):
@@ -547,6 +550,9 @@ class MosaicPanel(FigureCanvas):
             self.imgSrc.move_stage(currpos.x,currpos.y)
             currpos=self.posList.get_prev_pos(currpos)
 
+        whatisthis = self.posList.slicePositions #pos.frameList.slicePositions
+        self.runProcess = mp.Process(target = acquisition_process(metadata_dictionary,whatisthis))
+        self.runProcess.start()
 
         self.dataQueue = mp.Queue()
         self.saveProcess =  mp.Process(target=file_save_process,args=(self.dataQueue,STOP_TOKEN, metadata_dictionary))
