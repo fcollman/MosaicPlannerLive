@@ -47,6 +47,9 @@ import faulthandler
 import datetime
 from threading import Thread
 import multiprocessing as mp
+
+from mosaic_acquisition import acquisition_process
+
 STOP_TOKEN = 'STOP!!!'
 
 def file_save_process(queue,stop_token, metadata_dictionary):
@@ -549,7 +552,22 @@ class MosaicPanel(FigureCanvas):
             self.imgSrc.move_stage(currpos.x,currpos.y)
             currpos=self.posList.get_prev_pos(currpos)
 
+        if self.posList.slicePositions[0].frameList:
+            coordinates = [(fpos.x,fpos.y,i,j) for i,pos in enumerate(self.posList.slicePositions)\
+                   for j,fpos in enumerate(pos.framelist.slicePositions)]
 
+        elif self.posList.slicePositions[0].frameList is None:
+            coordinates = [(pos.x,pos.y,i) for i,pos in enumerate(self.posList.slicePositions)]
+
+
+        self.runProcess = mp.Process(target = acquisition_process(self.MM_config_file,
+                                                                  metadata_dictionary,
+                                                                  coordinates,
+                                                                  config,
+                                                                  outdir)
+        self.runProcess.start()
+
+        '''
         self.dataQueue = mp.Queue()
         self.saveProcess =  mp.Process(target=file_save_process,args=(self.dataQueue,STOP_TOKEN, metadata_dictionary))
         self.saveProcess.start()
@@ -566,7 +584,18 @@ class MosaicPanel(FigureCanvas):
         self.dataQueue.put(STOP_TOKEN)
         self.saveProcess.join()
         print "save process ended"
+        '''
+        dlg = wx.MessageBox('Nailed it','Info')
+        #dlg=wx.DirDialog(self,message="Pick output directory",defaultPath= os.path.split(self.rootPath)[0])
+        button_pressed = dlg.ShowModal()
+        if button_pressed == wx.ID_CANCEL:
+            wx.MessageBox("Aborting aquisition")
+            self.runProcess.terminate()
+            return None
+        outdir=dlg.GetPath()
+        dlg.Destroy()
 
+        self.runProcess.join()
 
 
     def EditChannels(self,event = "none"):
