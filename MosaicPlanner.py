@@ -583,7 +583,16 @@ class MosaicPanel(FigureCanvas):
         self.saveProcess.join()
         print "save process ended"
         '''
-        wx.MessageBox('Nailed it','Info')
+        dlg = wx.MessageBox('Nailed it','Info')
+        #dlg=wx.DirDialog(self,message="Pick output directory",defaultPath= os.path.split(self.rootPath)[0])
+        button_pressed = dlg.ShowModal()
+        if button_pressed == wx.ID_CANCEL:
+            wx.MessageBox("Aborting aquisition")
+            self.runProcess.terminate()
+            return None
+        outdir=dlg.GetPath()
+        dlg.Destroy()
+
         self.runProcess.join()
 
 

@@ -37,7 +37,6 @@ class MosaicAquisition()
 
     def __init__(self, MM_config_file, metadata_dictionary, coordinates,config,outdir):
         '''
-
         :param MM_config_file:
         :param metadata_dictionary:
         :param coordinates: if framelist D = 4, else D= 3
@@ -47,16 +46,15 @@ class MosaicAquisition()
         :return:
         '''
 
-        self.imgSrc=None
-        if self.imgSrc is None:
-            try:
-                self.imgSrc=imageSource(MM_config_file)
-            except:
-                print('Could not set up acquisition image source, aborting...')
-                return None
+        try:
+            self.imgSrc=imageSource(MM_config_file)
+        except:
+            print('Could not set up acquisition image source, aborting...')
+            return None
 
         self.dataQueue = mp.Queue()
         self.saveProcess =  mp.Process(target=file_save_process,args=(self.dataQueue,STOP_TOKEN, metadata_dictionary))
+        self.saveProcess.daemon = True # Set so saveprocess will be killed if the run process is terminated
         self.saveProcess.start()
 
         if len(coordinates[0]) == 3: # No framelist, just single positions
