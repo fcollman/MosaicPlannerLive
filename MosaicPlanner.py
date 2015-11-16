@@ -445,7 +445,7 @@ class MosaicPanel(FigureCanvas):
                 Nch+=1
 
         f.write("Width\tHeight\t#chan\tMosaicX\tMosaicY\tScaleX\tScaleY\n")
-        f.write("%d\t%d\t%d\t%d\t%d\t%f\t%f\n" % (width,height, Nch,self.posList.mosaic_settings.mx, self.posList.mosaic_settings.my, self.imgSrc.get_pixel_size(), self.imgSrc.get_pixel_size()))
+        f.write("%d\t%d\t%d\t%d\t%d\t%f\t%f\n" % (width,height, Nch,self.posList.mosaic_settings.mx, self.posList.mosaic_settings.mx, self.imgSrc.get_pixel_size(), self.imgSrc.get_pixel_size()))
         f.write("Channel\tExposure Times (msec)\tRLPosition\n")
         for k,ch in enumerate(self.channel_settings.channels):
             if self.channel_settings.usechannels[ch]:
