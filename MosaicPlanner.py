@@ -550,12 +550,19 @@ class MosaicPanel(FigureCanvas):
             self.imgSrc.move_stage(currpos.x,currpos.y)
             currpos=self.posList.get_prev_pos(currpos)
 
-        whatisthis = self.posList.slicePositions #pos.frameList.slicePositions
+        if self.posList.slicePositions[0].frameList:
+            coordinates = [(fpos.x,fpos.y,i,j) for i,pos in enumerate(self.posList.slicePositions)\
+                   for j,fpos in enumerate(pos.framelist.slicePositions)]
+
+        elif self.posList.slicePositions[0].frameList is None:
+            coordinates = [(pos.x,pos.y,i) for i,pos in enumerate(self.posList.slicePositions)]
+
 
         self.runProcess = mp.Process(target = acquisition_process(self.MM_config_file,
                                                                   metadata_dictionary,
-                                                                  whatisthis,
-                                                                  config)
+                                                                  coordinates,
+                                                                  config,
+                                                                  outdir)
         self.runProcess.start()
 
         '''

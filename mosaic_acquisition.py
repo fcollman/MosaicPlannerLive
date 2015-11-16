@@ -25,36 +25,52 @@ from imageSourceMM import imageSource
 
 STOP_TOKEN = 'STOP!!!'
 
-def acquisition_process(MM_config_file,metadata_dictionary,positions_etc,config):
+def acquisition_process(MM_config_file,metadata_dictionary,coordinates,config,outdir):
     '''
     Handler function for setting up the process to run the mosaic aquisition.
     '''
-    MosaicAquisition(MM_config_file,metadata_dictionary, positions_etc, config)
+    MosaicAquisition(MM_config_file,metadata_dictionary, coordinates, config,outdir)
 
 
 
 class MosaicAquisition()
 
-    def __init__(self, MM_config_file, metadata_dictionary, positions_etc,config):
+    def __init__(self, MM_config_file, metadata_dictionary, coordinates,config,outdir):
+        '''
+
+        :param MM_config_file:
+        :param metadata_dictionary:
+        :param coordinates: if framelist D = 4, else D= 3
+        (x,y,i,j) or (x,y,i)
+        :param config:
+        :param outdir:
+        :return:
+        '''
 
         self.imgSrc=None
         if self.imgSrc is None:
             try:
                 self.imgSrc=imageSource(MM_config_file)
             except:
-                print 'Could not set up acquisition image source, aborting...'
+                print('Could not set up acquisition image source, aborting...')
                 return None
 
         self.dataQueue = mp.Queue()
         self.saveProcess =  mp.Process(target=file_save_process,args=(self.dataQueue,STOP_TOKEN, metadata_dictionary))
         self.saveProcess.start()
 
-        for i,pos in enumerate(self.posList.slicePositions):
-                if pos.frameList is None:
-                    self.multiDAcq(outdir,pos.x,pos.y,i)
-                else:
-                    for j,fpos in enumerate(pos.frameList.slicePositions):
-                        self.multiDAcq(outdir,fpos.x,fpos.y,i,j)
+        if len(coordinates[0]) == 3: # No framelist, just single positions
+            for xyi in coordinates:
+                self.multiDAcq(xyi[0], xyi[1], xyi[2], frameindex=0)
+
+        elif len(coordinates[0]) == 4: # Framelist exists
+            for xyij in coordinates:
+                self.multiDAcq(xyij[0], xyij[1], xyij[2], xyij[3])
+
+        else:
+            print('Acquisition coordinates unexpected dimensions, aborting')
+            return None
+
 
         self.config = wx.Config('settings') # ? or just config
         self.channel_settings=ChannelSettings(self.imgSrc.get_channels())
