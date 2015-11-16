@@ -162,8 +162,8 @@ class MosaicToolbar(NavBarImproved):
         snapBmp = wx.Image('icons/new/snap.png',wx.BITMAP_TYPE_PNG).ConvertToBitmap()
         cameraBmp = wx.Image('icons/new/camera.png',wx.BITMAP_TYPE_PNG).ConvertToBitmap()
         liveBmp = wx.Image('icons/new/livemode.png',wx.BITMAP_TYPE_PNG).ConvertToBitmap()
-        #batmanBmp = wx.Image('icons/new/batman.png',wx.BITMAP_TYPE_PNG).ConvertToBitmap()
-        batmanBmp = wx.Image('icons/new/1446777170_Check.png',wx.BITMAP_TYPE_PNG).ConvertToBitmap()
+        batmanBmp = wx.Image('icons/new/batman.png',wx.BITMAP_TYPE_PNG).ConvertToBitmap()
+        #batmanBmp = wx.Image('icons/new/1446777170_Check.png',wx.BITMAP_TYPE_PNG).ConvertToBitmap()
         
 
         self.DeleteTool(self.wx_ids['Subplots'])
@@ -855,9 +855,11 @@ class MosaicPanel(FigureCanvas):
         goahead=True
         #keep doing this till the StepTool says it shouldn't go forward anymore
         while (goahead):
+            wx.Yield()
             goahead=self.StepTool()
             self.OnCropTool()
             self.draw()
+
         #call up a box and make a beep alerting the user for help
         wx.MessageBox('Fast Forward Aborted, Help me','Info')
 
