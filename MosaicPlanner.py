@@ -554,24 +554,36 @@ class MosaicPanel(FigureCanvas):
         self.dataQueue = mp.Queue()
         self.saveProcess =  mp.Process(target=file_save_process,args=(self.dataQueue,STOP_TOKEN, metadata_dictionary))
         self.saveProcess.start()
-        progressMax = 100
-        dialog = wx.ProgressDialog("A progress box", "Time remaining", progressMax,
+
+        hasFrameList = self.posList.slicePositions[0].frameList is not None
+        numSections = len(self.posList.slicePositions)
+        if hasFrameList:
+            numFrames = len(self.posList.slicePositions[0].frameList.slicePositions)
+        else:
+            numFrames = 1
+        maxProgress = numSections*numFrames
+
+        self.progress = wx.ProgressDialog("A progress box", "Time remaining", maxProgress ,
         style=wx.PD_CAN_ABORT | wx.PD_ELAPSED_TIME | wx.PD_REMAINING_TIME)
+
+
 
 
         #loop over positions
         for i,pos in enumerate(self.posList.slicePositions):
+            self.progress.Update(i*numFrames,'section %d of %d'%(i,numSections))
             #turn on autofocus
             if pos.frameList is None:
                 self.MultiDAcq(outdir,pos.x,pos.y,i)
             else:
                 for j,fpos in enumerate(pos.frameList.slicePositions):
                     self.MultiDAcq(outdir,fpos.x,fpos.y,i,j)
-
+                    self.progress.Update((i*numFrames) + j+1,'section %d of %d, frame %d'%(i,numSections,j))
+            wx.Yield()
         self.dataQueue.put(STOP_TOKEN)
         self.saveProcess.join()
         print "save process ended"
-
+        self.progress.Destroy()
 
 
     def EditChannels(self,event = "none"):
