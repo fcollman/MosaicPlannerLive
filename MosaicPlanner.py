@@ -454,6 +454,7 @@ class MosaicPanel(FigureCanvas):
         self.imgSrc.set_hardware_autofocus_state(True)
         #print datetime.datetime.now().time()," starting stage move"
         self.imgSrc.move_stage(x,y)
+        wx.Yield()
         attempts=0
         #print datetime.datetime.now().time()," starting autofocus"
         if self.imgSrc.has_hardware_autofocus():
@@ -553,6 +554,10 @@ class MosaicPanel(FigureCanvas):
         self.dataQueue = mp.Queue()
         self.saveProcess =  mp.Process(target=file_save_process,args=(self.dataQueue,STOP_TOKEN, metadata_dictionary))
         self.saveProcess.start()
+        progressMax = 100
+        dialog = wx.ProgressDialog("A progress box", "Time remaining", progressMax,
+        style=wx.PD_CAN_ABORT | wx.PD_ELAPSED_TIME | wx.PD_REMAINING_TIME)
+
 
         #loop over positions
         for i,pos in enumerate(self.posList.slicePositions):
