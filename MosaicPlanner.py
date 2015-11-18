@@ -16,65 +16,67 @@
 #  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #
 #===============================================================================
-from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
-from NavigationToolBarImproved import NavigationToolbar2Wx_improved as NavBarImproved
-from matplotlib.figure import Figure
-import OleFileIO_PL,os
-from PIL import Image
-import wx.lib.intctrl
+import os
+import sys
+import traceback
+import time
+import datetime
+import multiprocessing as mp
+import pickle
+
+import wx
 import numpy as np
-#from Settings import MosaicSettings, CameraSettings,SiftSettings,ChangeCameraSettings, ImageSettings, ChangeImageMetadata, SmartSEMSettings, ChangeSEMSettings, ChannelSettings, ChangeChannelSettings, ChangeSiftSettings
-from Settings import *
+import wx.lib.intctrl
+import faulthandler
+from pyqtgraph.Qt import QtCore, QtGui
+from tifffile import imsave
+from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
+from matplotlib.figure import Figure
+from PIL import Image
+
+import LiveMode
 from PositionList import posList
 from MyLasso import MyLasso
 from MosaicImage import MosaicImage
 from Transform import Transform,ChangeTransform
-from xml.dom.minidom import parseString
-import wx
-import xml.etree.ElementTree as ET
-import numpy
 from imageSourceMM import imageSource
-import LiveMode
-from pyqtgraph.Qt import QtCore, QtGui
-import sys, traceback
-from tifffile import imsave
-import time
 from MMPropertyBrowser import MMPropertyBrowser
-import threading
 from FocusCorrectionPlaneWindow import FocusCorrectionPlaneWindow
-import pickle
-import faulthandler
-import datetime
-from threading import Thread
-import multiprocessing as mp
+from NavigationToolBarImproved import NavigationToolbar2Wx_improved as NavBarImproved
+from Settings import (MosaicSettings, CameraSettings,SiftSettings,ChangeCameraSettings, ImageSettings,
+                       ChangeImageMetadata, SmartSEMSettings, ChangeSEMSettings, ChannelSettings,
+                       ChangeChannelSettings, ChangeSiftSettings)
+
 STOP_TOKEN = 'STOP!!!'
+
 
 def file_save_process(queue,stop_token, metadata_dictionary):
     while True:
-        token=queue.get()
+        token = queue.get()
         if token == stop_token:
             return
         else:
-            (slice_index,frame_index, z_index, prot_name,path,data,ch,x,y,z)=token
-            tif_filepath=os.path.join(path,prot_name+"_S%04d_F%04d_Z%02d.tif"%(slice_index,frame_index,z_index))
-            metadata_filepath=os.path.join(path,prot_name+"_S%04d_F%04d_Z%02d_metadata.txt"%(slice_index,frame_index,z_index))
+            (slice_index,frame_index, z_index, prot_name, path, data, ch, x, y, z) = token
+            tif_filepath = os.path.join(path, prot_name + "_S%04d_F%04d_Z%02d.tif" % (slice_index, frame_index, z_index))
+            metadata_filepath = os.path.join(path, prot_name + "_S%04d_F%04d_Z%02d_metadata.txt"%(slice_index, frame_index, z_index))
             imsave(tif_filepath,data)
-            write_slice_metadata(metadata_filepath,ch,x,y,z,metadata_dictionary)
+            write_slice_metadata(metadata_filepath, ch, x, y, z, metadata_dictionary)
 
 
-def write_slice_metadata(filename,ch,xpos,ypos,zpos, meta_dict):
+def write_slice_metadata(filename, ch, xpos, ypos, zpos, meta_dict):
+    channelname    = meta_dict['channelname'][ch]
+    (height,width) = meta_dict['(height,width)']
+    ScaleFactorX   = meta_dict['ScaleFactorX']
+    ScaleFactorY   = meta_dict['ScaleFactorY']
+    exp_time       = meta_dict['exp_time'][ch]
+
     f = open(filename, 'w')
-    channelname   = meta_dict['channelname'][ch]
-    (height,width)= meta_dict['(height,width)']
-    ScaleFactorX  = meta_dict['ScaleFactorX']
-    ScaleFactorY  = meta_dict['ScaleFactorY']
-    exp_time      = meta_dict['exp_time'][ch]
-
     f.write("Channel\tWidth\tHeight\tMosaicX\tMosaicY\tScaleX\tScaleY\tExposureTime\n")
     f.write("%s\t%d\t%d\t%d\t%d\t%f\t%f\t%f\n" % \
     (channelname, width, height, 1, 1, ScaleFactorX, ScaleFactorY, exp_time))
     f.write("XPositions\tYPositions\tFocusPositions\n")
     f.write("%s\t%s\t%s\n" %(xpos, ypos, zpos))
+
 
 class MosaicToolbar(NavBarImproved):
     """A custom toolbar which adds buttons and to interact with a MosaicPanel
@@ -92,7 +94,6 @@ class MosaicToolbar(NavBarImproved):
     corrTool: a button that calls self.canvas.OnCorrTool ID=ON_CORR
     stepTool: a button that calls self.canvas.OnStepTool ID=ON_STEP
     ffTool: a button that calls OnFastForwardTool ID=ON_FF
-
 
     installed Toggle tool buttons:
     gridTool: a toggled button that calls self.canvas.OnGridTool with the ID=ON_GRID
@@ -135,7 +136,6 @@ class MosaicToolbar(NavBarImproved):
         plotCanvas: an instance of MosaicPanel which has the correct features (see class doc)
 
         """
-
         #recursively call the init function of what we are extending
         NavBarImproved.__init__(self, plotCanvas)
         wx.Log.SetLogLevel(0)
@@ -164,7 +164,6 @@ class MosaicToolbar(NavBarImproved):
         liveBmp = wx.Image('icons/new/livemode.png',wx.BITMAP_TYPE_PNG).ConvertToBitmap()
         batmanBmp = wx.Image('icons/new/batman.png',wx.BITMAP_TYPE_PNG).ConvertToBitmap()
         #batmanBmp = wx.Image('icons/new/1446777170_Check.png',wx.BITMAP_TYPE_PNG).ConvertToBitmap()
-        
 
         self.DeleteTool(self.wx_ids['Subplots'])
         #self.DeleteTool(self.wx_ids['Pan'])
@@ -177,7 +176,6 @@ class MosaicToolbar(NavBarImproved):
         self.addTool = self.add_user_tool('add', 10, addpointBmp, True, 'Add a Point')
         self.oneTool = self.add_user_tool('selectone', 11, oneBmp, True, 'Choose pointLine2D 1')
         self.twoTool = self.add_user_tool('selecttwo', 12, twoBmp, True, 'Choose pointLine2D 2')
-
 
         self.AddSeparator()
         self.AddSeparator()
@@ -241,7 +239,6 @@ class MosaicToolbar(NavBarImproved):
         self.AddControl(self.sliderMaxCtrl)
 
         #bind event handles for the various tools
-
         #this one i think is inherited... the zoom_tool function
         self.Bind(wx.EVT_TOOL, self.on_toggle_pan_zoom, self.zoom_tool)
         # self.Bind(wx.wx.EVT_TOOL,self.canvas.OnHomeTool,self.home_tool)
@@ -266,10 +263,8 @@ class MosaicToolbar(NavBarImproved):
         #wx.EVT_TOOL(self, self.ON_FINETUNE, self.canvas.OnFineTuneTool)
         #wx.EVT_TOOL(self, self.ON_REDRAW, self.canvas.OnRedraw)
         wx.EVT_TOOL(self, self.ON_ROTATE, self.canvas.OnRotateTool)
-
         wx.EVT_TOOL(self, self.ON_SNAP, self.canvas.OnSnapTool)
         wx.EVT_TOOL(self, self.ON_CROP, self.canvas.OnCropTool)
-
 
         self.Realize()
 
