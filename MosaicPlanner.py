@@ -109,6 +109,7 @@ class MosaicToolbar(NavBarImproved):
 
     note this will also call self.canvas.OnHomeTool when the home button is pressed
     """
+    # Set up class attributes
     ON_FIND = wx.NewId()
     ON_SELECT  = wx.NewId()
     ON_NEWPOINT = wx.NewId()
@@ -130,95 +131,83 @@ class MosaicToolbar(NavBarImproved):
     ON_CROP = wx.NewId()
 
     def __init__(self, plotCanvas):
-        """initializes this object
-
-        keywords)
+        """
         plotCanvas: an instance of MosaicPanel which has the correct features (see class doc)
 
         """
-        #recursively call the init function of what we are extending
+        # call the init function of the class we inheriting from
         NavBarImproved.__init__(self, plotCanvas)
-        wx.Log.SetLogLevel(0)
+        wx.Log.SetLogLevel(0) # batman?
+
         #import the icons
-        selectBmp=wx.Image('icons/lasso-icon.png', wx.BITMAP_TYPE_PNG).ConvertToBitmap()
-        addpointBmp=wx.Image('icons/add-icon.bmp', wx.BITMAP_TYPE_BMP).ConvertToBitmap()
-        trashBmp =  wx.Image('icons/delete-icon.png', wx.BITMAP_TYPE_PNG).ConvertToBitmap()
-        selectnearBmp =  wx.Image('icons/cursor2-icon.png', wx.BITMAP_TYPE_PNG).ConvertToBitmap()
-        # wx.Image('icons/cursor-icon.bmp', wx.BITMAP_TYPE_BMP).ConvertToBitmap()
-        oneBmp =wx.Image('icons/one-icon.bmp', wx.BITMAP_TYPE_BMP).ConvertToBitmap()
-        twoBmp =wx.Image('icons/two-icon.bmp', wx.BITMAP_TYPE_BMP).ConvertToBitmap()
-        stepBmp = wx.Image('icons/step-icon.png', wx.BITMAP_TYPE_PNG).ConvertToBitmap()
-        leftcorrBmp = wx.ArtProvider.GetBitmap(wx.ART_GO_BACK,wx.ART_TOOLBAR)
-        corrBmp = wx.Image('icons/target-icon.png', wx.BITMAP_TYPE_PNG).ConvertToBitmap()
-        ffBmp =  wx.Image('icons/ff-icon.png', wx.BITMAP_TYPE_PNG).ConvertToBitmap()
-        smalltargetBmp = wx.Image('icons/small-target-icon.png', wx.BITMAP_TYPE_PNG).ConvertToBitmap()
-        rotateBmp = wx.Image('icons/rotate-icon.png', wx.BITMAP_TYPE_PNG).ConvertToBitmap()
-        gridBmp = wx.Image('icons/grid-icon.png', wx.BITMAP_TYPE_PNG).ConvertToBitmap()
-        cameraBmp = wx.Image('icons/camera-icon.png',wx.BITMAP_TYPE_PNG).ConvertToBitmap()
-        mosaicBmp = wx.Image('icons/mosaic-icon.png',wx.BITMAP_TYPE_PNG).ConvertToBitmap()
-        #mosaicBmp = wx.Image('icons/new/mosaic_camera.png',wx.BITMAP_TYPE_PNG).ConvertToBitmap()
-        carBmp = wx.Image('icons/car-icon.png',wx.BITMAP_TYPE_PNG).ConvertToBitmap()
-        cropBmp = wx.Image('icons/new/crop.png',wx.BITMAP_TYPE_PNG).ConvertToBitmap()
-        snapBmp = wx.Image('icons/new/snap.png',wx.BITMAP_TYPE_PNG).ConvertToBitmap()
-        cameraBmp = wx.Image('icons/new/camera.png',wx.BITMAP_TYPE_PNG).ConvertToBitmap()
-        liveBmp = wx.Image('icons/new/livemode.png',wx.BITMAP_TYPE_PNG).ConvertToBitmap()
-        batmanBmp = wx.Image('icons/new/batman.png',wx.BITMAP_TYPE_PNG).ConvertToBitmap()
-        #batmanBmp = wx.Image('icons/new/1446777170_Check.png',wx.BITMAP_TYPE_PNG).ConvertToBitmap()
+        leftcorrBmp   = wx.ArtProvider.GetBitmap(wx.ART_GO_BACK, wx.ART_TOOLBAR)
+        selectBmp     = wx.Image('icons/lasso-icon.png',   wx.BITMAP_TYPE_PNG).ConvertToBitmap()
+        addpointBmp   = wx.Image('icons/add-icon.bmp',     wx.BITMAP_TYPE_BMP).ConvertToBitmap()
+        trashBmp      = wx.Image('icons/delete-icon.png',  wx.BITMAP_TYPE_PNG).ConvertToBitmap()
+        selectnearBmp = wx.Image('icons/cursor2-icon.png', wx.BITMAP_TYPE_PNG).ConvertToBitmap()
+        oneBmp        = wx.Image('icons/one-icon.bmp',     wx.BITMAP_TYPE_BMP).ConvertToBitmap()
+        twoBmp        = wx.Image('icons/two-icon.bmp',     wx.BITMAP_TYPE_BMP).ConvertToBitmap()
+        stepBmp       = wx.Image('icons/step-icon.png',    wx.BITMAP_TYPE_PNG).ConvertToBitmap()
+        corrBmp       = wx.Image('icons/target-icon.png',  wx.BITMAP_TYPE_PNG).ConvertToBitmap()
+        ffBmp         = wx.Image('icons/ff-icon.png',      wx.BITMAP_TYPE_PNG).ConvertToBitmap()
+        rotateBmp     = wx.Image('icons/rotate-icon.png',  wx.BITMAP_TYPE_PNG).ConvertToBitmap()
+        gridBmp       = wx.Image('icons/grid-icon.png',    wx.BITMAP_TYPE_PNG).ConvertToBitmap()
+        cameraBmp     = wx.Image('icons/camera-icon.png',  wx.BITMAP_TYPE_PNG).ConvertToBitmap()
+        mosaicBmp     = wx.Image('icons/mosaic-icon.png',  wx.BITMAP_TYPE_PNG).ConvertToBitmap()
+        carBmp        = wx.Image('icons/car-icon.png',     wx.BITMAP_TYPE_PNG).ConvertToBitmap()
+        cropBmp       = wx.Image('icons/new/crop.png',     wx.BITMAP_TYPE_PNG).ConvertToBitmap()
+        snapBmp       = wx.Image('icons/new/snap.png',     wx.BITMAP_TYPE_PNG).ConvertToBitmap()
+        cameraBmp     = wx.Image('icons/new/camera.png',   wx.BITMAP_TYPE_PNG).ConvertToBitmap()
+        liveBmp       = wx.Image('icons/new/livemode.png', wx.BITMAP_TYPE_PNG).ConvertToBitmap()
+        batmanBmp     = wx.Image('icons/new/batman.png',   wx.BITMAP_TYPE_PNG).ConvertToBitmap()
+        #mosaicBmp     = wx.Image('icons/new/mosaic_camera.png', wx.BITMAP_TYPE_PNG).ConvertToBitmap()
 
-        self.DeleteTool(self.wx_ids['Subplots'])
-        #self.DeleteTool(self.wx_ids['Pan'])
+
+        self.DeleteTool(self.wx_ids['Subplots']) # batman - what is this? add comment above it?
+
         #add the mutually exclusive/toggleable tools to the toolbar, see superclass for details on how function works
-        self.moveHereTool = self.add_user_tool('movehere',6,carBmp,True,'move scope here')
-        self.snapHereTool = self.add_user_tool('snaphere',7,cameraBmp,True,'move scope and snap image here')
+        self.moveHereTool    = self.add_user_tool('movehere',6,carBmp,True,'move scope here')
+        self.snapHereTool    = self.add_user_tool('snaphere',7,cameraBmp,True,'move scope and snap image here')
         self.snapPictureTool = self.add_user_tool('snappic',8,mosaicBmp,True,'take 3x3 mosaic on click')
-        self.selectNear = self.add_user_tool('selectnear',9,selectnearBmp,True,'Add Nearest Point to selection')
-        #self.selectTool=self.add_user_tool('select', 10, selectBmp, True, 'Select Points')
-        self.addTool = self.add_user_tool('add', 10, addpointBmp, True, 'Add a Point')
-        self.oneTool = self.add_user_tool('selectone', 11, oneBmp, True, 'Choose pointLine2D 1')
-        self.twoTool = self.add_user_tool('selecttwo', 12, twoBmp, True, 'Choose pointLine2D 2')
+        self.selectNear      = self.add_user_tool('selectnear',9,selectnearBmp,True,'Add Nearest Point to selection')
+        self.addTool         = self.add_user_tool('add', 10, addpointBmp, True, 'Add a Point')
+        self.oneTool         = self.add_user_tool('selectone', 11, oneBmp, True, 'Choose pointLine2D 1')
+        self.twoTool         = self.add_user_tool('selecttwo', 12, twoBmp, True, 'Choose pointLine2D 2')
 
         self.AddSeparator()
-        self.AddSeparator()
+        self.AddSeparator() # batman - why called twice, why called at all!, maybe add comment?
 
         #add the simple button click tools
-        #self.leftcorrTool=self.AddSimpleTool(self.ON_CORR_LEFT,leftcorrBmp,'do something with correlation','correlation baby!')
         self.liveModeTool = self.AddSimpleTool(self.ON_LIVE_MODE,liveBmp,'Enter Live Mode','liveMode')
-        self.deleteTool=self.AddSimpleTool(self.ON_DELETE_SELECTED,trashBmp,'Delete selected points','delete points')
-        self.corrTool=self.AddSimpleTool(self.ON_CORR,corrBmp,'Ajdust pointLine2D 2 with correlation','corrTool')
-        self.stepTool=self.AddSimpleTool(self.ON_STEP,stepBmp,'Take one step using points 1+2','stepTool')
-        self.ffTool=self.AddSimpleTool(self.ON_FF,ffBmp,'Auto-take steps till C<.3 or off image','fastforwardTool')
-
-        self.snapNowTool = self.AddSimpleTool(self.ON_SNAP,snapBmp,'Take a snap now','snapHereTool')
-        self.onCropTool = self.AddSimpleTool(self.ON_CROP,cropBmp,'Crop field of view','cropTool')
-
-        #self.refTool=self.AddSimpleTool(self.ON_,refBmp,'Refine the current set of positions, starting around point 1 and propogating out','refineTool')
+        self.deleteTool   = self.AddSimpleTool(self.ON_DELETE_SELECTED,trashBmp,'Delete selected points','delete points')
+        self.corrTool     = self.AddSimpleTool(self.ON_CORR,corrBmp,'Ajdust pointLine2D 2 with correlation','corrTool')
+        self.stepTool     = self.AddSimpleTool(self.ON_STEP,stepBmp,'Take one step using points 1+2','stepTool')
+        self.ffTool       = self.AddSimpleTool(self.ON_FF,ffBmp,'Auto-take steps till C<.3 or off image','fastforwardTool')
+        self.snapNowTool  = self.AddSimpleTool(self.ON_SNAP,snapBmp,'Take a snap now','snapHereTool')
+        self.onCropTool   = self.AddSimpleTool(self.ON_CROP,cropBmp,'Crop field of view','cropTool')
 
         #add the toggleable tools
         self.gridTool=self.AddCheckTool(self.ON_GRID,gridBmp,wx.NullBitmap,'toggle rotate boxes')
-        #self.finetuneTool=self.AddSimpleTool(self.ON_FINETUNE,smalltargetBmp,'auto fine tune positions','finetuneTool')
-        #self.redrawTool=self.AddSimpleTool(self.ON_REDRAW,smalltargetBmp,'redraw canvas','redrawTool')
         self.rotateTool=self.AddCheckTool(self.ON_ROTATE,rotateBmp,wx.NullBitmap,'toggle rotate boxes')
-        #self.AddSimpleTool(self.ON_ROTATE,rotateBmp,'toggle rotate mosaic boxes according to rotation','rotateTool')
         self.runAcqTool=self.AddSimpleTool(self.ON_RUN,batmanBmp,'Acquire AT Data','run_tool')
 
         #setup the controls for the mosaic
         self.showmagCheck = wx.CheckBox(self)
         self.showmagCheck.SetValue(False)
-        self.magChoiceCtrl = wx.lib.agw.floatspin.FloatSpin(self,size=(65, -1 ),
-                                       value=self.canvas.posList.mosaic_settings.mag,
-                                       min_val=0,
-                                       increment=.1,
-                                       digits=2,
-                                       name='magnification')
-		#wx.lib.intctrl.IntCtrl( self, value=63,size=( 30, -1 ) )
-        self.mosaicXCtrl = wx.lib.intctrl.IntCtrl( self, value=1,size=( 20, -1 ) )
-        self.mosaicYCtrl = wx.lib.intctrl.IntCtrl( self, value=1,size=( 20, -1 ) )
-        self.overlapCtrl = wx.lib.intctrl.IntCtrl( self, value=10,size=( 25, -1 ))
+        self.magChoiceCtrl = wx.lib.agw.floatspin.FloatSpin(self,
+                                                            size=(65, -1 ),
+                                                            value=self.canvas.posList.mosaic_settings.mag,
+                                                            min_val=0,
+                                                            increment=.1,
+                                                            digits=2,
+                                                            name='magnification')
+        self.mosaicXCtrl = wx.lib.intctrl.IntCtrl(self, value=1, size=(20, -1))
+        self.mosaicYCtrl = wx.lib.intctrl.IntCtrl(self, value=1, size=(20, -1))
+        self.overlapCtrl = wx.lib.intctrl.IntCtrl(self, value=10, size=(25, -1))
 
         #setup the controls for the min/max slider
         minstart=0
         maxstart=500
-        #self.sliderMinCtrl = wx.lib.intctrl.IntCtrl( self, value=minstart,size=( 30, -1 ))
         self.slider = wx.Slider(self,value=250,minValue=minstart,maxValue=maxstart,size=( 180, -1),style = wx.SL_SELRANGE)
         self.sliderMaxCtrl = wx.lib.intctrl.IntCtrl( self, value=maxstart,size=( 60, -1 ))
 
@@ -234,14 +223,12 @@ class MosaicToolbar(NavBarImproved):
         self.AddControl(wx.StaticText(self,label="%Overlap"))
         self.AddControl(self.overlapCtrl)
         self.AddSeparator()
-        #self.AddControl(self.sliderMinCtrl)
         self.AddControl(self.slider)
         self.AddControl(self.sliderMaxCtrl)
 
         #bind event handles for the various tools
-        #this one i think is inherited... the zoom_tool function
+        #this one i think is inherited... the zoom_tool function (- batman, resolution to thinking?)
         self.Bind(wx.EVT_TOOL, self.on_toggle_pan_zoom, self.zoom_tool)
-        # self.Bind(wx.wx.EVT_TOOL,self.canvas.OnHomeTool,self.home_tool)
         self.Bind(wx.EVT_CHECKBOX,self.toggleMosaicVisible,self.showmagCheck)
         self.Bind( wx.lib.agw.floatspin.EVT_FLOATSPIN,self.updateMosaicSettings, self.magChoiceCtrl)
         self.Bind(wx.lib.intctrl.EVT_INT,self.updateMosaicSettings, self.mosaicXCtrl)
@@ -250,7 +237,6 @@ class MosaicToolbar(NavBarImproved):
 
         #event binding for slider
         self.Bind(wx.EVT_SCROLL_THUMBRELEASE,self.canvas.OnSliderChange,self.slider)
-        #self.Bind(wx.lib.intctrl.EVT_INT,self.updateSliderRange, self.sliderMinCtrl)
         self.Bind(wx.lib.intctrl.EVT_INT,self.updateSliderRange, self.sliderMaxCtrl)
 
         wx.EVT_TOOL(self, self.ON_LIVE_MODE, self.canvas.OnLiveMode)
@@ -260,26 +246,24 @@ class MosaicToolbar(NavBarImproved):
         wx.EVT_TOOL(self, self.ON_RUN, self.canvas.OnRunAcq)
         wx.EVT_TOOL(self, self.ON_FF, self.canvas.OnFastForwardTool)
         wx.EVT_TOOL(self, self.ON_GRID, self.canvas.OnGridTool)
-        #wx.EVT_TOOL(self, self.ON_FINETUNE, self.canvas.OnFineTuneTool)
-        #wx.EVT_TOOL(self, self.ON_REDRAW, self.canvas.OnRedraw)
         wx.EVT_TOOL(self, self.ON_ROTATE, self.canvas.OnRotateTool)
         wx.EVT_TOOL(self, self.ON_SNAP, self.canvas.OnSnapTool)
         wx.EVT_TOOL(self, self.ON_CROP, self.canvas.OnCropTool)
 
         self.Realize()
 
-    def updateMosaicSettings(self,evt=""):
+    def updateMosaicSettings(self, evt=""):
         """"update the mosaic_settings variables of the canvas and the posList of the canvas and redraw
         set_mosaic_settings should take care of what is necessary to replot the mosaic"""
         self.canvas.posList.set_mosaic_settings(self.getMosaicParameters())
-        self.canvas.mosaic_settings=self.getMosaicParameters()
+        self.canvas.mosaic_settings = self.getMosaicParameters()
         self.canvas.draw()
 
-    def updateSliderRange(self,evt=""):
+    def updateSliderRange(self, evt=""):
         #self.setSliderMin(self.sliderMinCtrl.GetValue())
         self.setSliderMax(self.sliderMaxCtrl.GetValue())
 
-    def toggleMosaicVisible(self,evt=""):
+    def toggleMosaicVisible(self, evt=""):
         """call the set_mosaic_visible function of self.canvas.posList to initiate what is necessary to hide the mosaic box"""
         self.canvas.posList.set_mosaic_visible(self.showmagCheck.IsChecked())
         self.canvas.draw()
@@ -291,17 +275,19 @@ class MosaicToolbar(NavBarImproved):
                               mx=self.mosaicXCtrl.GetValue(),
                               my=self.mosaicYCtrl.GetValue(),
                               overlap=self.overlapCtrl.GetValue())
-
     #unused
     def CrossCursor(self, event):
         self.canvas.SetCursor(wx.StockCursor(wx.CURSOR_ARROW))
+
     #overrides the default
-    def home(self,event):
+    def home(self, event):
         """calls self.canvas.OnHomeTool(), should be triggered by the hometool press.. overrides default behavior"""
         self.canvas.OnHomeTool()
-    def setSliderMin(self,min=0):
+
+    def setSliderMin(self, min=0):
         self.slider.SetMin(min)
-    def setSliderMax(self,max=500):
+
+    def setSliderMax(self, max=500):
         self.slider.SetMax(max)
 
 class MosaicPanel(FigureCanvas):
@@ -314,24 +300,23 @@ class MosaicPanel(FigureCanvas):
         self.canvas = self.figure.canvas
 
         #format the appearance
-        self.figure.set_facecolor((1,1,1))
-        self.figure.set_edgecolor((1,1,1))
+        self.figure.set_facecolor((1, 1, 1))
+        self.figure.set_edgecolor((1, 1, 1))
         self.canvas.SetBackgroundColour('white')
 
         #add subplots for various things
-        self.subplot = self.figure.add_axes([.05,.5,.92,.5])
-        self.posone_plot = self.figure.add_axes([.1,.05,.2,.4])
-        self.postwo_plot = self.figure.add_axes([.37,.05,.2,.4])
-        self.corrplot = self.figure.add_axes([.65,.05,.25,.4])
+        self.subplot     = self.figure.add_axes([.05, .5, .92, .5])
+        self.posone_plot = self.figure.add_axes([.1, .05, .2, .4])
+        self.postwo_plot = self.figure.add_axes([.37, .05, .2, .4])
+        self.corrplot    = self.figure.add_axes([.65, .05, .25, .4])
 
         #initialize the camera settings and mosaic settings
-        self.cfg=config
-
-        self.camera_settings=CameraSettings()
+        self.cfg = config
+        self.camera_settings = CameraSettings()
         self.camera_settings.load_settings(config)
-        mosaic_settings=MosaicSettings()
+        mosaic_settings = MosaicSettings()
         mosaic_settings.load_settings(config)
-        self.MM_config_file= str(self.cfg.Read('MM_config_file',""))
+        self.MM_config_file = str(self.cfg.Read('MM_config_file',""))
         print self.MM_config_file
 
         #setup the image source
