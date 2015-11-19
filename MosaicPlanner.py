@@ -782,7 +782,7 @@ class MosaicPanel(FigureCanvas):
 
     def on_snap_tool(self,evt=""):
         #takes snap straight away
-        self.mosaicImage.imgCollection.ohSnap()
+        self.mosaicImage.imgCollection.oh_snap()
         if self.mosaicImage.imgCollection.imgCount == 1:
             self.on_crop_tool()
         self.draw()

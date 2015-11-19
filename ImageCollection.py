@@ -17,7 +17,7 @@ class MyImage():
         self.imagePath = imagePath
         
         
-    def saveMetadata(self,filename):
+    def save_metadata(self,filename):
          d = {"boundBox":{"top":self.boundBox.top,"bottom":self.boundBox.bottom,
                           "left":self.boundBox.left,"right":self.boundBox.right},
               "imagePath":{"path":self.imagePath,"format":".tif"}
@@ -29,7 +29,7 @@ class MyImage():
          metafile.close()
          
          
-    def loadFromMetadata(self,filename):
+    def load_from_metadata(self,filename):
         #loads this image from a metadata file
         file = open(filename,'r')
         data = file.read()
@@ -87,7 +87,7 @@ class MyImage():
         else:
             Raise_Error("cutout not in image")
             
-    def getExt(self):
+    def get_ext(self):
         return ".tif"
     
     def file_has_metadata(self,path):
@@ -95,7 +95,7 @@ class MyImage():
         print "need a better way to tell if this is a metadata file"
         return 'txt' in theext
                 
-    def saveData(self,data):
+    def save_data(self,data):
         #img = Image.fromarray(data)
         #img.save(self.imagePath)
         imsave(self.imagePath,data)
@@ -106,7 +106,7 @@ class MyImage():
     def contains_point(self,x,y):
         return self.boundBox.contains_point(x,y)
         
-    def getData(self):
+    def get_data(self):
         img=Image.open(self.imagePath,mode='r')
         thedata=img.getdata()
         
@@ -204,7 +204,7 @@ class ImageCollection():
         self.add_image_at(x,y)
         return False
 
-    def ohSnap(self):
+    def oh_snap(self):
         (x, y) = self.imageSource.get_xy()
         self.add_image_at(x,y)
         
@@ -226,7 +226,7 @@ class ImageCollection():
         print "x,y is",x,y
         
         #add this image to the collection
-        theimage=self.addImage(thedata,bbox)
+        theimage=self.add_image(thedata,bbox)
         return theimage
         
         
@@ -251,7 +251,7 @@ class ImageCollection():
             print "there is no image source!"
             return None
         
-    def addImage(self,thedata,bbox):
+    def add_image(self,thedata,bbox):
         
         #determine the file path of this image
         thefile=os.path.join(self.rootpath,"%010d"%self.imgCount + ".tif")
@@ -261,14 +261,14 @@ class ImageCollection():
         
         #initialize the new image and save the data
         theimage=self.imageClass(thefile,bbox)
-        theimage.saveData(thedata)
-        theimage.saveMetadata(themetafile)
+        theimage.save_data(thedata)
+        theimage.save_metadata(themetafile)
         
         #append this image to the list of images
         self.images.append(theimage)
         
         #update the display
-        self.addImageToDisplay(thedata,bbox)
+        self.add_image_to_display(thedata,bbox)
         return theimage
         
     
@@ -279,7 +279,7 @@ class ImageCollection():
         for theimg in self.matplot_images:
             theimg.set_clim(min,max)
             
-    def addImageToDisplay(self,data,bbox):
+    def add_image_to_display(self,data,bbox):
         #make the bounding box of the entire image collection include this bounding box
         
         #if there is no big box, make one!
@@ -300,17 +300,17 @@ class ImageCollection():
         self.axis.set_xlabel('X Position (um)')
         self.axis.set_ylabel('Y Position (um)')
             
-    def saveImageCollection(self):
+    def save_image_collection(self):
         #do all the saving
         #todo
         self.save_all_the_things()
     
-    def printBoundBoxes(self):
+    def print_bounding_boxes(self):
         print "printing bounding boxes"
         for image in self.images:
             image.boundBox.printRect()
             
-    def loadImageCollection(self):
+    def load_image_collection(self):
         #list all metadata files in rootdir
         testimage=self.imageClass()
         if not os.path.isdir(self.rootpath):
@@ -323,10 +323,10 @@ class ImageCollection():
         for file in metafiles:
             print file
             theimage=self.imageClass()
-            theimage.loadFromMetadata(file)
+            theimage.load_from_metadata(file)
             self.images.append(theimage)
-            data=theimage.getData()
-            self.addImageToDisplay(data,theimage.boundBox)
+            data=theimage.get_data()
+            self.add_image_to_display(data,theimage.boundBox)
             self.imgCount+=1
      
             
@@ -345,7 +345,7 @@ class ImageCollection():
 # axes = figure.get_axes()
 
 # ic=ImageCollection(rootpath=rootPath,imageSource=imgsrc,axis=axes[0])
-# ic.loadImageCollection()
+# ic.load_image_collection()
 # box=Rectangle(-50,50,-50,50)
 # data2=ic.get_cutout(box)
 

@@ -237,7 +237,7 @@ class MMPropertyBrowser(QtGui.QWidget):
         self.mmc.waitForDevice(device)
         self.fillPropTable(device)
 
-    #def handleOpenDialog(self):
+    #def handle_open_dialog(self):
     #    if self._dialog is None:
     #        self._dialog = QtGui.QDialog(self)
     #        self._dialog.resize(200, 100)
