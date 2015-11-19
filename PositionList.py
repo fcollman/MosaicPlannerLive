@@ -143,22 +143,22 @@ class posList():
             pos.set_selected(selected)
                 
     def set_mosaic_settings(self,mosaic_settings):
-        """sets the mosaic settings, and updates all the necessary properties of the slice positions using their updateMosaicSettings() function
+        """sets the mosaic settings, and updates all the necessary properties of the slice positions using their update_mosaic_settings() function
         
         keywords:
         mosaic_settings)the MosaicSettings class to make be the current mosaic settings"""
         self.mosaic_settings=mosaic_settings
         for pos in self.slicePositions:
-            pos.updateMosaicSettings()
+            pos.update_mosaic_settings()
             
     def set_camera_settings(self,camera_settings):
-        """sets the camera_settings attribute, and updates all the necessary properties of the slice positions using their updateMosaicSettings() function
+        """sets the camera_settings attribute, and updates all the necessary properties of the slice positions using their update_mosaic_settings() function
         
         keywords:
         camera_settings)the CameraSettings class to make be the current camera_settings"""
         self.camera_settings=camera_settings
         for pos in self.slicePositions:
-            pos.updateMosaicSettings()
+            pos.update_mosaic_settings()
         
     def set_mosaic_visible(self,visible):
         """sets visibility of the mosaic boxes on each of the slicePositions to be equal to visible
