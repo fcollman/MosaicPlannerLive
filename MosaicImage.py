@@ -158,7 +158,7 @@ class MosaicImage():
         (x,y)=imgSrc.get_xy()
         bbox=imgSrc.calc_bbox(x,y)
         self.imgCollection.set_view_home()
-        self.imgCollection.loadImageCollection()
+        self.imgCollection.load_image_collection()
         
         self.maxvalue=512
         self.currentPosLine2D=Line2D([x],[y],marker='o',markersize=7,markeredgewidth=1.5,markeredgecolor='r',zorder=100)

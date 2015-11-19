@@ -21,11 +21,11 @@ class FocusCorrectionPlaneWindow(QtGui.QWidget):
         self.posList = posList
 
         table_layout.addWidget(self.positionListTable)
-        self.fillTable()
-        self.positionListTable.itemSelectionChanged.connect(self.selectRow)
+        self.fill_table()
+        self.positionListTable.itemSelectionChanged.connect(self.select_row)
 
         self.currentPositionTable = QtGui.QTableWidget(self)
-        self.setup_currentPositionTable()
+        self.setup_current_position_table()
         table_layout.addWidget(self.currentPositionTable)
         self.currentPositionTable.setSizePolicy(QtGui.QSizePolicy.Minimum,QtGui.QSizePolicy.Expanding)
         table_layout.addStretch(1)
@@ -68,7 +68,7 @@ class FocusCorrectionPlaneWindow(QtGui.QWidget):
         fileName = QtGui.QFileDialog.getOpenFileName(self, 'Position List File', selectedFilter='*.csv')
         print fileName
         self.posList.LoadFromFile(fileName,'AxioVision')
-        self.fillTable()
+        self.fill_table()
         self.update_plane()
 
 
@@ -79,7 +79,7 @@ class FocusCorrectionPlaneWindow(QtGui.QWidget):
         
 
 
-    def setup_currentPositionTable(self):
+    def setup_current_position_table(self):
         self.currentPositionTable.clear()
         self.currentPositionTable.setRowCount(1)
         self.currentPositionTable.setColumnCount(3)
@@ -104,13 +104,13 @@ class FocusCorrectionPlaneWindow(QtGui.QWidget):
         "delete all the positions"
         self.posList.select_all()
         self.posList.delete_selected()
-        self.fillTable()
+        self.fill_table()
 
     def delete_selected(self):
         i_sel = self.positionListTable.currentRow()
         self.posList.delete_position(i_sel)
         self.update_plane()
-        self.fillTable()
+        self.fill_table()
 
     def get_xyz(self):
         x,y = self.imgSrc.get_xy()
@@ -123,9 +123,9 @@ class FocusCorrectionPlaneWindow(QtGui.QWidget):
 
         self.posList.add_position(x=x,y=y,z=z,edgecolor='m')
         self.update_plane()
-        self.fillTable()
+        self.fill_table()
 
-    def selectRow(self):
+    def select_row(self):
         #print "hello"
         i_sel=self.positionListTable.currentRow()
         N=self.positionListTable.rowCount()
@@ -137,6 +137,7 @@ class FocusCorrectionPlaneWindow(QtGui.QWidget):
                 color = QtCore.Qt.white
             for j in range(3):
                 self.positionListTable.item(i,j).setBackground(color)
+
     def closeEvent(self,evt=None):
         print "closing"
         self.cursor_timer.cancel()
@@ -144,11 +145,11 @@ class FocusCorrectionPlaneWindow(QtGui.QWidget):
 
     def update_current_pos(self):
         x,y,z = self.get_xyz()
-        self.fillRow(x,y,z,0,table=self.currentPositionTable)
+        self.fill_row(x,y,z,0,table=self.currentPositionTable)
         self.cursor_timer = threading.Timer(.5, self.update_current_pos)
         self.cursor_timer.start()
 
-    def fillTable(self):
+    def fill_table(self):
         (xx,yy,zz)=self.posList.getXYZ()
         N=len(xx)
         self.positionListTable.clear()
@@ -157,18 +158,18 @@ class FocusCorrectionPlaneWindow(QtGui.QWidget):
         self.positionListTable.setHorizontalHeaderLabels(["X", "Y","Z"])
 
         for i in range(N):
-            self.fillRow(xx[i],yy[i],zz[i],i,self.positionListTable)
+            self.fill_row(xx[i],yy[i],zz[i],i,self.positionListTable)
 
         self.positionListTable.setSelectionMode(QtGui.QAbstractItemView.SingleSelection)
         self.positionListTable.setSelectionBehavior(QtGui.QAbstractItemView.SelectRows)
         self.positionListTable.setEditTriggers(QtGui.QTableWidget.NoEditTriggers)
 
-    def fillRow(self,x,y,z,row,table):
-        self.addNameItem(str(x),row=row,table=table,col=0)
-        self.addNameItem(str(y),row=row,table=table,col=1)
-        self.addNameItem(str(z),row=row,table=table,col=2)
+    def fill_row(self,x,y,z,row,table):
+        self.add_name_item(str(x),row=row,table=table,col=0)
+        self.add_name_item(str(y),row=row,table=table,col=1)
+        self.add_name_item(str(z),row=row,table=table,col=2)
 
-    def addNameItem(self,text,row,table,isReadOnly=True,col=0,greyBack = False):
+    def add_name_item(self,text,row,table,isReadOnly=True,col=0,greyBack = False):
         NameItem = QtGui.QTableWidgetItem(text)
         if isReadOnly:
             NameItem.setFlags(QtCore.Qt.ItemIsEnabled)
@@ -177,7 +178,7 @@ class FocusCorrectionPlaneWindow(QtGui.QWidget):
         table.setItem(row, col, NameItem) 
         return NameItem
 
-    def handleOpenDialog(self):
+    def handle_open_dialog(self):
         if self._dialog is None:
             self._dialog = QtGui.QDialog(self)
             self._dialog.resize(200, 100)
