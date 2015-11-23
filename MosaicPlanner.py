@@ -45,7 +45,7 @@ from FocusCorrectionPlaneWindow import FocusCorrectionPlaneWindow
 from NavigationToolBarImproved import NavigationToolbar2Wx_improved as NavBarImproved
 from Settings import (MosaicSettings, CameraSettings,SiftSettings,ChangeCameraSettings, ImageSettings,
                        ChangeImageMetadata, SmartSEMSettings, ChangeSEMSettings, ChannelSettings,
-                       ChangeChannelSettings, ChangeSiftSettings)
+                       ChangeChannelSettings, ChangeSiftSettings, CorrSettings, ZstackSettings)
 
 STOP_TOKEN = 'STOP!!!'
 
