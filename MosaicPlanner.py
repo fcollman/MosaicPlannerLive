@@ -45,7 +45,9 @@ from FocusCorrectionPlaneWindow import FocusCorrectionPlaneWindow
 from NavigationToolBarImproved import NavigationToolbar2Wx_improved as NavBarImproved
 from Settings import (MosaicSettings, CameraSettings,SiftSettings,ChangeCameraSettings, ImageSettings,
                        ChangeImageMetadata, SmartSEMSettings, ChangeSEMSettings, ChannelSettings,
-                       ChangeChannelSettings, ChangeSiftSettings, CorrSettings, ZstackSettings)
+                       ChangeChannelSettings, ChangeSiftSettings, CorrSettings,ChangeCorrSettings,
+                      ChangeZstackSettings, ZstackSettings,)
+
 
 STOP_TOKEN = 'STOP!!!'
 
@@ -595,7 +597,6 @@ class MosaicPanel(FigureCanvas):
             self.SiftSettings = dlg.GetSettings()
             self.SiftSettings.save_settings(self.cfg)
         dlg.Destroy()
-
 
     def edit_corr_settings(self, event="none"):
         dlg = ChangeCorrSettings(None, -1, title= "Edit Corr Settings", settings = self.CorrSettings, style = wx.OK)
