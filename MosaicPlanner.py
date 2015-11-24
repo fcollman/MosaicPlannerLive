@@ -1012,7 +1012,7 @@ class ZVISelectFrame(wx.Frame):
 
         #options.Check(self.ID_FULLRES,self.cfg.ReadBool('fullres',False))
 
-        self.edit_transform = options.Append(self.ID_EDIT_CAMERA_SETTINGS,'Edit Camera Properties...','Edit the size of the camera chip and the pixel size',kind=wx.ITEM_NORMAL)
+        self.edit_transform_option = options.Append(self.ID_EDIT_CAMERA_SETTINGS,'Edit Camera Properties...','Edit the size of the camera chip and the pixel size',kind=wx.ITEM_NORMAL)
 
         #SETUP THE CALLBACKS
         self.Bind(wx.EVT_MENU, self.save_settings, id=self.ID_SAVE_SETTINGS)
