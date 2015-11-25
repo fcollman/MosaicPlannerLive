@@ -772,6 +772,7 @@ class MosaicPanel(FigureCanvas):
         """handler for when the step_tool is pressed"""
         #we call another steptool function so that the fast forward tool can use the same function
         goahead=self.step_tool()
+        self.on_crop_tool()
         self.draw()
 
     def on_corr_tool(self,evt=""):
