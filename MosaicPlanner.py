@@ -717,6 +717,9 @@ class MosaicPanel(FigureCanvas):
                         for i in range(-1,2):
                             for j in range(-1,2):
                                 self.mosaicImage.imgCollection.add_image_at(evt.xdata+(j*fw),evt.ydata+(i*fh))
+                                self.draw()
+                                self.on_crop_tool()
+                                wx.Yield()
                     elif (mode == 'snaphere'):
                         self.mosaicImage.imgCollection.add_image_at(evt.xdata,evt.ydata)
 
