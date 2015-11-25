@@ -1142,7 +1142,7 @@ class slicePosition():
     def getPosition(self):
         return (self.x,self.y)
       
-    def updateMosaicSettings(self):
+    def update_mosaic_settings(self):
         """update the matplotlib representation of this point's mosaic"""
         if not self.axis: return None
         self.__updateMosaicSize()
