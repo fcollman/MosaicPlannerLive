@@ -531,6 +531,7 @@ class MosaicPanel(FigureCanvas):
             self.imgSrc.set_hardware_autofocus_state(True)
             self.imgSrc.move_stage(currpos.x,currpos.y)
             currpos=self.posList.get_prev_pos(currpos)
+            wx.Yield()
 
 
         self.dataQueue = mp.Queue()
