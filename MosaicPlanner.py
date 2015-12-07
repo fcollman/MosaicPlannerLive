@@ -45,7 +45,9 @@ from FocusCorrectionPlaneWindow import FocusCorrectionPlaneWindow
 from NavigationToolBarImproved import NavigationToolbar2Wx_improved as NavBarImproved
 from Settings import (MosaicSettings, CameraSettings,SiftSettings,ChangeCameraSettings, ImageSettings,
                        ChangeImageMetadata, SmartSEMSettings, ChangeSEMSettings, ChannelSettings,
-                       ChangeChannelSettings, ChangeSiftSettings)
+                       ChangeChannelSettings, ChangeSiftSettings, CorrSettings,ChangeCorrSettings,
+                      ChangeZstackSettings, ZstackSettings,)
+
 
 STOP_TOKEN = 'STOP!!!'
 
@@ -529,6 +531,7 @@ class MosaicPanel(FigureCanvas):
             self.imgSrc.set_hardware_autofocus_state(True)
             self.imgSrc.move_stage(currpos.x,currpos.y)
             currpos=self.posList.get_prev_pos(currpos)
+            wx.Yield()
 
 
         self.dataQueue = mp.Queue()
@@ -595,7 +598,6 @@ class MosaicPanel(FigureCanvas):
             self.SiftSettings = dlg.GetSettings()
             self.SiftSettings.save_settings(self.cfg)
         dlg.Destroy()
-
 
     def edit_corr_settings(self, event="none"):
         dlg = ChangeCorrSettings(None, -1, title= "Edit Corr Settings", settings = self.CorrSettings, style = wx.OK)
@@ -715,6 +717,9 @@ class MosaicPanel(FigureCanvas):
                         for i in range(-1,2):
                             for j in range(-1,2):
                                 self.mosaicImage.imgCollection.add_image_at(evt.xdata+(j*fw),evt.ydata+(i*fh))
+                                self.draw()
+                                self.on_crop_tool()
+                                wx.Yield()
                     elif (mode == 'snaphere'):
                         self.mosaicImage.imgCollection.add_image_at(evt.xdata,evt.ydata)
 
@@ -771,6 +776,7 @@ class MosaicPanel(FigureCanvas):
         """handler for when the step_tool is pressed"""
         #we call another steptool function so that the fast forward tool can use the same function
         goahead=self.step_tool()
+        self.on_crop_tool()
         self.draw()
 
     def on_corr_tool(self,evt=""):
@@ -1011,7 +1017,7 @@ class ZVISelectFrame(wx.Frame):
 
         #options.Check(self.ID_FULLRES,self.cfg.ReadBool('fullres',False))
 
-        self.edit_transform = options.Append(self.ID_EDIT_CAMERA_SETTINGS,'Edit Camera Properties...','Edit the size of the camera chip and the pixel size',kind=wx.ITEM_NORMAL)
+        self.edit_transform_option = options.Append(self.ID_EDIT_CAMERA_SETTINGS,'Edit Camera Properties...','Edit the size of the camera chip and the pixel size',kind=wx.ITEM_NORMAL)
 
         #SETUP THE CALLBACKS
         self.Bind(wx.EVT_MENU, self.save_settings, id=self.ID_SAVE_SETTINGS)
