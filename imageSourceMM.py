@@ -4,6 +4,7 @@ from PIL import Image
 import time
 from Rectangle import Rectangle
 import wx
+from retry import retry
 
 class imageSource():
     
@@ -260,13 +261,26 @@ class imageSource():
        
         return Rectangle(left,right,top,bottom)
         
-    
+    #@retry(tries= 5)
     def snap_image(self):
         #NEED TO IMPLEMENT IF NOT MICROMANAGER
         #with microscope in current configuration
         #snap a picture, and return the data as a numpy 2d array
 
-        self.mmc.snapImage()
+        for attempt in range(5):
+            try:
+                # do thing
+                self.mmc.snapImage()
+            except:
+                # perhaps reconnect, etc.
+                print "snap failed.. cleaning up buffer"
+                data=self.mmc.getImage()
+            else:
+              break
+        else:
+            # we failed all the attempts - deal with the consequences.
+            print "we failed on 5 attempts to snap properly... freakout!"
+            return None
         data = self.mmc.getImage()
 
 

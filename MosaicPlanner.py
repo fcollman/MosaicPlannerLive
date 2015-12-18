@@ -41,6 +41,7 @@ from MosaicImage import MosaicImage
 from Transform import Transform,ChangeTransform
 from imageSourceMM import imageSource
 from MMPropertyBrowser import MMPropertyBrowser
+from ASI_Control import ASI_AutoFocus
 from FocusCorrectionPlaneWindow import FocusCorrectionPlaneWindow
 from NavigationToolBarImproved import NavigationToolbar2Wx_improved as NavBarImproved
 from Settings import (MosaicSettings, CameraSettings,SiftSettings,ChangeCameraSettings, ImageSettings,
@@ -483,6 +484,7 @@ class MosaicPanel(FigureCanvas):
                     self.imgSrc.set_channel(ch)
                     #t2 = time.clock()*1000
                     #print time.clock(),t2-ti, 'ms to get to snap image from start'
+
                     data=self.imgSrc.snap_image()
                     #t3 = time.clock()*1000
                     #print time.clock(),t3-t2, 'ms to snap image'
@@ -551,18 +553,30 @@ class MosaicPanel(FigureCanvas):
 
 
 
-
+        goahead = True
         #loop over positions
         for i,pos in enumerate(self.posList.slicePositions):
-            self.progress.Update(i*numFrames,'section %d of %d'%(i,numSections))
+            if not goahead:
+                break
+            (goahead, skip) = self.progress.Update(i*numFrames,'section %d of %d'%(i+1,numSections))
             #turn on autofocus
             if pos.frameList is None:
                 self.multiDacq(outdir,pos.x,pos.y,i)
             else:
                 for j,fpos in enumerate(pos.frameList.slicePositions):
+                    if not goahead:
+                        print "breaking out!"
+                        break
                     self.multiDacq(outdir,fpos.x,fpos.y,i,j)
-                    self.progress.Update((i*numFrames) + j+1,'section %d of %d, frame %d'%(i,numSections,j))
+                    (goahead, skip)=self.progress.Update((i*numFrames) + j+1,'section %d of %d, frame %d'%(i+1,numSections,j))
+
             wx.Yield()
+        if not goahead:
+            print "user cancelled the acquisition "
+            print "section %d"%(i)
+            if pos.frameList is not None:
+                print "frame %d"%(j)
+
         self.dataQueue.put(STOP_TOKEN)
         self.saveProcess.join()
         print "save process ended"
@@ -639,6 +653,11 @@ class MosaicPanel(FigureCanvas):
         global win
         win = MMPropertyBrowser(self.imgSrc.mmc)
         win.show()
+
+    def launch_ASI(self, event=None):
+         global win
+         win = ASI_AutoFocus(self.imgSrc.mmc)
+         win.show()
 
     def repaint_image(self, evt):
         """event handler used when the slider bar changes and you want to repaint the MosaicImage with a different color scale"""
@@ -979,6 +998,9 @@ class ZVISelectFrame(wx.Frame):
     ID_USE_FOCUS_CORRECTION = wx.NewId()
     ID_TRANSPOSE_XY = wx.NewId()
     ID_EDIT_ZSTACK = wx.NewId()
+    ID_ASIAUTOFOCUS = wx.NewId()
+
+    # ID_Alfred = wx.NewId()
 
     def __init__(self, parent, title):
         """default init function for a wx.Frame
@@ -1061,6 +1083,7 @@ class ZVISelectFrame(wx.Frame):
         self.launch_MM_PropBrowser = Imaging_Menu.Append(self.ID_MM_PROP_BROWSER,'Open MicroManager Property Browser',kind = wx.ITEM_NORMAL)
         self.focus_correction_plane = Imaging_Menu.Append(self.ID_EDIT_FOCUS_CORRECTION,'Edit Focus Correction Plane',kind = wx.ITEM_NORMAL)
         self.use_focus_correction = Imaging_Menu.Append(self.ID_USE_FOCUS_CORRECTION,'Use Focus Correction?','Use Focus Correction For Mapping',kind=wx.ITEM_CHECK)
+        self.launch_ASIControl = Imaging_Menu.Append(self.ID_ASIAUTOFOCUS, 'Allen ASI AutoFocus Control', kind= wx.ITEM_NORMAL)
 
 
         self.Bind(wx.EVT_MENU, self.toggle_use_focus_correction,id=self.ID_USE_FOCUS_CORRECTION)
@@ -1071,6 +1094,8 @@ class ZVISelectFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.mosaicCanvas.edit_corr_settings, id = self.ID_EDIT_CORR)
         self.Bind(wx.EVT_MENU, self.mosaicCanvas.launch_MManager_browser, id = self.ID_MM_PROP_BROWSER)
         self.Bind(wx.EVT_MENU, self.mosaicCanvas.edit_focus_correction_plane, id = self.ID_EDIT_FOCUS_CORRECTION)
+        self.Bind(wx.EVT_MENU, self.mosaicCanvas.launch_ASI,id = self.ID_ASIAUTOFOCUS)
+
         Imaging_Menu.Check(self.ID_USE_FOCUS_CORRECTION,self.cfg.ReadBool('use_focus_correction',False))
 
         menubar.Append(options, '&Options')
