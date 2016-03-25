@@ -27,37 +27,40 @@ def get_ribbon_from_json(directory,ribbonkey):
     else:
         return None
 
-def get_
-def add_ribbon_to_json(directory,ribbonid):
 
-def add_session_to_json()
+def add_ribbon_to_json(directory,ribbonid):
+    pass
+
+def add_session_to_json():
+    print "hi"
+
 
 def file_save_process(queue,stop_token, metadata_dictionary):
-    while True:
-        token = queue.get()
-        token_type = token[0]
-        if token_type == stop_token:
-            return
-        else:
-            if token_type==FRAME_TOKEN:
+    pass
+    # while True:
+    #     token = queue.get()
+    #     token_type = token[0]
+    #     if token_type == stop_token:
+    #         return
+    #     else:
+    #         if token_type==FRAME_TOKEN:
+    #
+    #         elif token_type==SECTION_TOKEN:
+    #             process_
+    #         elif token_type==TILE_TOKEN:
+    #             process_tile_token(token,metadata_dictionary)
+    #         elif token_type==SESSION_TOKEN:
+    #             process_session_token(token)
+    #
+    #         (slice_index,frame_index, z_index, prot_name, path, data, ch, x, y, z) = token
+    #
+    #
+    #         tif_filepath = os.path.join(path, prot_name + "_S%04d_F%04d_Z%02d.tif" % (slice_index, frame_index, z_index))
+    #         metadata_filepath = os.path.join(path, prot_name + "_S%04d_F%04d_Z%02d_metadata.txt"%(slice_index, frame_index, z_index))
+    #         imsave(tif_filepath,data)
+    #         write_slice_metadata(metadata_filepath, ch, x, y, z, metadata_dictionary)
 
-            elif token_type==SECTION_TOKEN:
-                process_
-            elif token_type==TILE_TOKEN:
-                process_tile_token(token,metadata_dictionary)
-            elif token_type==SESSION_TOKEN:
-                process_session_token(token)
 
-            (slice_index,frame_index, z_index, prot_name, path, data, ch, x, y, z) = token
-
-
-            tif_filepath = os.path.join(path, prot_name + "_S%04d_F%04d_Z%02d.tif" % (slice_index, frame_index, z_index))
-            metadata_filepath = os.path.join(path, prot_name + "_S%04d_F%04d_Z%02d_metadata.txt"%(slice_index, frame_index, z_index))
-            imsave(tif_filepath,data)
-            write_slice_metadata(metadata_filepath, ch, x, y, z, metadata_dictionary)
-
-def process_tile_token(token):
-    (token_type,tile_id,
 def process_session_token(token):
     (token_type,experiment_id,ribbon_id,session_id,section_ids)=token
     session_json = create_session_json(session_id,section_ids)
@@ -69,7 +72,7 @@ def process_frame_token(token):
     (token_type,frame_id,tile_ids,frame_index)=token
 
 def create_session_json(session_id,section_ids):
-
+    pass
 def write_slice_metadata(filename, ch, xpos, ypos, zpos, meta_dict):
     channelname    = meta_dict['channelname'][ch]
     (height,width) = meta_dict['(height,width)']
@@ -93,9 +96,9 @@ class MP_json_node():
     def save(self):
         self.dump()
     def load(self):
-
+        pass
     def queue_to_s3(self):
-
+        pass
 class Experiment_json_node(MP_json_node):
 
     def get_ribbons(self):
@@ -103,4 +106,3 @@ class Experiment_json_node(MP_json_node):
     def set_ribbons(self,ribbons):
         self.mydict['ribbons']=ribbons
 
-class

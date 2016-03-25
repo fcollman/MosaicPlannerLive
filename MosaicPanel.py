@@ -3,6 +3,29 @@ from Settings import (MosaicSettings, CameraSettings,SiftSettings,ChangeCameraSe
                        ChangeImageMetadata, SmartSEMSettings, ChangeSEMSettings, ChannelSettings,
                        ChangeChannelSettings, ChangeSiftSettings, CorrSettings,ChangeCorrSettings,
                       ChangeZstackSettings, ZstackSettings)
+from sqlalchemy import create_engine
+from imageSourceMM import imageSource
+from matplotlib.figure import Figure
+import traceback
+import wx
+import sys
+from PositionList import posList
+import os
+import multiprocessing as mp
+from tifffile import imsave
+from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
+from MMPropertyBrowser import MMPropertyBrowser
+from ASI_Control import ASI_AutoFocus
+from FocusCorrectionPlaneWindow import FocusCorrectionPlaneWindow
+from NavigationToolBarImproved import NavigationToolbar2Wx_improved as NavBarImproved
+import pickle
+from PIL import Image
+import SaveQueue
+from MosaicToolbar import MosaicToolbar
+import LiveMode
+import numpy as np
+from MyLasso import MyLasso
+from MosaicImage import MosaicImage
 
 class MosaicPanel(FigureCanvas):
     """A panel that extends the matplotlib class FigureCanvas for plotting all the plots, and handling all the GUI interface events
@@ -30,7 +53,7 @@ class MosaicPanel(FigureCanvas):
         self.camera_settings.load_settings(config)
         mosaic_settings = MosaicSettings()
         mosaic_settings.load_settings(config)
-        self.MM_config_file = str(self.cfg.Read('MM_config_file',""))
+        self.MM_config_file = str(self.cfg.get('MosaicPlanner','MM_config_file',""))
         print self.MM_config_file
 
         #setup the image source
@@ -42,6 +65,10 @@ class MosaicPanel(FigureCanvas):
                 traceback.print_exc(file=sys.stdout)
                 dlg = wx.MessageBox("Error Loading Micromanager\n check scope and re-select config file","MM Error")
                 self.edit_MManager_config()
+
+        self.MM_database_path = str(self.cfg.get("MM_database_path",None))
+
+
 
         channels=self.imgSrc.get_channels()
         self.channel_settings=ChannelSettings(self.imgSrc.get_channels())
@@ -76,7 +103,7 @@ class MosaicPanel(FigureCanvas):
         self.focusCorrectionList = posList(self.subplot)
 
         #read saved position list from configuration file
-        pos_list_string = self.cfg.Read('focal_pos_list_pickle',"")
+        pos_list_string = self.cfg.get('focal_pos_list_pickle',"")
         #if the saved list is not default blank.. add it to current list
         print "pos_list",pos_list_string
         if len(pos_list_string)>0:
@@ -196,6 +223,7 @@ class MosaicPanel(FigureCanvas):
         #self.pos_list
         #self.imgSrc
 
+
         #get an output directory
         dlg=wx.DirDialog(self,message="Pick output directory",defaultPath= os.path.split(self.rootPath)[0])
         button_pressed = dlg.ShowModal()
@@ -206,37 +234,7 @@ class MosaicPanel(FigureCanvas):
         outdir=dlg.GetPath()
         dlg.Destroy()
 
-        experiment = SaveQueue.Experiment_json_node()
-        experiment.load()
 
-        exp_dict = SaveQueue.get_experiment_from_json(outdir)
-
-        if exp_dict == None:
-            new_experiment = True
-            exp_dict = {'ribbon_keys':[],'ribbon_ids':[],'experiment_name':os.path.split(outdir)[1]}
-
-        ##ribbonid,newribbon=user_select_ribbon_dlg(exp_dict['ribbons'])
-        #hard coding for now
-        new_ribbon = True
-        ribbonid = 1
-        self.ribbon_key = 'RIBBONID%04D'%ribbonid
-        if new_ribbon:
-            exp_dict['ribbon_ids'].append(ribbonid)
-            exp_dict['ribbon_keys'].append(self.ribbon_key)
-
-            #TODO write json_temp_version of exp_dict to disk
-            rib_dict = {'ribbonid':ribbonid,'session_ids':[],'session_keys':[]}
-        else:
-            rib_dict = SaveQueue.get_data_from_json(outdir,self.ribbon_key)
-
-        if len(rib_dict['session_ids'])==0:
-            self.session_id = 1
-        else:
-            self.session_id = max(rib_dict['session_ids'])+1
-        self.session_key = '_'.join(self.ribbon_key,'SESSIONID%04D'%self.session_id)
-        rib_dict['session_ids'].append(self.session_id)
-        rib_dict['session_keys'].append(self.session_key)
-        #TODO write json_temp_version of rib_dict to disk
 
         metadata_dictionary = {
         'channelname'    : self.channel_settings.prot_names,
@@ -374,7 +372,7 @@ class MosaicPanel(FigureCanvas):
 
         dlg.ShowModal()
         self.MM_config_file = str(dlg.GetPath())
-        self.cfg.Write('MM_config_file',self.MM_config_file)
+        self.cfg.set('MosaicPlanner','MM_config_file',self.MM_config_file)
 
         dlg.Destroy()
 

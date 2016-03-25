@@ -16,12 +16,7 @@
 #  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #
 #===============================================================================
-import os
-import sys
-import traceback
-import time
-import datetime
-import multiprocessing as mp
+
 import pickle
 
 import wx
@@ -29,27 +24,17 @@ import numpy as np
 import wx.lib.intctrl
 import faulthandler
 from pyqtgraph.Qt import QtCore, QtGui
-from tifffile import imsave
-from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
-from matplotlib.figure import Figure
-from PIL import Image
 
-import LiveMode
-from PositionList import posList
-from MyLasso import MyLasso
-from MosaicImage import MosaicImage
 from Transform import Transform,ChangeTransform
-from imageSourceMM import imageSource
-from MMPropertyBrowser import MMPropertyBrowser
-from ASI_Control import ASI_AutoFocus
-from FocusCorrectionPlaneWindow import FocusCorrectionPlaneWindow
-from NavigationToolBarImproved import NavigationToolbar2Wx_improved as NavBarImproved
+
+
 from Settings import (MosaicSettings, CameraSettings,SiftSettings,ChangeCameraSettings, ImageSettings,
                        ChangeImageMetadata, SmartSEMSettings, ChangeSEMSettings, ChannelSettings,
                        ChangeChannelSettings, ChangeSiftSettings, CorrSettings,ChangeCorrSettings,
                       ChangeZstackSettings, ZstackSettings,)
-from MosaicToolbar import MosaicToolbar
+import ConfigParser
 # import SaveQueue
+SETTINGS_FILE = 'MosaicPlannerSettings.cfg'
 
 class ZVISelectFrame(wx.Frame):
     """class extending wx.Frame for highest level handling of GUI components """
@@ -90,9 +75,12 @@ class ZVISelectFrame(wx.Frame):
 
         #recursively call old init function
         wx.Frame.__init__(self, parent, title=title, size=(1550,885),pos=(5,5))
-        self.cfg = wx.Config('settings')
+        self.cfg = ConfigParser.ConfigParser()
+        self.cfg.read(SETTINGS_FILE)
+
+        #self.cfg = wx.Config('settings')
         #setup a mosaic panel
-        self.mosaicCanvas=MosaicPanel(self,config=self.cfg)
+        self.mosaicPanel=MosaicPanel(self, config=self.cfg)
 
         #setup menu
         menubar = wx.MenuBar()
@@ -125,16 +113,17 @@ class ZVISelectFrame(wx.Frame):
 
 
         #SET THE INTIAL SETTINGS
-        options.Check(self.ID_RELATIVEMOTION,self.cfg.ReadBool('relativemotion',True))
+
+        options.Check(self.ID_RELATIVEMOTION,self.cfg.get('MosaicPlanner','relativemotion',True))
         options.Check(self.ID_SORTPOINTS,True)
         options.Check(self.ID_SHOWNUMBERS,False)
-        options.Check(self.ID_FLIPVERT,self.cfg.ReadBool('flipvert',False))
-        options.Check(self.ID_TRANSPOSE_XY,self.cfg.ReadBool('transposexy',False))
+        options.Check(self.ID_FLIPVERT,self.cfg.get('MosaicPlanner','flipvert',False))
+        options.Check(self.ID_TRANSPOSE_XY,self.cfg.get('MosaicPlanner','transposexy',False))
         self.toggle_transpose_xy()
         #TRANSFORM MENU
         self.save_transformed = transformMenu.Append(self.ID_SAVETRANSFORM,'Save Transformed?',\
         'Rather than save the coordinates in the original space, save a transformed set of coordinates according to transform configured in set_transform...',kind=wx.ITEM_CHECK)
-        transformMenu.Check(self.ID_SAVETRANSFORM,self.cfg.ReadBool('savetransform',False))
+        transformMenu.Check(self.ID_SAVETRANSFORM,self.cfg.get('MosaicPlanner','savetransform',False))
 
         self.edit_camera_settings = transformMenu.Append(self.ID_EDITTRANSFORM,'Edit Transform...',\
         'Edit the transform used to save transformed coordinates, by setting corresponding points and fitting a model',kind=wx.ITEM_NORMAL)
@@ -161,16 +150,16 @@ class ZVISelectFrame(wx.Frame):
 
 
         self.Bind(wx.EVT_MENU, self.toggle_use_focus_correction,id=self.ID_USE_FOCUS_CORRECTION)
-        self.Bind(wx.EVT_MENU, self.mosaicCanvas.edit_Zstack_settings,id=self.ID_EDIT_ZSTACK)
-        self.Bind(wx.EVT_MENU, self.mosaicCanvas.edit_MManager_config, id = self.ID_EDIT_MM_CONFIG)
-        self.Bind(wx.EVT_MENU, self.mosaicCanvas.edit_channels, id = self.ID_EDIT_CHANNELS)
-        self.Bind(wx.EVT_MENU, self.mosaicCanvas.edit_SIFT_settings, id = self.ID_EDIT_SIFT)
-        self.Bind(wx.EVT_MENU, self.mosaicCanvas.edit_corr_settings, id = self.ID_EDIT_CORR)
-        self.Bind(wx.EVT_MENU, self.mosaicCanvas.launch_MManager_browser, id = self.ID_MM_PROP_BROWSER)
-        self.Bind(wx.EVT_MENU, self.mosaicCanvas.edit_focus_correction_plane, id = self.ID_EDIT_FOCUS_CORRECTION)
-        self.Bind(wx.EVT_MENU, self.mosaicCanvas.launch_ASI,id = self.ID_ASIAUTOFOCUS)
+        self.Bind(wx.EVT_MENU, self.mosaicPanel.edit_Zstack_settings, id=self.ID_EDIT_ZSTACK)
+        self.Bind(wx.EVT_MENU, self.mosaicPanel.edit_MManager_config, id = self.ID_EDIT_MM_CONFIG)
+        self.Bind(wx.EVT_MENU, self.mosaicPanel.edit_channels, id = self.ID_EDIT_CHANNELS)
+        self.Bind(wx.EVT_MENU, self.mosaicPanel.edit_SIFT_settings, id = self.ID_EDIT_SIFT)
+        self.Bind(wx.EVT_MENU, self.mosaicPanel.edit_corr_settings, id = self.ID_EDIT_CORR)
+        self.Bind(wx.EVT_MENU, self.mosaicPanel.launch_MManager_browser, id = self.ID_MM_PROP_BROWSER)
+        self.Bind(wx.EVT_MENU, self.mosaicPanel.edit_focus_correction_plane, id = self.ID_EDIT_FOCUS_CORRECTION)
+        self.Bind(wx.EVT_MENU, self.mosaicPanel.launch_ASI, id = self.ID_ASIAUTOFOCUS)
 
-        Imaging_Menu.Check(self.ID_USE_FOCUS_CORRECTION,self.cfg.ReadBool('use_focus_correction',False))
+        Imaging_Menu.Check(self.ID_USE_FOCUS_CORRECTION,self.cfg.get('MosaicPlanner','use_focus_correction',False))
 
         menubar.Append(options, '&Options')
         menubar.Append(transformMenu,'&Transform')
@@ -195,7 +184,7 @@ class ZVISelectFrame(wx.Frame):
         self.imgCollectDirPicker=wx.DirPickerCtrl(self,message='Select a directory to store images',\
         path="",name='imgCollectPickerCtrl1',\
         style=wx.FLP_USE_TEXTCTRL, size=wx.Size(300,20))
-        self.imgCollectDirPicker.SetPath(self.cfg.Read('default_imagepath',""))
+        self.imgCollectDirPicker.SetPath(self.cfg.get('MosaicPlanner','default_imagepath',""))
         self.imgCollect_load_button=wx.Button(self,id=wx.ID_ANY,label="Load",name="imgCollect load")
 
         #wire up the button to the "on_load" button
@@ -208,7 +197,7 @@ class ZVISelectFrame(wx.Frame):
         self.array_filepicker=wx.FilePickerCtrl(self,message='Select an array file',\
         path="",name='arrayFilePickerCtrl1',\
         style=wx.FLP_USE_TEXTCTRL, size=wx.Size(300,20),wildcard='*.*')
-        self.array_filepicker.SetPath(self.cfg.Read('default_arraypath',""))
+        self.array_filepicker.SetPath(self.cfg.get('MosaicPlanner','default_arraypath',""))
 
         self.array_load_button=wx.Button(self,id=wx.ID_ANY,label="Load",name="load button")
         self.array_formatBox=wx.ComboBox(self,id=wx.ID_ANY,value='AxioVision',\
@@ -253,8 +242,8 @@ class ZVISelectFrame(wx.Frame):
         self.sizer.Add(self.imgCollect_filepickersizer,0,wx.EXPAND)
         #self.sizer.Add(self.meta_filepickersizer,0,wx.EXPAND)
         self.sizer.Add(self.array_filepickersizer,0,wx.EXPAND)
-        self.sizer.Add(self.mosaicCanvas.get_toolbar(), 0, wx.LEFT | wx.EXPAND)
-        self.sizer.Add(self.mosaicCanvas, 0, wx.EXPAND)
+        self.sizer.Add(self.mosaicPanel.get_toolbar(), 0, wx.LEFT | wx.EXPAND)
+        self.sizer.Add(self.mosaicPanel, 0, wx.EXPAND)
 
         #self.poslist_set=False
         #set the overall sizer and autofit everything
@@ -275,147 +264,152 @@ class ZVISelectFrame(wx.Frame):
     def toggle_transpose_xy(self,evt=None):
         print "toggle called",self.transpose_xy.IsChecked()
 
-        self.mosaicCanvas.imgSrc.transpose_xy = self.transpose_xy.IsChecked()
+        self.mosaicPanel.imgSrc.transpose_xy = self.transpose_xy.IsChecked()
 
 
     def save_settings(self,event="none"):
         #save the transform parameters
+
+
+
         self.Transform.save_settings(self.cfg)
 
         #save the menu options
-        self.cfg.WriteBool('relativemotion',self.relative_motion.IsChecked())
+        self.cfg.set('MosaicPlanner','relativemotion',self.relative_motion.IsChecked())
         #self.cfg.WriteBool('flipvert',self.flipvert.IsChecked())
         #self.cfg.WriteBool('fullres',self.fullResOpt.IsChecked())
-        self.cfg.WriteBool('savetransform',self.save_transformed.IsChecked())
-        self.cfg.WriteBool('transposexy',self.transpose_xy.IsChecked())
+        self.cfg.set('MosaicPlanner','savetransform',self.save_transformed.IsChecked())
+        self.cfg.set('MosaicPlanner','transposexy',self.transpose_xy.IsChecked())
         #save the camera settings
-        self.mosaicCanvas.posList.camera_settings.save_settings(self.cfg)
+        self.mosaicPanel.posList.camera_settings.save_settings(self.cfg)
 
         #save the mosaic options
-        self.mosaicCanvas.posList.mosaic_settings.save_settings(self.cfg)
+        self.mosaicPanel.posList.mosaic_settings.save_settings(self.cfg)
 
         #save the SEMSettings
         self.SmartSEMSettings.save_settings(self.cfg)
 
-        self.cfg.Write('default_imagepath',self.imgCollectDirPicker.GetPath())
-        #self.cfg.Write('default_metadatapath',self.meta_filepicker.GetPath())
-        self.cfg.Write('default_arraypath',self.array_filepicker.GetPath())
+        self.cfg.set('MosaicPlanner','default_imagepath',self.imgCollectDirPicker.GetPath())
 
-        focal_pos_lis_string = pickle.dumps(self.mosaicCanvas.focusCorrectionList)
-        self.cfg.Write("focal_pos_list_pickle",focal_pos_lis_string)
+        self.cfg.set('MosaicPlanner','default_arraypath',self.array_filepicker.GetPath())
+
+        focal_pos_lis_string = pickle.dumps(self.mosaicPanel.focusCorrectionList)
+        self.cfg.set('MosaicPlanner',"focal_pos_list_pickle",focal_pos_lis_string)
+        with open(SETTINGS_FILE,'wb') as configfile:
+            self.cfg.write(configfile)
 
     def on_key_press(self,event="none"):
         """forward the key press event to the mosaicCanvas handler"""
         mpos=wx.GetMousePosition()
-        mcrect=self.mosaicCanvas.GetScreenRect()
+        mcrect=self.mosaicPanel.GetScreenRect()
         if mcrect.Contains(mpos):
-            self.mosaicCanvas.on_key_press(event)
+            self.mosaicPanel.on_key_press(event)
         else:
             event.Skip()
 
     def on_array_load(self,event="none"):
         """event handler for the array load button"""
         if self.array_formatBox.GetValue()=='AxioVision':
-            self.mosaicCanvas.posList.add_from_file(self.array_filepicker.GetPath())
+            self.mosaicPanel.posList.add_from_file(self.array_filepicker.GetPath())
         elif self.array_formatBox.GetValue()=='OMX':
             print "not yet implemented"
         elif self.array_formatBox.GetValue()=='SmartSEM':
-            SEMsetting=self.mosaicCanvas.posList.add_from_file_SmartSEM(self.array_filepicker.GetPath())
+            SEMsetting=self.mosaicPanel.posList.add_from_file_SmartSEM(self.array_filepicker.GetPath())
             self.SmartSEMSettings=SEMsetting
         elif self.array_formatBox.GetValue()=='ZEN':
-            self.mosaicCanvas.posList.add_from_file_ZEN(self.array_filepicker.GetPath())
+            self.mosaicPanel.posList.add_from_file_ZEN(self.array_filepicker.GetPath())
 
-        self.mosaicCanvas.draw()
+        self.mosaicPanel.draw()
 
     def on_array_save(self,event):
         """event handler for the array save button"""
         if self.array_formatBox.GetValue()=='AxioVision':
             if self.save_transformed.IsChecked():
-                self.mosaicCanvas.posList.save_position_list(self.array_filepicker.GetPath(),trans=self.Transform)
+                self.mosaicPanel.posList.save_position_list(self.array_filepicker.GetPath(), trans=self.Transform)
             else:
-                self.mosaicCanvas.posList.save_position_list(self.array_filepicker.GetPath())
+                self.mosaicPanel.posList.save_position_list(self.array_filepicker.GetPath())
         elif self.array_formatBox.GetValue()=='OMX':
             if self.save_transformed.IsChecked():
-                self.mosaicCanvas.posList.save_position_list_OMX(self.array_filepicker.GetPath(),trans=self.Transform);
+                self.mosaicPanel.posList.save_position_list_OMX(self.array_filepicker.GetPath(), trans=self.Transform);
             else:
-                self.mosaicCanvas.posList.save_position_list_OMX(self.array_filepicker.GetPath(),trans=None);
+                self.mosaicPanel.posList.save_position_list_OMX(self.array_filepicker.GetPath(), trans=None);
         elif self.array_formatBox.GetValue()=='SmartSEM':
             if self.save_transformed.IsChecked():
-                self.mosaicCanvas.posList.save_position_list_SmartSEM(self.array_filepicker.GetPath(),SEMS=self.SmartSEMSettings,trans=self.Transform)
+                self.mosaicPanel.posList.save_position_list_SmartSEM(self.array_filepicker.GetPath(), SEMS=self.SmartSEMSettings, trans=self.Transform)
             else:
-                self.mosaicCanvas.posList.save_position_list_SmartSEM(self.array_filepicker.GetPath(),SEMS=self.SmartSEMSettings,trans=None)
+                self.mosaicPanel.posList.save_position_list_SmartSEM(self.array_filepicker.GetPath(), SEMS=self.SmartSEMSettings, trans=None)
         elif self.array_formatBox.GetValue()=='ZEN':
             if self.save_transformed.IsChecked():
-                self.mosaicCanvas.posList.save_position_list_ZENczsh(self.array_filepicker.GetPath(),trans=self.Transform,planePoints=self.planePoints)
+                self.mosaicPanel.posList.save_position_list_ZENczsh(self.array_filepicker.GetPath(), trans=self.Transform, planePoints=self.planePoints)
             else:
-                self.mosaicCanvas.posList.save_position_list_ZENczsh(self.array_filepicker.GetPath(),trans=None,planePoints=self.planePoints)
+                self.mosaicPanel.posList.save_position_list_ZENczsh(self.array_filepicker.GetPath(), trans=None, planePoints=self.planePoints)
         elif self.array_formatBox.GetValue()=='uManager':
             if self.save_transformed.IsChecked():
-                self.mosaicCanvas.posList.save_position_list_uM(self.array_filepicker.GetPath(),trans=self.Transform)
+                self.mosaicPanel.posList.save_position_list_uM(self.array_filepicker.GetPath(), trans=self.Transform)
             else:
-                self.mosaicCanvas.posList.save_position_list_uM(self.array_filepicker.GetPath(),trans=None)
+                self.mosaicPanel.posList.save_position_list_uM(self.array_filepicker.GetPath(), trans=None)
 
     def on_image_collect_load(self,event):
         path=self.imgCollectDirPicker.GetPath()
-        self.mosaicCanvas.on_load(path)
+        self.mosaicPanel.on_load(path)
 
     def on_array_save_frames(self,event):
         if self.array_formatBox.GetValue()=='AxioVision':
             if self.save_transformed.IsChecked():
-                self.mosaicCanvas.posList.save_frame_list(self.array_filepicker.GetPath(),trans=self.Transform)
+                self.mosaicPanel.posList.save_frame_list(self.array_filepicker.GetPath(), trans=self.Transform)
             else:
-                self.mosaicCanvas.posList.save_frame_list(self.array_filepicker.GetPath())
+                self.mosaicPanel.posList.save_frame_list(self.array_filepicker.GetPath())
         elif self.array_formatBox.GetValue()=='OMX':
             if self.save_transformed.IsChecked():
-                self.mosaicCanvas.posList.save_frame_list_OMX(self.array_filepicker.GetPath(),trans=self.Transform);
+                self.mosaicPanel.posList.save_frame_list_OMX(self.array_filepicker.GetPath(), trans=self.Transform);
             else:
-                self.mosaicCanvas.posList.save_frame_list_OMX(self.array_filepicker.GetPath(),trans=None);
+                self.mosaicPanel.posList.save_frame_list_OMX(self.array_filepicker.GetPath(), trans=None);
         elif self.array_formatBox.GetValue()=='SmartSEM':
             if self.save_transformed.IsChecked():
-                self.mosaicCanvas.posList.save_frame_list_SmartSEM(self.array_filepicker.GetPath(),SEMS=self.SmartSEMSettings,trans=self.Transform)
+                self.mosaicPanel.posList.save_frame_list_SmartSEM(self.array_filepicker.GetPath(), SEMS=self.SmartSEMSettings, trans=self.Transform)
             else:
-                self.mosaicCanvas.posList.save_frame_list_SmartSEM(self.array_filepicker.GetPath(),SEMS=self.SmartSEMSettings,trans=None)
+                self.mosaicPanel.posList.save_frame_list_SmartSEM(self.array_filepicker.GetPath(), SEMS=self.SmartSEMSettings, trans=None)
 
     def toggle_relative_motion(self,event):
         """event handler for handling the toggling of the relative motion"""
         if self.relative_motion.IsChecked():
-            self.mosaicCanvas.relative_motion=(True)
+            self.mosaicPanel.relative_motion=(True)
         else:
-            self.mosaicCanvas.relative_motion=(False)
+            self.mosaicPanel.relative_motion=(False)
 
     def toggle_sort_option(self,event):
         """event handler for handling the toggling of the relative motion"""
         if self.sort_points.IsChecked():
-            self.mosaicCanvas.posList.dosort=(True)
+            self.mosaicPanel.posList.dosort=(True)
         else:
-            self.mosaicCanvas.posList.dosort=(False)
+            self.mosaicPanel.posList.dosort=(False)
 
     def toggle_use_focus_correction(self,event):
         """event handler for handling the toggling of using focus correction plane"""
         if self.use_focus_correction.IsChecked():
             "print use focus correction"
-            self.mosaicCanvas.imgSrc.use_focus_plane = True
+            self.mosaicPanel.imgSrc.use_focus_plane = True
         else:
             "print do not use focus correction"
-            self.mosaicCanvas.imgSrc.use_focus_plane = False
+            self.mosaicPanel.imgSrc.use_focus_plane = False
 
     def toggle_show_numbers(self,event):
         if self.show_numbers.IsChecked():
-            self.mosaicCanvas.posList.setNumberVisibility(True)
+            self.mosaicPanel.posList.setNumberVisibility(True)
         else:
-            self.mosaicCanvas.posList.setNumberVisibility(False)
-        self.mosaicCanvas.draw()
+            self.mosaicPanel.posList.setNumberVisibility(False)
+        self.mosaicPanel.draw()
 
     def edit_camera_settings(self,event):
         """event handler for clicking the camera setting menu button"""
         dlg = ChangeCameraSettings(None, -1,
                                    title="Camera Settings",
-                                   settings=self.mosaicCanvas.camera_settings)
+                                   settings=self.mosaicPanel.camera_settings)
         dlg.ShowModal()
         #del self.posList.camera_settings
         #passes the settings to the position list
-        self.mosaicCanvas.camera_settings=dlg.GetSettings()
-        self.mosaicCanvas.posList.set_camera_settings(dlg.GetSettings())
+        self.mosaicPanel.camera_settings=dlg.GetSettings()
+        self.mosaicPanel.posList.set_camera_settings(dlg.GetSettings())
         dlg.Destroy()
 
     def edit_smart_SEM_settings(self,event):
@@ -445,7 +439,7 @@ class ZVISelectFrame(wx.Frame):
     def on_close(self,event):
         print "closing"
 
-        self.mosaicCanvas.handle_close()
+        self.mosaicPanel.handle_close()
         self.Destroy()
 
 if __name__ == '__main__':
