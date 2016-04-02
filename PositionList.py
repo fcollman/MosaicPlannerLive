@@ -28,7 +28,7 @@ from matplotlib import path
 from matplotlib.lines import Line2D
 #from matplotlib.nxutils import points_inside_poly
 from CenterRectangle import CenterRectangle
-from Transform import Transform
+#from Transform import Transform
 from scipy.interpolate import griddata
 import lxml.etree as ET
 import json
@@ -313,6 +313,8 @@ class posList():
         theta[badones]=theta[badones-1]   
         return theta
 
+
+
     def getXYZ(self):
         xpos=[]
         ypos=[]
@@ -407,10 +409,15 @@ class posList():
             self.add_from_file_OMX(file) 
         elif format=='SmartSEM':
             SEMsetting=self.add_from_file_SmartSEM(file)
-            self.SmartSEMSettings=SEMsetting  
+            self.SmartSEMSettings=SEMsetting
+    def to_json(self):
+        str=json.dumps(self.slicePositions)
+        print "json str",str
+        return str
+
     def add_from_posList(self,posList):
         for pos in posList.slicePositions:
-            newPosition=slicePosition(axis=self.axis,pos_list=self,x=pos.x,y=pox.y,z=pos.z,
+            newPosition=slicePosition(axis=self.axis,pos_list=self,x=pos.x,y=pos.y,z=pos.z,
                 showNumber=pos.shownumbers,edgecolor=pos.edgecolor,withpoint=pos.withpoint,
                 selected=pos.selected,number=pos.number)
             self.slicePositions.append(newPosition)  
@@ -615,7 +622,7 @@ class posList():
             newZ=griddata(planePoints[:,0:2],planePoints[:,2],points,'nearest')
         else:
             newZ=np.zeros(len(self.slicePositions));
-            for index,pos in enumerate(slicePositions):
+            for index,pos in enumerate(self.slicePositions):
                 if pos.Z is not None:
                     newZ[index]=pos.Z-zoffset
                     
@@ -674,7 +681,7 @@ class posList():
             newZ=griddata(planePoints[:,0:2],planePoints[:,2],points,'nearest')
         else:
             newZ=np.zeros(len(self.slicePositions));
-            for index,pos in enumerate(slicePositions):
+            for index,pos in enumerate(self.slicePositions):
                 if pos.Z is not None:
                     newZ[index]=pos.Z-zoffset
                     

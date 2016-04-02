@@ -26,15 +26,22 @@ import faulthandler
 from pyqtgraph.Qt import QtCore, QtGui
 
 from Transform import Transform,ChangeTransform
-
+from MosaicPanel import MosaicPanel
 
 from Settings import (MosaicSettings, CameraSettings,SiftSettings,ChangeCameraSettings, ImageSettings,
                        ChangeImageMetadata, SmartSEMSettings, ChangeSEMSettings, ChannelSettings,
                        ChangeChannelSettings, ChangeSiftSettings, CorrSettings,ChangeCorrSettings,
                       ChangeZstackSettings, ZstackSettings,)
-import ConfigParser
+from configobj import ConfigObj
+import jsonpickle
+from validate import Validator
 # import SaveQueue
 SETTINGS_FILE = 'MosaicPlannerSettings.cfg'
+VALIDATOR_FILE = 'MosaicPlannerSettingsModel.cfg'
+
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+import SQLModels
 
 class ZVISelectFrame(wx.Frame):
     """class extending wx.Frame for highest level handling of GUI components """
@@ -75,8 +82,13 @@ class ZVISelectFrame(wx.Frame):
 
         #recursively call old init function
         wx.Frame.__init__(self, parent, title=title, size=(1550,885),pos=(5,5))
-        self.cfg = ConfigParser.ConfigParser()
-        self.cfg.read(SETTINGS_FILE)
+        self.cfg = ConfigObj(SETTINGS_FILE,unrepr=True)
+        #val = Validator()
+        #test = self.cfg.validate(val)
+        #if test == True:
+        #    print "config file validated"
+        #else:
+        #    print "error in validation"
 
         #self.cfg = wx.Config('settings')
         #setup a mosaic panel
@@ -114,16 +126,16 @@ class ZVISelectFrame(wx.Frame):
 
         #SET THE INTIAL SETTINGS
 
-        options.Check(self.ID_RELATIVEMOTION,self.cfg.get('MosaicPlanner','relativemotion',True))
+        options.Check(self.ID_RELATIVEMOTION,self.cfg['MosaicPlanner']['relativemotion'])
         options.Check(self.ID_SORTPOINTS,True)
         options.Check(self.ID_SHOWNUMBERS,False)
-        options.Check(self.ID_FLIPVERT,self.cfg.get('MosaicPlanner','flipvert',False))
-        options.Check(self.ID_TRANSPOSE_XY,self.cfg.get('MosaicPlanner','transposexy',False))
+        options.Check(self.ID_FLIPVERT,self.cfg['MosaicPlanner']['flipvert'])
+        options.Check(self.ID_TRANSPOSE_XY,self.cfg['MosaicPlanner']['transposexy'])
         self.toggle_transpose_xy()
         #TRANSFORM MENU
         self.save_transformed = transformMenu.Append(self.ID_SAVETRANSFORM,'Save Transformed?',\
         'Rather than save the coordinates in the original space, save a transformed set of coordinates according to transform configured in set_transform...',kind=wx.ITEM_CHECK)
-        transformMenu.Check(self.ID_SAVETRANSFORM,self.cfg.get('MosaicPlanner','savetransform',False))
+        transformMenu.Check(self.ID_SAVETRANSFORM,self.cfg['MosaicPlanner']['savetransform'])
 
         self.edit_camera_settings = transformMenu.Append(self.ID_EDITTRANSFORM,'Edit Transform...',\
         'Edit the transform used to save transformed coordinates, by setting corresponding points and fitting a model',kind=wx.ITEM_NORMAL)
@@ -159,7 +171,7 @@ class ZVISelectFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.mosaicPanel.edit_focus_correction_plane, id = self.ID_EDIT_FOCUS_CORRECTION)
         self.Bind(wx.EVT_MENU, self.mosaicPanel.launch_ASI, id = self.ID_ASIAUTOFOCUS)
 
-        Imaging_Menu.Check(self.ID_USE_FOCUS_CORRECTION,self.cfg.get('MosaicPlanner','use_focus_correction',False))
+        Imaging_Menu.Check(self.ID_USE_FOCUS_CORRECTION,self.cfg['MosaicPlanner']['use_focus_correction'])
 
         menubar.Append(options, '&Options')
         menubar.Append(transformMenu,'&Transform')
@@ -184,7 +196,7 @@ class ZVISelectFrame(wx.Frame):
         self.imgCollectDirPicker=wx.DirPickerCtrl(self,message='Select a directory to store images',\
         path="",name='imgCollectPickerCtrl1',\
         style=wx.FLP_USE_TEXTCTRL, size=wx.Size(300,20))
-        self.imgCollectDirPicker.SetPath(self.cfg.get('MosaicPlanner','default_imagepath',""))
+        self.imgCollectDirPicker.SetPath(self.cfg['MosaicPlanner']['default_imagepath'])
         self.imgCollect_load_button=wx.Button(self,id=wx.ID_ANY,label="Load",name="imgCollect load")
 
         #wire up the button to the "on_load" button
@@ -197,7 +209,7 @@ class ZVISelectFrame(wx.Frame):
         self.array_filepicker=wx.FilePickerCtrl(self,message='Select an array file',\
         path="",name='arrayFilePickerCtrl1',\
         style=wx.FLP_USE_TEXTCTRL, size=wx.Size(300,20),wildcard='*.*')
-        self.array_filepicker.SetPath(self.cfg.get('MosaicPlanner','default_arraypath',""))
+        self.array_filepicker.SetPath(self.cfg['MosaicPlanner']['default_arraypath'])
 
         self.array_load_button=wx.Button(self,id=wx.ID_ANY,label="Load",name="load button")
         self.array_formatBox=wx.ComboBox(self,id=wx.ID_ANY,value='AxioVision',\
@@ -257,6 +269,31 @@ class ZVISelectFrame(wx.Frame):
         self.SmartSEMSettings=SmartSEMSettings()
         self.app = QtGui.QApplication([])
         #self.app.exec_()
+        self.connect_database()
+        new_experiment = SQLModels.Experiment(name="testing")
+
+        session = self.Session()
+        session.add(new_experiment)
+        session.flush()
+        session.commit()
+
+        self.find_experiments()
+
+    def find_experiments(self):
+
+        session = self.Session()
+        exps=session.query(SQLModels.Experiment)
+
+
+    def connect_database(self):
+
+
+
+        self.sql_engine = create_engine(self.cfg['SqlAlchemy']['database_path'])
+        SQLModels.Base.metadata.create_all(self.sql_engine)
+
+        self.Session = sessionmaker(bind=self.sql_engine)
+
 
         #self.OnImageLoad()
         #self.on_array_load()
@@ -275,11 +312,11 @@ class ZVISelectFrame(wx.Frame):
         self.Transform.save_settings(self.cfg)
 
         #save the menu options
-        self.cfg.set('MosaicPlanner','relativemotion',self.relative_motion.IsChecked())
+        self.cfg['MosaicPlanner']['relativemotion']=self.relative_motion.IsChecked()
         #self.cfg.WriteBool('flipvert',self.flipvert.IsChecked())
         #self.cfg.WriteBool('fullres',self.fullResOpt.IsChecked())
-        self.cfg.set('MosaicPlanner','savetransform',self.save_transformed.IsChecked())
-        self.cfg.set('MosaicPlanner','transposexy',self.transpose_xy.IsChecked())
+        self.cfg['MosaicPlanner']['savetransform']=self.save_transformed.IsChecked()
+        self.cfg['MosaicPlanner']['transposexy']=self.transpose_xy.IsChecked()
         #save the camera settings
         self.mosaicPanel.posList.camera_settings.save_settings(self.cfg)
 
@@ -289,14 +326,16 @@ class ZVISelectFrame(wx.Frame):
         #save the SEMSettings
         self.SmartSEMSettings.save_settings(self.cfg)
 
-        self.cfg.set('MosaicPlanner','default_imagepath',self.imgCollectDirPicker.GetPath())
+        self.cfg['MosaicPlanner']['default_imagepath']=self.imgCollectDirPicker.GetPath()
 
-        self.cfg.set('MosaicPlanner','default_arraypath',self.array_filepicker.GetPath())
+        self.cfg['MosaicPlanner']['default_arraypath']=self.array_filepicker.GetPath()
 
-        focal_pos_lis_string = pickle.dumps(self.mosaicPanel.focusCorrectionList)
-        self.cfg.set('MosaicPlanner',"focal_pos_list_pickle",focal_pos_lis_string)
-        with open(SETTINGS_FILE,'wb') as configfile:
-            self.cfg.write(configfile)
+        focal_pos_lis_string = self.mosaicPanel.focusCorrectionList.to_json()
+        #jsonpickle.encode(self.mosaicPanel.focusCorrectionList)
+        self.cfg['MosaicPlanner']["focal_pos_list_pickle"]=focal_pos_lis_string
+        self.cfg.write()
+        #with open(SETTINGS_FILE,'wb') as configfile:
+        #    self.cfg.write(configfile)
 
     def on_key_press(self,event="none"):
         """forward the key press event to the mosaicCanvas handler"""

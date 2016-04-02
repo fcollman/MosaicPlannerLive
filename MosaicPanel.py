@@ -18,7 +18,7 @@ from MMPropertyBrowser import MMPropertyBrowser
 from ASI_Control import ASI_AutoFocus
 from FocusCorrectionPlaneWindow import FocusCorrectionPlaneWindow
 from NavigationToolBarImproved import NavigationToolbar2Wx_improved as NavBarImproved
-import pickle
+import jsonpickle
 from PIL import Image
 import SaveQueue
 from MosaicToolbar import MosaicToolbar
@@ -53,7 +53,7 @@ class MosaicPanel(FigureCanvas):
         self.camera_settings.load_settings(config)
         mosaic_settings = MosaicSettings()
         mosaic_settings.load_settings(config)
-        self.MM_config_file = str(self.cfg.get('MosaicPlanner','MM_config_file',""))
+        self.MM_config_file = self.cfg['MosaicPlanner']['MM_config_file']
         print self.MM_config_file
 
         #setup the image source
@@ -66,7 +66,7 @@ class MosaicPanel(FigureCanvas):
                 dlg = wx.MessageBox("Error Loading Micromanager\n check scope and re-select config file","MM Error")
                 self.edit_MManager_config()
 
-        self.MM_database_path = str(self.cfg.get("MM_database_path",None))
+        self.MM_database_path = str(self.cfg.get("MosaicPlanner","MM_database_path"))
 
 
 
@@ -103,17 +103,17 @@ class MosaicPanel(FigureCanvas):
         self.focusCorrectionList = posList(self.subplot)
 
         #read saved position list from configuration file
-        pos_list_string = self.cfg.get('focal_pos_list_pickle',"")
+        pos_list_string = self.cfg['MosaicPlanner']['focal_pos_list_pickle']
         #if the saved list is not default blank.. add it to current list
-        print "pos_list",pos_list_string
-        if len(pos_list_string)>0:
-            print "loading saved position list"
-            pl = pickle.loads(pos_list_string)
-            self.focusCorrectionList.add_from_posList(pl)
-        x,y,z = self.focusCorrectionList.getXYZ()
-        if len(x)>2:
-            XYZ = np.column_stack((x,y,z))
-            self.imgSrc.define_focal_plane(np.transpose(XYZ))
+        #print "pos_list",pos_list_string
+        #if len(pos_list_string)>0:
+        #    print "loading saved position list"
+        #    pl = jsonpickle.decode(pos_list_string)
+        #    self.focusCorrectionList.add_from_posList(pl)
+        #x,y,z = self.focusCorrectionList.getXYZ()
+        #if len(x)>2:
+        #    XYZ = np.column_stack((x,y,z))
+        #    self.imgSrc.define_focal_plane(np.transpose(XYZ))
 
 
         #start with no toolbar and no lasso tool
@@ -372,7 +372,8 @@ class MosaicPanel(FigureCanvas):
 
         dlg.ShowModal()
         self.MM_config_file = str(dlg.GetPath())
-        self.cfg.set('MosaicPlanner','MM_config_file',self.MM_config_file)
+        self.cfg['MosaicPlanner']['MM_config_file'] = self.MM_config_file
+        self.cfg.write()
 
         dlg.Destroy()
 
