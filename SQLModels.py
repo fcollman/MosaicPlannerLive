@@ -242,6 +242,8 @@ class Image(ATObject,MyMixin):
     frame_id = Column(Integer,ForeignKey('frames.id'))
     frame = relationship("Frame",back_populates='images',foreign_keys=[frame_id])
 
+event.listen(Ribbon, 'before_insert',update_created_modified_on_create_listener)
+event.listen(Ribbon, 'before_update',update_modified_on_update_listener)
 event.listen(Experiment, 'before_insert',update_created_modified_on_create_listener)
 event.listen(Experiment, 'before_update',update_modified_on_update_listener)
 event.listen(ATObject, 'before_insert',update_created_modified_on_create_listener)

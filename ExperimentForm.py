@@ -8,7 +8,7 @@ from alchemical_model import AlchemicalTableModel
 
 
 class SelectModelFromQueryForm(QtGui.QDialog):
-    def __init__(self,session,query_model,Model,EditModelDialog,layoutfile):
+    def __init__(self,session,query_model,Model,ModelDialog,layoutfile):
         super(SelectModelFromQueryForm,self).__init__()
         currpath=os.path.split(os.path.realpath(__file__))[0]
         filename = os.path.join(currpath,layoutfile)
@@ -21,6 +21,7 @@ class SelectModelFromQueryForm(QtGui.QDialog):
         self.new_button.clicked.connect(self.newModel)
         self.model = None
         self.Model = Model
+        self.ModelDialog = ModelDialog
 
     def selectModel(self,evt):
         index=self.theTableView.selectedIndexes()
@@ -30,11 +31,11 @@ class SelectModelFromQueryForm(QtGui.QDialog):
             self.close()
 
     def initialModel(self):
-        mod = self.Model()
+        return self.Model()
 
     def newModel(self):
         mod = self.initialModel()
-        moddlg = EditModelDialog(mod)
+        moddlg = self.ModelDialog(mod)
         moddlg.exec_()
         if not moddlg.cancelled:
             self.model = moddlg.getModel()
@@ -48,7 +49,7 @@ class SelectModelFromQueryForm(QtGui.QDialog):
     def getModel(self):
         return self.model
 
-class RibbonForm(QtGui.QDialog):
+class RibbonForm(SelectModelFromQueryForm):
 
     def __init__(self,Session,experiment,layoutfile='RibbonQueryForm.ui'):
 
@@ -56,25 +57,24 @@ class RibbonForm(QtGui.QDialog):
         self.experiment = experiment
         rib_query = self.session.query(Ribbon).filter(Ribbon.experiment_id==experiment.id)
         self.query_model = AlchemicalTableModel(self.session,rib_query,
-                                           [('id',Experiment.id,'id',{'editable':False}),
-                                            ('order',Experiment.name,'order',{'editable':False}),
-                                            ('modified',Experiment.modified,'modified',{'editable':False,'dateformat':'%c'}),
-                                            ('created',Experiment.created,'created',{'editable':False,'dateformat':'%c'}),
-                                            ('sections',Experiment.sections,'sections',{'editable':False,'show_count':True}),
-                                            ('imagingsessions',Experiment.imagingsessions,'imagingsessions',{'editable':False,'show_count':True})]
+                                           [('id',Ribbon.id,'id',{'editable':False}),
+                                            ('order',Ribbon.order,'order',{'editable':False}),
+                                            ('modified',Ribbon.modified,'modified',{'editable':False,'dateformat':'%c'}),
+                                            ('created',Ribbon.created,'created',{'editable':False,'dateformat':'%c'}),
+                                            ('sections',Ribbon.sections,'sections',{'editable':False,'show_count':True}),
+                                            ('imagingsessions',Ribbon.imagingsessions,'imagingsessions',{'editable':False,'show_count':True})]
                                            )
         super(RibbonForm,self).__init__(self.session,self.query_model,Ribbon,EditRibbonDialog,layoutfile)
 
     def initialModel(self):
+
         return Ribbon(experiment=self.experiment)
 
 
-class ExperimentForm(QtGui.QDialog):
+class ExperimentForm(SelectModelFromQueryForm):
 
     def __init__(self,Session,layoutfile = 'ExperimentForm.ui'):
         #QtGui.QWidget.__init__(self)
-
-
 
         self.session = Session()
         exp_query = self.session.query(Experiment)
@@ -86,6 +86,7 @@ class ExperimentForm(QtGui.QDialog):
                                             ('ribbons',Experiment.ribbons,'ribbons',{'editable':False,'show_count':True})]
                                            )
         super(ExperimentForm,self).__init__(self.session,self.query_model,Experiment,EditExperimentDialog,layoutfile)
+
 
 
 class EditModelDialog(QtGui.QDialog):
@@ -118,7 +119,7 @@ class EditModelDialog(QtGui.QDialog):
 
 class EditRibbonDialog(EditModelDialog):
     def __init__(self,ribbon,layoutfile='RibbonModelForm.ui'):
-        super(EditRibbonDialog,self).__init__(ribbon,layoutfile)
+        EditModelDialog.__init__(self,ribbon,layoutfile)
 
         if ribbon.experiment is not None:
             self.experiment_Label.setText(ribbon.experiment.name)
@@ -136,7 +137,7 @@ class EditRibbonDialog(EditModelDialog):
 
 class EditExperimentDialog(EditModelDialog):
     def __init__(self,experiment,layoutfile = 'ExperimentModelForm.ui'):
-        super(EditExperimentDialog,self).__init__(experiment,layoutfile)
+        EditModelDialog.__init__(self,experiment,layoutfile)
         if experiment.name is not None:
             self.name_textEdit.setPlainText(experiment.name)
         if experiment.notes is not None:
@@ -194,10 +195,16 @@ if __name__ == "__main__":
     print type(ribb1.created)
     dlg = ExperimentForm(Session)
     dlg.exec_()
-    experiment = dlg.getValues()
+    experiment = dlg.getModel()
+    dlg.destroy()
+
+    dlg = RibbonForm(Session,experiment)
+    dlg.exec_()
+    ribbon = dlg.getModel()
     dlg.destroy()
 
     print experiment
+    print ribbon
     app.exec_()
     sys.exit()
 
