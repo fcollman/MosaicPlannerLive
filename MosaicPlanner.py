@@ -17,9 +17,11 @@
 #
 #===============================================================================
 
-
 if __name__ == "__main__":
+    import pickle
+
     import wx
+    import numpy as np
     import wx.lib.intctrl
     import faulthandler
     from pyqtgraph.Qt import QtCore, QtGui
@@ -28,12 +30,12 @@ if __name__ == "__main__":
     from MosaicPanel import MosaicPanel
 
     from Settings import (MosaicSettings, CameraSettings,SiftSettings,ChangeCameraSettings, ImageSettings,
-                       ChangeImageMetadata, SmartSEMSettings, ChangeSEMSettings, ChannelSettings,
-                       ChangeChannelSettings, ChangeSiftSettings, CorrSettings,ChangeCorrSettings,
-                      ChangeZstackSettings, ZstackSettings,)
+                           ChangeImageMetadata, SmartSEMSettings, ChangeSEMSettings, ChannelSettings,
+                           ChangeChannelSettings, ChangeSiftSettings, CorrSettings,ChangeCorrSettings,
+                          ChangeZstackSettings, ZstackSettings,)
     from configobj import ConfigObj
-import jsonpickle
-from validate import Validator
+    import jsonpickle
+    from validate import Validator
 # import SaveQueue
 SETTINGS_FILE = 'MosaicPlannerSettings.cfg'
 VALIDATOR_FILE = 'MosaicPlannerSettingsModel.cfg'

@@ -3,7 +3,7 @@ from PyQt4 import Qt,QtGui,uic
 import os
 import sys
 import SQLModels
-from SQLModels import Experiment,Ribbon
+from SQLModels import Volume,Ribbon
 from alchemical_model import AlchemicalTableModel
 
 
@@ -44,16 +44,16 @@ class SelectModelFromQueryForm(QtGui.QDialog):
 
     def closeEvent(self, event):
         super(SelectModelFromQueryForm,self).closeEvent(event)
-        self.session.close()
+        #self.session.close()
 
     def getModel(self):
         return self.model
 
 class RibbonForm(SelectModelFromQueryForm):
 
-    def __init__(self,Session,experiment,layoutfile='RibbonQueryForm.ui'):
+    def __init__(self,session,experiment,layoutfile='RibbonQueryForm.ui'):
 
-        self.session = Session()
+        self.session = session
         self.experiment = experiment
         rib_query = self.session.query(Ribbon).filter(Ribbon.experiment_id==experiment.id)
         self.query_model = AlchemicalTableModel(self.session,rib_query,
@@ -73,10 +73,10 @@ class RibbonForm(SelectModelFromQueryForm):
 
 class ExperimentForm(SelectModelFromQueryForm):
 
-    def __init__(self,Session,layoutfile = 'ExperimentForm.ui'):
+    def __init__(self,session,layoutfile = 'ExperimentForm.ui'):
         #QtGui.QWidget.__init__(self)
 
-        self.session = Session()
+        self.session = session
         exp_query = self.session.query(Experiment)
         self.query_model = AlchemicalTableModel(self.session,exp_query,
                                            [('id',Experiment.id,'id',{'editable':False}),
@@ -85,7 +85,7 @@ class ExperimentForm(SelectModelFromQueryForm):
                                             ('created',Experiment.created,'created',{'editable':False,'dateformat':'%c'}),
                                             ('ribbons',Experiment.ribbons,'ribbons',{'editable':False,'show_count':True})]
                                            )
-        super(ExperimentForm,self).__init__(self.session,self.query_model,Experiment,EditExperimentDialog,layoutfile)
+        super(ExperimentForm,self).__init__(session,self.query_model,Experiment,EditExperimentDialog,layoutfile)
 
 
 
@@ -152,8 +152,7 @@ class EditExperimentDialog(EditModelDialog):
 
 if __name__ == "__main__":
 
-
-    from MosaicPlanner import SETTINGS_FILE
+    SETTINGS_FILE = 'MosaicPlannerSettings.cfg'
     from configobj import ConfigObj
     from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker
@@ -169,42 +168,47 @@ if __name__ == "__main__":
 
     mysess = Session()
 
-    exp1 = Experiment(name="testme",status=0)
+    vol1 = Volume(name="testme",status=0)
     mysess.add(exp1)
-    exp1 = Experiment(name="testme2",status=0)
+    vol1 = Volume(name="testme2",status=0)
     mysess.add(exp1)
 
-    ribb1 = Ribbon(order=0,experiment=exp1)
+    ribb1 = Ribbon(order=0)
+    vol1.ribbons.append(ribb1)
     mysess.add(ribb1)
     mysess.commit()
     mysess = Session()
-    exp1 = Experiment(name="testme",status=0)
+    vol1 = Volume(name="testme",status=0)
     mysess.add(exp1)
-    exp1 = Experiment(name="testme2",status=0)
+    vol1 = Volume(name="testme2",status=0)
     mysess.add(exp1)
 
-    ribb1 = Ribbon(order=0,experiment=exp1)
+    ribb1 = Ribbon(order=0)
+    vol1.ribbons.append(ribb1)
+
     mysess.add(ribb1)
 
     for i in range(20):
-        exp = Experiment(name="exp%d"%i,status=1)
+        exp = Volume(name="exp%d"%i,status=1)
         mysess.add(exp)
 
-    mysess.commit()
+
 
     print type(ribb1.created)
-    dlg = ExperimentForm(Session)
+    dlg = ExperimentForm(mysess)
     dlg.exec_()
     experiment = dlg.getModel()
     dlg.destroy()
 
-    dlg = RibbonForm(Session,experiment)
+    dlg = RibbonForm(mysess,experiment)
     dlg.exec_()
     ribbon = dlg.getModel()
     dlg.destroy()
 
     print experiment
     print ribbon
+
+    mysess.close()
     app.exec_()
     sys.exit()
 
