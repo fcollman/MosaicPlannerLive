@@ -80,7 +80,7 @@ ribbon_microscoperound_association = Table('ribbon_microscoperound_association',
 
 volumeribbon_association = Table('volumeribbon_association', Base.metadata,
                                   Column('volume_id', Integer, ForeignKey('volume.id')),
-                                  Column('ribobn_id', Integer, ForeignKey('ribbon.id')))
+                                  Column('ribbon_id', Integer, ForeignKey('ribbon.id')))
 
 class Volume(ATObject, MyMixin):
     __tablename__ = 'volume'
@@ -105,7 +105,7 @@ class Ribbon(ATObject,MyMixin):
 
     #volume_id = Column(Integer,ForeignKey('volume.id'))
     #volume = relationship("Volume",back_populates='ribbons',foreign_keys=[volume_id])
-
+    volumes = relationship("Volume", secondary=volumeribbon_association)
     #imagingsessions = relationship("ImagingSession",back_populates='ribbon',primaryjoin="Ribbon.id==ImagingSession.ribbon_id")
     order = Column(Integer)
     stainrounds = relationship("StainRound",secondary=ribbon_stainround_association)
@@ -114,7 +114,7 @@ class Ribbon(ATObject,MyMixin):
     sections = relationship("Section",back_populates='ribbon',primaryjoin = "Ribbon.id==Section.ribbon_id")
     notes = Column(String(512))
     def __repr__(self):
-        return "Ribbon(order=%d,volume='%s')"%(self.order,self.volume.name)
+        return "Ribbon(order=%d,volume='%s')"%(self.order,self.volumes)
 
 class MicroscopeRound(ATObject,MyMixin):
     __tablename__ = 'microscoperound'
