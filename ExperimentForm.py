@@ -68,7 +68,7 @@ class RibbonForm(SelectModelFromQueryForm):
 
     def initialModel(self):
 
-        return Ribbon(experiment=self.experiment)
+        return Ribbon()
 
 
 class ExperimentForm(SelectModelFromQueryForm):
@@ -77,15 +77,15 @@ class ExperimentForm(SelectModelFromQueryForm):
         #QtGui.QWidget.__init__(self)
 
         self.session = session
-        exp_query = self.session.query(Experiment)
+        exp_query = self.session.query(Volume)
         self.query_model = AlchemicalTableModel(self.session,exp_query,
-                                           [('id',Experiment.id,'id',{'editable':False}),
-                                            ('name',Experiment.name,'name',{'editable':False}),
-                                            ('modified',Experiment.modified,'modified',{'editable':False,'dateformat':'%c'}),
-                                            ('created',Experiment.created,'created',{'editable':False,'dateformat':'%c'}),
-                                            ('ribbons',Experiment.ribbons,'ribbons',{'editable':False,'show_count':True})]
+                                           [('id',Volume.id,'id',{'editable':False}),
+                                            ('name',Volume.name,'name',{'editable':False}),
+                                            ('modified',Volume.modified,'modified',{'editable':False,'dateformat':'%c'}),
+                                            ('created',Volume.created,'created',{'editable':False,'dateformat':'%c'}),
+                                            ('ribbons',Volume.ribbons,'ribbons',{'editable':False,'show_count':True})]
                                            )
-        super(ExperimentForm,self).__init__(session,self.query_model,Experiment,EditExperimentDialog,layoutfile)
+        super(ExperimentForm,self).__init__(session,self.query_model,Volume,EditExperimentDialog,layoutfile)
 
 
 
@@ -169,9 +169,9 @@ if __name__ == "__main__":
     mysess = Session()
 
     vol1 = Volume(name="testme",status=0)
-    mysess.add(exp1)
+    mysess.add(vol1)
     vol1 = Volume(name="testme2",status=0)
-    mysess.add(exp1)
+    mysess.add(vol1)
 
     ribb1 = Ribbon(order=0)
     vol1.ribbons.append(ribb1)
@@ -179,9 +179,9 @@ if __name__ == "__main__":
     mysess.commit()
     mysess = Session()
     vol1 = Volume(name="testme",status=0)
-    mysess.add(exp1)
+    mysess.add(vol1)
     vol1 = Volume(name="testme2",status=0)
-    mysess.add(exp1)
+    mysess.add(vol1)
 
     ribb1 = Ribbon(order=0)
     vol1.ribbons.append(ribb1)

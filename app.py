@@ -3,13 +3,12 @@ from flask_admin import Admin
 from flask_admin.contrib.sqla import ModelView
 from config import cfg
 from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate, MigrateCommand
+from flask_script import Manager
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from SQLModels import *
 
 class BaseView(ModelView):
-    form_excluded_columns = ('objecttype')
+    form_excluded_columns = ('objecttype','created','modified')
 
 class VolumeView(BaseView):
     # Show only name and email columns in list view
@@ -30,15 +29,28 @@ app.config['SQLALCHEMY_DATABASE_URI']=cfg['SqlAlchemy']['database_path']
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
+
+
+manager = Manager(app)
+from SQLModels import ATObject,Volume,Ribbon,MicroscopeRound,Base,Block
+
 admin = Admin(app, name='ATdbservice', template_mode='bootstrap3')
 # Add administrative views here
-Base.metadata.drop_all(bind=db.engine)
-Base.metadata.create_all(bind=db.engine)
+@manager.command
+def init_db():
+    Base.metadata.create_all(bind=db.engine)
+
+@manager.command
+def delete_db():
+    Base.metadata.drop_all(bind=db.engine)
 
 admin.add_view(ModelView(ATObject,db.session,category='model'))
 admin.add_view(VolumeView(Volume, db.session,category='Imaging'))
 admin.add_view(BaseView(Ribbon, db.session,category='Imaging'))
 admin.add_view(BaseView(MicroscopeRound, db.session,category='Imaging'))
 
-app.run()
+
+if __name__ == "__main__":
+    manager.run()
+
 

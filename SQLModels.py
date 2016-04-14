@@ -40,14 +40,45 @@ class ATObject(Base):
     __mapper_args__ = {
         'polymorphic_on': objecttype
     }
-    #json_filename = Column(String(100))
-    #def __init__(self, **kwargs):
-    #    if 'status' not in kwargs:
-    #        kwargs['status'] = 0
-    #    super(Object, self).__init__(**kwargs)
 
     def __repr__(self):
         return "ATObject(objecttype=%s)"%(self.objecttype)
+
+# class Organism(ATObject,MyMixin):
+#     __tablename__ = 'organism'
+#     __mapper_args__={'polymorphic_identity': 'block'}
+#     object_id = Column(Integer, ForeignKey('objects.object_id'))
+#
+#     species_id = Column(Integer, ForeignKey('species.id'))
+#     species = relationship("Species",foreign_keys=[species_id])
+#
+# class SpecimenBlock(ATObject,MyMixin):
+#     __tablename__ = 'organism'
+#     __mapper_args__={'polymorphic_identity': 'block'}
+#     object_id = Column(Integer, ForeignKey('objects.object_id'))
+#
+#     tissueprocessingrun_id = Column(Integer,ForeignKey('tissueprocessingrun.id'))
+#     tissueprocessingrun = relationship("TissueProcessingRun",foreign_keys=[tissueprocessingrun_id])
+#
+# class TissueProcessingRun(ATObject,MyMixin):
+#     __tablename__ = 'tissueprocessingrun'
+#     __mapper_args__={'polymorphic_identity': 'tissueprocessingrun'}
+#     object_id = Column(Integer, ForeignKey('objects.object_id'))
+#
+#     specimenblocks = relationship("SpecimenBlock",
+#                                   primaryjoin="SpecimenBlocks.tissueprocessingrun_id==TissueProcessingRun.id")
+#
+#     tissueprocessingprotocol_id = Column(Integer, ForeignKey('tissueprocessingprotocol.id'))
+#     tissueprocessingprotocol = relationship("TissueProcessingProtocol", foreign_keys=[tissueprocessingprotocol_id])
+#
+#
+# class TissueProcessingProtocol(ATObject,MyMixin):
+#     __tablename__ = 'tissueprocessingprotocol'
+#     __mapper_args__={'polymorphic_identity': 'tissueprocessingprotocol'}
+#     object_id = Column(Integer, ForeignKey('objects.object_id'))
+#
+#     name = Column(String(100))
+
 
 
 def update_created_modified_on_create_listener(mapper, connection, target):
@@ -69,18 +100,23 @@ ribbon_microscoperound_association = Table('ribbon_microscoperound_association',
                                       Column('ribbon_id', Integer, ForeignKey('ribbon.id')),
                                       Column('microscoperound_id', Integer, ForeignKey('microscoperound.id')))
 
-# class Block(ATObject,MyMixin):
-#     __tablename__ = 'block'
-#     __mapper_args__={'polymorphic_identity': 'block'}
-#     object_id = Column(Integer, ForeignKey('objects.object_id'))
-#
-#     ribbons = relationship("Ribbon",back_populates='block',primaryjoin="Block.id==Ribbon.block_id")
-#
-#     #map of ribbons in this block
+class Block(ATObject,MyMixin):
+    __tablename__ = 'block'
+    __mapper_args__={'polymorphic_identity': 'block'}
+    object_id = Column(Integer, ForeignKey('objects.object_id'))
 
-volumeribbon_association = Table('volumeribbon_association', Base.metadata,
-                                  Column('volume_id', Integer, ForeignKey('volume.id')),
+    ribbons = relationship("Ribbon",back_populates='block',primaryjoin="Block.id==Ribbon.block_id")
+
+    #map of ribbons in this block
+
+roundribbon_association = Table('roundribbon_association', Base.metadata,
+                                  Column('round_id', Integer, ForeignKey('round.id')),
                                   Column('ribbon_id', Integer, ForeignKey('ribbon.id')))
+
+volumeribbon_association = Table('volumnribbon_association', Base.metadata,
+                                Column('volume_id', Integer, ForeignKey('volume.id')),
+                                Column('ribbon_id', Integer, ForeignKey('ribbon.id')))
+
 
 class Volume(ATObject, MyMixin):
     __tablename__ = 'volume'
@@ -89,7 +125,7 @@ class Volume(ATObject, MyMixin):
 
     name = Column(String(50))
     ribbons = relationship("Ribbon",secondary=volumeribbon_association)
-
+    sectionimageplans = relationship("SectionImagePlan",primaryjoin = "Volume.id == SectionImagePlan.volume_id")
     notes = Column(String(512))
 
     def __repr__(self):
@@ -100,26 +136,36 @@ class Ribbon(ATObject,MyMixin):
     __mapper_args__={'polymorphic_identity': 'ribbon'}
     object_id = Column(Integer, ForeignKey('objects.object_id'))
 
-    # block_id = Column(Integer,ForeignKey('block.id'))
-    # block = relationship("Block",back_populates='ribbons',foreign_keys=[block_id])
+    block_id = Column(Integer,ForeignKey('block.id'))
+    block = relationship("Block",back_populates='ribbons',foreign_keys=[block_id])
 
     #volume_id = Column(Integer,ForeignKey('volume.id'))
     #volume = relationship("Volume",back_populates='ribbons',foreign_keys=[volume_id])
     volumes = relationship("Volume", secondary=volumeribbon_association)
     #imagingsessions = relationship("ImagingSession",back_populates='ribbon',primaryjoin="Ribbon.id==ImagingSession.ribbon_id")
     order = Column(Integer)
-    stainrounds = relationship("StainRound",secondary=ribbon_stainround_association)
-    microscoperounds = relationship("MicroscopeRound",secondary=ribbon_microscoperound_association)
-
+    rounds = relationship("Round",secondary=roundribbon_association)
     sections = relationship("Section",back_populates='ribbon',primaryjoin = "Ribbon.id==Section.ribbon_id")
     notes = Column(String(512))
     def __repr__(self):
         return "Ribbon(order=%d,volume='%s')"%(self.order,self.volumes)
 
+class Round(ATObject,MyMixin):
+    __tablename__ = 'round'
+    __mapper_args__={'polymorphic_identity': 'round'}
+    object_id = Column(Integer, ForeignKey('objects.object_id'))
+
+    microscoperound = relationship("MicroscopeRound",primaryjoin = "Round.id==MicroscopeRound.round_id")
+    stainround = relationship("StainRound",primaryjoin = "Round.id==StainRound.round_id")
+
+
 class MicroscopeRound(ATObject,MyMixin):
     __tablename__ = 'microscoperound'
     __mapper_args__={'polymorphic_identity': 'microscoperound'}
     object_id = Column(Integer, ForeignKey('objects.object_id'))
+
+    round_id = Column(Integer,ForeignKey('round.id'))
+    round = relationship("Round",foreign_keys=[round_id])
 
     channelsettings = relationship("ChannelSetting",primaryjoin="MicroscopeRound.id==ChannelSetting.microscoperound_id")
 
@@ -168,6 +214,9 @@ class StainRound(ATObject,MyMixin):
     __tablename__ = 'stainround'
     __mapper_args__ = {'polymorphic_identity':'stainround'}
     object_id = Column(Integer,ForeignKey('objects.object_id'))
+
+    round_id = Column(Integer, ForeignKey('round.id'))
+    round = relationship("Round", foreign_keys=[round_id])
 
     immunoprotocol_id = Column(Integer,ForeignKey('immunoprotocol.id'))
     protocol = relationship("ImmunoProtocol",foreign_keys = [immunoprotocol_id])
@@ -255,48 +304,38 @@ class Fluorophore(ATObject,MyMixin):
     excitation_max = Column(Integer)
     emission_max = Column(Integer)
 
-# class ImagingSession(ATObject,MyMixin):
-#     __tablename__ = 'imagingsessions'
-#     __mapper_args__={'polymorphic_identity': 'imagingsession'}
-#     object_id = Column(Integer, ForeignKey('objects.object_id'))
-#
-#     ribbon_id = Column(Integer,ForeignKey('ribbons.id'))
-#     ribbon = relationship("Ribbon",back_populates='imagingsessions',foreign_keys=[ribbon_id])
-#     order = Column(Integer)
-#
-#     channel_settings = relationship("ChannelSetting",back_populates='imagingsession',
-#                                    primaryjoin='ImagingSession.id==ChannelSetting.imagingsession_id')
-#     poslist_transform = relationship("LinearTransform",uselist=False,back_populates='imagingsession',
-#                                      primaryjoin='ImagingSession.id==LinearTransform.imagingsession_id')
-#
 
-# class LinearTransform(ATObject,MyMixin):
-#     __tablename__ = 'lineartransforms'
-#     __mapper_args__={'polymorphic_identity': 'lineartransforms'}
-#     object_id = Column(Integer, ForeignKey('objects.object_id'))
-#
-#     imagingsession_id = Column(Integer,ForeignKey('imagingsessions.id'))
-#     imagingsession = relationship("ImagingSession",back_populates='poslist_transform',foreign_keys=[imagingsession_id])
-#
-#     a00 = Column(Float)
-#     a10 = Column(Float)
-#     a11 = Column(Float)
-#     a12 = Column(Float)
-#     b0 = Column(Float)
-#     b1 = Column(Float)
-#
-#     def get_transform(self):
-#         A=np.array([[self.a00,self.a01],[self.a10,self.a11]])
-#         B=np.array([self.b0,self.b1])
-#         return A,B
-#
-#     def set_transform(self,A,B):
-#         self.a00=A[0,0]
-#         self.a01=A[0,1]
-#         self.a10=A[1,0]
-#         self.a11=A[0,1]
-#         self.b0=B[0]
-#         self.b1=B[1]
+
+class LinearTransform(ATObject,MyMixin):
+    __tablename__ = 'lineartransforms'
+    __mapper_args__={'polymorphic_identity': 'lineartransforms'}
+    object_id = Column(Integer, ForeignKey('objects.object_id'))
+
+    microscoperound_id = Column(Integer,ForeignKey('microscoperound.id'))
+    microscoperound = relationship("MicroscopeRound",foreign_keys=[microscoperound_id])
+
+    ribbon_id = Column(Integer,ForeignKey('ribbon.id'))
+    ribbon = relationship("Ribbon",foreign_keys = [ribbon_id])
+
+    a00 = Column(Float)
+    a10 = Column(Float)
+    a11 = Column(Float)
+    a12 = Column(Float)
+    b0 = Column(Float)
+    b1 = Column(Float)
+
+    def get_transform(self):
+        A=np.array([[self.a00,self.a01],[self.a10,self.a11]])
+        B=np.array([self.b0,self.b1])
+        return A,B
+
+    def set_transform(self,A,B):
+        self.a00=A[0,0]
+        self.a01=A[0,1]
+        self.a10=A[1,0]
+        self.a11=A[0,1]
+        self.b0=B[0]
+        self.b1=B[1]
 
 
 # # class RigidTransform(LinearTransform,Base):
@@ -327,17 +366,23 @@ class Section(ATObject,MyMixin):
 
 
 class SectionImagePlan(ATObject,MyMixin):
-    __tablename__ = 'sectionimageplans'
-    __mapper_args__={'polymorphic_identity': 'sectionimageplans'}
-
+    __tablename__ = 'sectionimageplan'
+    __mapper_args__={'polymorphic_identity': 'sectionimageplan'}
     object_id = Column(Integer, ForeignKey('objects.object_id'),primary_key=True)
 
-    microscoperound_id = Column(Integer,ForeignKey('microscoperound.id'))
-    microscoperound = relationship("MicroscopeRound",foreign_keys=[microscoperound_id])
+    volume_id = Column(Integer,ForeignKey('volume.id'))
+    volume = relationship("Volume",foreign_keys=[volume_id])
     section_id = Column(Integer,ForeignKey('sections.id'))
     section = relationship("Section",foreign_keys=[section_id])
     frames = relationship("Frame",back_populates='sectionimageplan',
                          primaryjoin='SectionImagePlan.id==Frame.sectionimageplan_id')
+
+    mx = Column(Integer)
+    my = Column(Integer)
+    pos_x = Column(Float)
+    pos_y = Column(Float)
+    overlap = Column(Float)
+
 
 class Frame(ATObject,MyMixin):
     __tablename__ = 'frames'
@@ -346,7 +391,7 @@ class Frame(ATObject,MyMixin):
     object_id = Column(Integer,ForeignKey('objects.object_id'))
 
     order = Column(Integer)
-    sectionimageplan_id = Column(Integer,ForeignKey('sectionimageplans.id'))
+    sectionimageplan_id = Column(Integer,ForeignKey('sectionimageplan.id'))
     sectionimageplan = relationship("SectionImagePlan",back_populates='frames',foreign_keys=[sectionimageplan_id])
 
     pos_x = Column(Float)
