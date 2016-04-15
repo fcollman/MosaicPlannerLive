@@ -489,6 +489,27 @@ class MosaicPanel(FigureCanvas):
                     #t3 = time.clock()*1000
                     #print time.clock(),t3-t2, 'ms to snap image'
                     self.dataQueue.put((slice_index,frame_index, z_index, prot_name,path,data,ch,x,y,z,))
+        self.imgSrc.set_z(currZ)
+        self.imgSrc.set_hardware_autofocus_state(True)
+
+    def ResetPiezo(self):
+
+        Z_label = 'ZStage:Z:32'
+        PIEZO_label = 'PiezoStage:P:34'
+
+        piezo = self.imgSrc.mmc.getPosition(PIEZO_label)
+        if abs(piezo)>65:
+            z = self.imgSrc.mmc.getPosition(Z_label)
+            islocked = self.imgSrc.mmc.isContinuousFocusEnabled()
+
+            if islocked:
+                self.imgSrc.mmc.enableContinuousFocus(False)
+
+            self.imgSrc.mmc.setPosition(Z_label,z-piezo)
+            self.imgSrc.mmc.setPosition(PIEZO_label,0)
+
+            if islocked:
+                self.imgSrc.mmc.enableContinuousFocus(True)
 
 
     def on_run_acq(self,event="none"):
@@ -531,6 +552,7 @@ class MosaicPanel(FigureCanvas):
         while currpos is not None:
             #turn on autofocus
             self.imgSrc.set_hardware_autofocus_state(True)
+            self.ResetPiezo()
             self.imgSrc.move_stage(currpos.x,currpos.y)
             currpos=self.posList.get_prev_pos(currpos)
             wx.Yield()
@@ -558,14 +580,21 @@ class MosaicPanel(FigureCanvas):
         for i,pos in enumerate(self.posList.slicePositions):
             if not goahead:
                 break
+            if not self.imgSrc.mmc.isContinuousFocusEnabled():
+                print "autofocus lost.. quiting"
+                break
             (goahead, skip) = self.progress.Update(i*numFrames,'section %d of %d'%(i+1,numSections))
             #turn on autofocus
+            self.ResetPiezo()
             if pos.frameList is None:
                 self.multiDacq(outdir,pos.x,pos.y,i)
             else:
                 for j,fpos in enumerate(pos.frameList.slicePositions):
                     if not goahead:
                         print "breaking out!"
+                        break
+                    if not self.imgSrc.mmc.isContinuousFocusEnabled():
+                        print "autofocus lost.. quiting"
                         break
                     self.multiDacq(outdir,fpos.x,fpos.y,i,j)
                     (goahead, skip)=self.progress.Update((i*numFrames) + j+1,'section %d of %d, frame %d'%(i+1,numSections,j))

@@ -68,10 +68,6 @@ class ASI_AutoFocus(QtGui.QMainWindow):
         self.get_exposure.clicked.connect(self.GetExposure)
         self.inc_exposure.clicked.connect(self.IncExposure)
         self.dec_exposure.clicked.connect(self.DecExposure)
-        self.red_laser.clicked.connect(self.FireRed)
-        self.green_laser.clicked.connect(self.FireGreen)
-        self.blue_laser.clicked.connect(self.FireBlue)
-        self.purple_laser.clicked.connect(self.FirePurple)
         self.prop_browser.clicked.connect(self.GetProperties)
         self.idle_button.clicked.connect(self.Idle)
         self.dither_button.clicked.connect(self.Dither)
@@ -104,6 +100,9 @@ class ASI_AutoFocus(QtGui.QMainWindow):
 
         self.VideoTimer = QtCore.QTimer(self)
         self.connect(self.VideoTimer, QtCore.SIGNAL("timeout()"), self.UpdateVideo)
+        self.ChannelsComboBox.addItems(self.mmc.getAvailableConfigs('Channels'))
+        self.ChannelsComboBox.currentIndexChanged[str].connect(self.changeChannel)
+
 
 
         self.ended = False
@@ -111,6 +110,9 @@ class ASI_AutoFocus(QtGui.QMainWindow):
         print "Goodbye Master Wayne"
         self.StopVideo()
 
+    def changeChannel(self,chan):
+        print 'channel is', chan
+        self.mmc.setConfig('Channels',str(chan))
 
     def startPosTimer(self,evt):
         self.PosTimer.start(200)
@@ -172,14 +174,6 @@ class ASI_AutoFocus(QtGui.QMainWindow):
             new = current    
         self.mmc.setExposure(new)
         self.current_exposure.setText(str(new))
-    def FireRed(self):
-        self.mmc.setConfig('Channels', '640')
-    def FireBlue(self):
-        self.mmc.setConfig('Channels', '488')
-    def FireGreen(self):
-        self.mmc.setConfig('Channels', '561')
-    def FirePurple(self):
-        self.mmc.setConfig('Channels', '405')
     def StartVideo(self):
         if not self.mmc.isSequenceRunning():
             self.mmc.startContinuousSequenceAcquisition(1)
@@ -444,11 +438,7 @@ class ASI_AutoFocus(QtGui.QMainWindow):
         #     # for i in range(20): 
         #     #     self.mmc.setRelativePosition(self.Z_label, -step)
         #     #     time.sleep(.25)
-
-            
-            
-          
-            #self.mmc.setPosition(self.PIEZO_label, 0)
+        #     self.mmc.setPosition(self.PIEZO_label, 0)
 
     def TakeZstack(self, evt,filename,zrange = 1.8, dz = .1):
         # filename = QtGui.QFileDialog.getSaveFileName(self, 'Save File', '.')
