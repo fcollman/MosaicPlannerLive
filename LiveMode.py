@@ -47,8 +47,8 @@ class VideoView(QtGui.QWidget):
         startChan=self.channels[Nch-1]
         for ch in self.channels:
             if 'dapi' in ch.lower():
-                self.mmc.setConfig(self.channelGroup,startChan)
-                self.mmc.waitForConfig(self.channelGroup,startChan)
+                self.mmc.setConfig(self.channelGroup,ch)
+                self.mmc.waitForConfig(self.channelGroup,ch)
         self.mmc.startContinuousSequenceAcquisition(1)
     
     def initUI(self):

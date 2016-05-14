@@ -431,6 +431,7 @@ class MosaicPanel(FigureCanvas):
             if self.channel_settings.usechannels[ch]:
                 f.write(self.channel_settings.prot_names[ch] + "\t" + "%f\t%s\n" % (self.channel_settings.exposure_times[ch],ch))
 
+
     def multiDacq(self,outdir,x,y,slice_index,frame_index=0):
 
         #print datetime.datetime.now().time()," starting multiDAcq, autofocus on"
@@ -443,9 +444,9 @@ class MosaicPanel(FigureCanvas):
         if self.imgSrc.has_hardware_autofocus():
             #wait till autofocus settles
             while not self.imgSrc.is_hardware_autofocus_done():
-                #time.sleep(.05)
+                time.sleep(.2)
                 attempts+=1
-                if attempts>100:
+                if attempts>50:
                     print "not auto-focusing correctly.. giving up after 10 seconds"
                     break
 
@@ -464,6 +465,7 @@ class MosaicPanel(FigureCanvas):
         if self.zstack_settings.zstack_flag:
             furthest_distance = self.zstack_settings.zstack_delta * (self.zstack_settings.zstack_number-1)/2
             zplanes_to_visit = [(currZ-furthest_distance) + i*self.zstack_settings.zstack_delta for i in range(self.zstack_settings.zstack_number)]
+
         else:
             zplanes_to_visit = [currZ]
         #print 'zplanes_to_visit : ',zplanes_to_visit
@@ -552,7 +554,7 @@ class MosaicPanel(FigureCanvas):
         while currpos is not None:
             #turn on autofocus
             self.imgSrc.set_hardware_autofocus_state(True)
-            self.ResetPiezo()
+            #self.ResetPiezo()
             self.imgSrc.move_stage(currpos.x,currpos.y)
             currpos=self.posList.get_prev_pos(currpos)
             wx.Yield()
@@ -581,11 +583,11 @@ class MosaicPanel(FigureCanvas):
             if not goahead:
                 break
             if not self.imgSrc.mmc.isContinuousFocusEnabled():
-                print "autofocus lost.. quiting"
+                print "autofocus not enabled when moving between sections.. quiting"
                 break
             (goahead, skip) = self.progress.Update(i*numFrames,'section %d of %d'%(i+1,numSections))
             #turn on autofocus
-            self.ResetPiezo()
+            #self.ResetPiezo()
             if pos.frameList is None:
                 self.multiDacq(outdir,pos.x,pos.y,i)
             else:
@@ -594,7 +596,7 @@ class MosaicPanel(FigureCanvas):
                         print "breaking out!"
                         break
                     if not self.imgSrc.mmc.isContinuousFocusEnabled():
-                        print "autofocus lost.. quiting"
+                        print "autofocus no longer enabled while moving between frames.. quiting"
                         break
                     self.multiDacq(outdir,fpos.x,fpos.y,i,j)
                     (goahead, skip)=self.progress.Update((i*numFrames) + j+1,'section %d of %d, frame %d'%(i+1,numSections,j))

@@ -294,7 +294,7 @@ class ChannelSettings():
 class ChangeChannelSettings(wx.Dialog):
     """simple dialog for changing the channel settings"""
     def __init__(self, parent, id, title, settings,style):
-        wx.Dialog.__init__(self, parent, id, title,style=wx.DEFAULT_DIALOG_STYLE, size=(420, -1))
+        wx.Dialog.__init__(self, parent, id, title,style=wx.DEFAULT_DIALOG_STYLE|wx.RESIZE_BORDER|wx.EXPAND)
         
         self.settings=settings
         vbox = wx.BoxSizer(wx.VERTICAL)   

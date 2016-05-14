@@ -5,6 +5,8 @@ import time
 from Rectangle import Rectangle
 import wx
 from retry import retry
+import datetime
+import os
 
 class imageSource():
     
@@ -15,7 +17,11 @@ class imageSource():
         self.mmc = MMCorePy.CMMCore() 
         self.mmc.enableStderrLog(False)
         self.mmc.enableDebugLog(True)
-        self.mmc.setPrimaryLogFile('CoreLogProcessSpeed_newfirm.txt')
+        now=datetime.datetime.now()
+        #logfile=now.strftime('%Y-%m-%d_%H:%M:%S_log.txt')
+        logfile = 'testme.txt'
+        currpath=os.path.split(os.path.realpath(__file__))[0]
+        self.mmc.setPrimaryLogFile(os.path.join(currpath,logfile))
         self.mmc.loadSystemConfiguration(self.configFile)
        
         self.channelGroupName=channelGroupName
@@ -99,6 +105,7 @@ class imageSource():
     def set_hardware_autofocus_state(self,state):
         if self.has_hardware_autofocus():
             self.mmc.enableContinuousFocus(state)
+            self.mmc.waitForDevice(self.mmc.getAutoFocusDevice())
         
     def has_hardware_autofocus(self):
         #NEED TO IMPLEMENT IF NOT MICROMANAGER
@@ -126,9 +133,10 @@ class imageSource():
 
         #print "is continuous focus enabled",self.mmc.isContinuousFocusEnabled()
         #print "is continuous focus locked",self.mmc.isContinuousFocusLocked()
-        if not self.mmc.isContinuousFocusLocked():
-            print 'CRISP is not locked'
-            wx.MessageBox('CRISP is not locked, Help me',)
+
+        if not self.mmc.isContinuousFocusEnabled():
+            print 'autofocus not enabled'
+            wx.MessageBox('autofocus not enabled, Help me',)
             return
 
 
@@ -146,8 +154,10 @@ class imageSource():
                 failure=False
                 while not self.is_hardware_autofocus_done():
                     attempts+=1
+                    time.sleep(.1)
                     if attempts>100:
                         failure=True
+                        print("focus score is ",self.mmc.getCurrentFocusScore(),'breaking out')
                         break
                         print "not autofocusing correctly.. giving up after 10 seconds"
                 if failure:
