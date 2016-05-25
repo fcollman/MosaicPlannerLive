@@ -550,4 +550,5 @@ class ChangeSEMSettings(wx.Dialog):
                                      rot=self.rotCtrl.GetValue(),
                                      Z=self.ZCtrl.GetValue(),
                                      WD=self.WDCtrl)
-                                     
+
+
