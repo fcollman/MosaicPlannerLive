@@ -1,7 +1,10 @@
 from PyQt4 import QtCore, QtGui, uic
 import os
+import MMCorePy
 
-class StageResetSettings():
+
+class StageResetSettings:
+
     def __init__(self,enableStageReset=False,focusStage=None,resetStage=None,compensationStage=None,minThreshold=-60,
                  maxThreshold=60,resetPosition=0,invertCompensation=False):
         self.enableStageReset=enableStageReset
@@ -12,6 +15,17 @@ class StageResetSettings():
         self.maxThreshold=maxThreshold
         self.resetPosition=resetPosition
         self.invertCompensation=invertCompensation
+
+    def __str__(self):
+        total_string = "enableStageReset:"+str(self.enableStageReset) +" \n"
+        total_string += "focusStage: " + self.focusStage + "\n"
+        total_string += "resetStage: " + self.resetStage + "\n"
+        total_string += "compensationStage: " + self.compensationStage + "\n"
+        total_string += "minThreshold: " + str(self.minThreshold) + "\n"
+        total_string += "maxThreshold: " + str(self.maxThreshold) + "\n"
+        total_string += "resetPosition: " + str(self.resetPosition) + "\n"
+        total_string += "invertCompensation: " + str(self.invertCompensation) + "\n"
+        return total_string
 
     def savesettings(self,cfg):
         cfg.WriteBool('enableStageReset',self.enableStageReset)
@@ -34,23 +48,72 @@ class StageResetSettings():
         self.invertCompensation=cfg.ReadBool('invertCompensation',False)
 
 
-class ChangeStageResetSettings(QtGui.QWidget):
-    def __init__(self,mmc,settings=StageResetSettings()):
+class ChangeStageResetSettings(QtGui.QDialog):
+    def __init__(self, mmc, input_settings=StageResetSettings()):
 
         #QtGui.QWidget.__init__(self)
         super(ChangeStageResetSettings,self).__init__()
         currpath=os.path.split(os.path.realpath(__file__))[0]
         filename = os.path.join(currpath,'StageReset.ui')
+        self.input_settings = input_settings
         uic.loadUi(filename,self)
-        self.show()
+
+        stages = mmc.getLoadedDevicesOfType(MMCorePy.StageDevice)
+        #load up the focusStage_combobox
+        self.enableReset_checkBox.setCheckState(input_settings.enableStageReset)
+
+        self.focusStage_comboBox.addItems(stages)
+        self.resetStage_comboBox.addItems(stages)
+        self.compensationStage_comboBox.addItems(stages)
+
+        def setComboByText(combobox,text):
+            index = combobox.findText(text, flags=QtCore.Qt.MatchExactly)
+            if(index>-1):
+                combobox.setCurrentIndex(index)
+
+        if settings.focusStage is not None:
+            setComboByText(self.focusStage_comboBox,settings.focusStage)
+
+        if settings.resetStage is not None:
+            setComboByText(self.resetStage_comboxBox,settings.resetStage)
+
+        if settings.compensationStage is not None:
+            setComboByText(self.compensationStage_comboBox,settings.compensationStage)
+
+
+        #self.show()
 
     def getSettings(self):
 
 
         """extracts the Camera Settings from the controls"""
-        return SmartSEMSettings(mag=self.magCtrl.GetValue(),
-                                     tilt=self.tiltCtrl.GetValue(),
-                                     rot=self.rotCtrl.GetValue(),
-                                     Z=self.ZCtrl.GetValue(),
-                                     WD=self.WDCtrl)
+        return StageResetSettings(enableStageReset=self.enableReset_checkBox.isChecked(),
+                                  focusStage=str(self.focusStage_comboBox.currentText()),
+                                  resetStage=str(self.resetStage_comboBox.currentText()),
+                                  compensationStage=str(self.compensationStage_comboBox.currentText()),
+                                  minThreshold=self.minThreshold_SpinBox.value(),
+                                  maxThreshold=self.maxThreshold_SpinBox.value(),
+                                  resetPosition=self.resetPosition_SpinBox.value(),
+                                  invertCompensation=self.invertCompensation_checkBox.isChecked())
 
+if __name__ == '__main__':
+    import sys
+    app = QtGui.QApplication(sys.argv)
+    defaultMMpath = "C:\Users\Administrator\Documents"
+    configFile = QtGui.QFileDialog.getOpenFileName(
+        None, "pick a uManager cfg file", defaultMMpath, "*.cfg")
+    configFile = str(configFile.replace("/", "\\"))
+
+    mmc = MMCorePy.CMMCore()
+    mmc.loadSystemConfiguration(configFile)
+    print "loaded configuration file"
+    settings = StageResetSettings()
+    resetSettings=ChangeStageResetSettings(mmc,settings)
+    #resetSettings.setModal(True)
+    resetSettings.show()
+    app.exec_()
+    settings=resetSettings.getSettings()
+    print(settings)
+    mmc.reset()
+    print "reset micromanager core"
+    sys.exit()

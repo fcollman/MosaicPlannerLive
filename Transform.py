@@ -108,28 +108,29 @@ class Transform():
         print "saving_transformation"
         print self.T
         print self.D
-        cfg.WriteFloat('trans_M00',self.T[0][0])
-        cfg.WriteFloat('trans_M01',self.T[0][1])
-        cfg.WriteFloat('trans_M10',self.T[1][0])
-        cfg.WriteFloat('trans_M11',self.T[1][1])
+        cfg['Transform']['M00']=self.T[0][0]
+        cfg['Transform']['M01']=self.T[0][1]
+        cfg['Transform']['M10']=self.T[1][0]
+        cfg['Transform']['M11']=self.T[1][1]
         
-        cfg.WriteFloat('trans_D0',self.D[0])
-        cfg.WriteFloat('trans_D1',self.D[1])
-        cfg.WriteBool('trans_flipvert',self.flipVert)
-        cfg.WriteBool('trans_fliphoriz',self.flipHoriz)
-      
+        cfg['Transform']['D0']=self.D[0]
+        cfg['Transform']['D1']=self.D[1]
+        cfg['Transform']['flipvert']=self.flipVert
+        cfg['Transform']['fliphoriz']=self.flipHoriz
+        cfg.write()
+
     def load_settings(self,cfg):
         print "loading transform"
         print self.T
         print self.D
-        self.T[0,0]=cfg.ReadFloat('trans_M00',1.0)
-        self.T[0,1]=cfg.ReadFloat('trans_M01',0.0)
-        self.T[1,0]=cfg.ReadFloat('trans_M10',0.0)
-        self.T[1,1]=cfg.ReadFloat('trans_M11',1.0)       
-        self.D[0]=cfg.ReadFloat('trans_D0',0.0)
-        self.D[1]=cfg.ReadFloat('trans_D1',0.0)
-        self.flipVert=cfg.ReadBool('trans_flipvert',False)
-        self.flipHoriz=cfg.ReadBool('trans_fliphoriz',False)
+        self.T[0,0]=cfg['Transform']['M00']
+        self.T[0,1]=cfg['Transform']['M01']
+        self.T[1,0]=cfg['Transform']['M10']
+        self.T[1,1]=cfg['Transform']['M11']
+        self.D[0]=cfg['Transform']['D0']
+        self.D[1]=cfg['Transform']['D1']
+        self.flipVert=cfg['Transform']['flipvert']
+        self.flipHoriz=cfg['Transform']['fliphoriz']
         print self.T
         print self.D
            

@@ -49,9 +49,10 @@ from Settings import (MosaicSettings, CameraSettings,SiftSettings,ChangeCameraSe
                        ChangeChannelSettings, ChangeSiftSettings, CorrSettings,ChangeCorrSettings,
                       ChangeZstackSettings, ZstackSettings,)
 
+from configobj import ConfigObj
 
 STOP_TOKEN = 'STOP!!!'
-
+SETTINGS_FILE = 'MosaicPlannerSettings.cfg'
 
 def file_save_process(queue,stop_token, metadata_dictionary):
     while True:
@@ -319,7 +320,7 @@ class MosaicPanel(FigureCanvas):
         self.camera_settings.load_settings(config)
         mosaic_settings = MosaicSettings()
         mosaic_settings.load_settings(config)
-        self.MM_config_file = str(self.cfg.Read('MM_config_file',""))
+        self.MM_config_file = self.cfg['MosaicPlanner']['MM_config_file']
         print self.MM_config_file
 
         #setup the image source
@@ -365,7 +366,7 @@ class MosaicPanel(FigureCanvas):
         self.focusCorrectionList = posList(self.subplot)
 
         #read saved position list from configuration file
-        pos_list_string = self.cfg.Read('focal_pos_list_pickle',"")
+        pos_list_string = self.cfg['MosaicPlanner']['focal_pos_list_pickle']
         #if the saved list is not default blank.. add it to current list
         print "pos_list",pos_list_string
         if len(pos_list_string)>0:
@@ -496,22 +497,31 @@ class MosaicPanel(FigureCanvas):
 
     def ResetPiezo(self):
 
-        Z_label = 'ZStage:Z:32'
-        PIEZO_label = 'PiezoStage:P:34'
+        do_stage_reset=self.cfg['StageResetSettings']['enableStageReset']
+        if do_stage_reset:
+            z_label = self.cfg['StageResetSettings']['compensationStage']
+            piezo_label = self.cfg['StageResetSettings']['resetStage']
+            min_threshold = self.cfg['StageResetSettings']['minThreshold']
+            max_threshold = self.cfg['StageResetSettings']['maxThreshold']
+            reset_position = self.cfg['StageResetSettings']['resetPosition']
+            invert_compensation = self.cfg['StageResetSettings']['invertCompensation']
 
-        piezo = self.imgSrc.mmc.getPosition(PIEZO_label)
-        if abs(piezo)>65:
-            z = self.imgSrc.mmc.getPosition(Z_label)
-            islocked = self.imgSrc.mmc.isContinuousFocusEnabled()
+            piezo = self.imgSrc.mmc.getPosition(piezo_label)
+            if (piezo<min_threshold) or (piezo>max_threshold):
+                z = self.imgSrc.mmc.getPosition(z_label)
+                islocked = self.imgSrc.mmc.isContinuousFocusEnabled()
 
-            if islocked:
-                self.imgSrc.mmc.enableContinuousFocus(False)
+                if islocked:
+                    self.imgSrc.mmc.enableContinuousFocus(False)
 
-            self.imgSrc.mmc.setPosition(Z_label,z-piezo)
-            self.imgSrc.mmc.setPosition(PIEZO_label,0)
+                if invert_compensation:
+                    self.imgSrc.mmc.setPosition(z_label,z+(piezo-reset_position))
+                else:
+                    self.imgSrc.mmc.setPosition(z_label,z-(piezo-reset_position))
+                self.imgSrc.mmc.setPosition(piezo_label,reset_position)
 
-            if islocked:
-                self.imgSrc.mmc.enableContinuousFocus(True)
+                if islocked:
+                    self.imgSrc.mmc.enableContinuousFocus(True)
 
 
     def on_run_acq(self,event="none"):
@@ -554,7 +564,7 @@ class MosaicPanel(FigureCanvas):
         while currpos is not None:
             #turn on autofocus
             self.imgSrc.set_hardware_autofocus_state(True)
-            #self.ResetPiezo()
+            self.ResetPiezo()
             self.imgSrc.move_stage(currpos.x,currpos.y)
             currpos=self.posList.get_prev_pos(currpos)
             wx.Yield()
@@ -587,7 +597,7 @@ class MosaicPanel(FigureCanvas):
                 break
             (goahead, skip) = self.progress.Update(i*numFrames,'section %d of %d'%(i+1,numSections))
             #turn on autofocus
-            #self.ResetPiezo()
+            self.ResetPiezo()
             if pos.frameList is None:
                 self.multiDacq(outdir,pos.x,pos.y,i)
             else:
@@ -599,6 +609,7 @@ class MosaicPanel(FigureCanvas):
                         print "autofocus no longer enabled while moving between frames.. quiting"
                         break
                     self.multiDacq(outdir,fpos.x,fpos.y,i,j)
+                    self.ResetPiezo()
                     (goahead, skip)=self.progress.Update((i*numFrames) + j+1,'section %d of %d, frame %d'%(i+1,numSections,j))
 
             wx.Yield()
@@ -663,7 +674,8 @@ class MosaicPanel(FigureCanvas):
 
         dlg.ShowModal()
         self.MM_config_file = str(dlg.GetPath())
-        self.cfg.Write('MM_config_file',self.MM_config_file)
+        self.cfg['MosaicPlanner']['MM_config_file'] = self.MM_config_file
+        self.cfg.write()
 
         dlg.Destroy()
 
@@ -1047,7 +1059,8 @@ class ZVISelectFrame(wx.Frame):
 
         #recursively call old init function
         wx.Frame.__init__(self, parent, title=title, size=(1550,885),pos=(5,5))
-        self.cfg = wx.Config('settings')
+        #self.cfg = wx.Config('settings')
+        self.cfg = ConfigObj(SETTINGS_FILE,unrepr=True)
         #setup a mosaic panel
         self.mosaicCanvas=MosaicPanel(self,config=self.cfg)
 
@@ -1082,16 +1095,16 @@ class ZVISelectFrame(wx.Frame):
 
 
         #SET THE INTIAL SETTINGS
-        options.Check(self.ID_RELATIVEMOTION,self.cfg.ReadBool('relativemotion',True))
+        options.Check(self.ID_RELATIVEMOTION,self.cfg['MosaicPlanner']['relativemotion'])
         options.Check(self.ID_SORTPOINTS,True)
         options.Check(self.ID_SHOWNUMBERS,False)
-        options.Check(self.ID_FLIPVERT,self.cfg.ReadBool('flipvert',False))
-        options.Check(self.ID_TRANSPOSE_XY,self.cfg.ReadBool('transposexy',False))
+        options.Check(self.ID_FLIPVERT,self.cfg['MosaicPlanner']['flipvert'])
+        options.Check(self.ID_TRANSPOSE_XY,self.cfg['MosaicPlanner']['transposexy'])
         self.toggle_transpose_xy()
         #TRANSFORM MENU
         self.save_transformed = transformMenu.Append(self.ID_SAVETRANSFORM,'Save Transformed?',\
         'Rather than save the coordinates in the original space, save a transformed set of coordinates according to transform configured in set_transform...',kind=wx.ITEM_CHECK)
-        transformMenu.Check(self.ID_SAVETRANSFORM,self.cfg.ReadBool('savetransform',False))
+        transformMenu.Check(self.ID_SAVETRANSFORM,self.cfg['MosaicPlanner']['savetransform'])
 
         self.edit_camera_settings = transformMenu.Append(self.ID_EDITTRANSFORM,'Edit Transform...',\
         'Edit the transform used to save transformed coordinates, by setting corresponding points and fitting a model',kind=wx.ITEM_NORMAL)
@@ -1127,7 +1140,7 @@ class ZVISelectFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.mosaicCanvas.edit_focus_correction_plane, id = self.ID_EDIT_FOCUS_CORRECTION)
         self.Bind(wx.EVT_MENU, self.mosaicCanvas.launch_ASI,id = self.ID_ASIAUTOFOCUS)
 
-        Imaging_Menu.Check(self.ID_USE_FOCUS_CORRECTION,self.cfg.ReadBool('use_focus_correction',False))
+        Imaging_Menu.Check(self.ID_USE_FOCUS_CORRECTION,self.cfg['MosaicPlanner']['use_focus_correction'])
 
         menubar.Append(options, '&Options')
         menubar.Append(transformMenu,'&Transform')
@@ -1152,7 +1165,7 @@ class ZVISelectFrame(wx.Frame):
         self.imgCollectDirPicker=wx.DirPickerCtrl(self,message='Select a directory to store images',\
         path="",name='imgCollectPickerCtrl1',\
         style=wx.FLP_USE_TEXTCTRL, size=wx.Size(300,20))
-        self.imgCollectDirPicker.SetPath(self.cfg.Read('default_imagepath',""))
+        self.imgCollectDirPicker.SetPath(self.cfg['MosaicPlanner']['default_imagepath'])
         self.imgCollect_load_button=wx.Button(self,id=wx.ID_ANY,label="Load",name="imgCollect load")
 
         #wire up the button to the "on_load" button
@@ -1165,7 +1178,7 @@ class ZVISelectFrame(wx.Frame):
         self.array_filepicker=wx.FilePickerCtrl(self,message='Select an array file',\
         path="",name='arrayFilePickerCtrl1',\
         style=wx.FLP_USE_TEXTCTRL, size=wx.Size(300,20),wildcard='*.*')
-        self.array_filepicker.SetPath(self.cfg.Read('default_arraypath',""))
+        self.array_filepicker.SetPath(self.cfg['MosaicPlanner']['default_arraypath'])
 
         self.array_load_button=wx.Button(self,id=wx.ID_ANY,label="Load",name="load button")
         self.array_formatBox=wx.ComboBox(self,id=wx.ID_ANY,value='AxioVision',\
@@ -1236,30 +1249,35 @@ class ZVISelectFrame(wx.Frame):
 
 
     def save_settings(self,event="none"):
-        #save the transform parameters
+
+
         self.Transform.save_settings(self.cfg)
 
         #save the menu options
-        self.cfg.WriteBool('relativemotion',self.relative_motion.IsChecked())
+        self.cfg['MosaicPlanner']['relativemotion']=self.relative_motion.IsChecked()
         #self.cfg.WriteBool('flipvert',self.flipvert.IsChecked())
         #self.cfg.WriteBool('fullres',self.fullResOpt.IsChecked())
-        self.cfg.WriteBool('savetransform',self.save_transformed.IsChecked())
-        self.cfg.WriteBool('transposexy',self.transpose_xy.IsChecked())
+        self.cfg['MosaicPlanner']['savetransform']=self.save_transformed.IsChecked()
+        self.cfg['MosaicPlanner']['transposexy']=self.transpose_xy.IsChecked()
         #save the camera settings
-        self.mosaicCanvas.posList.camera_settings.save_settings(self.cfg)
+        self.mosaicPanel.posList.camera_settings.save_settings(self.cfg)
 
         #save the mosaic options
-        self.mosaicCanvas.posList.mosaic_settings.save_settings(self.cfg)
+        self.mosaicPanel.posList.mosaic_settings.save_settings(self.cfg)
 
         #save the SEMSettings
         self.SmartSEMSettings.save_settings(self.cfg)
 
-        self.cfg.Write('default_imagepath',self.imgCollectDirPicker.GetPath())
-        #self.cfg.Write('default_metadatapath',self.meta_filepicker.GetPath())
-        self.cfg.Write('default_arraypath',self.array_filepicker.GetPath())
+        self.cfg['MosaicPlanner']['default_imagepath']=self.imgCollectDirPicker.GetPath()
 
-        focal_pos_lis_string = pickle.dumps(self.mosaicCanvas.focusCorrectionList)
-        self.cfg.Write("focal_pos_list_pickle",focal_pos_lis_string)
+        self.cfg['MosaicPlanner']['default_arraypath']=self.array_filepicker.GetPath()
+
+        focal_pos_lis_string = self.mosaicPanel.focusCorrectionList.to_json()
+        #jsonpickle.encode(self.mosaicPanel.focusCorrectionList)
+        self.cfg['MosaicPlanner']["focal_pos_list_pickle"]=focal_pos_lis_string
+        self.cfg.write()
+        #with open(SETTINGS_FILE,'wb') as configfile:
+        #    self.cfg.write(configfile)
 
     def on_key_press(self,event="none"):
         """forward the key press event to the mosaicCanvas handler"""

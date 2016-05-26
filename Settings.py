@@ -26,14 +26,17 @@ class ZstackSettings():
         self.zstack_number = int(zstack_number + (1 - zstack_number % 2))
 
     def save_settings(self,cfg):
-        cfg.WriteFloat('zstack_delta/',self.zstack_delta)
-        cfg.WriteBool('zstack_flag/',self.zstack_flag)
-        cfg.WriteInt('zstack_number/',self.zstack_number)
+        cfg['ZStackSettings']['zstack_delta']=self.zstack_delta
+        cfg['ZStackSettings']['zstack_flag']=self.zstack_flag
+        cfg['ZStackSettings']['zstack_number']=self.zstack_number
+        cfg.write()
 
     def load_settings(self,cfg):
-        self.zstack_delta = cfg.ReadFloat('zstack_delta/')
-        self.zstack_flag = cfg.ReadBool('zstack_flag/')
-        self.zstack_number = cfg.ReadInt('zstack_number/')
+        self.zstack_delta = cfg['ZStackSettings']['zstack_delta']
+        self.zstack_flag = cfg['ZStackSettings']['zstack_flag']
+        self.zstack_number = cfg['ZStackSettings']['zstack_number']
+        print self.zstack_number,type(self.zstack_number)
+        self.zstack_number = int(self.zstack_number + (1 - self.zstack_number % 2))
 
 class ChangeZstackSettings(wx.Dialog):
     def __init__(self, parent, id, title, settings,style):
@@ -91,16 +94,16 @@ class CorrSettings():
         self.corr_thresh  = corr_thresh
         
     def save_settings(self,cfg):
-        cfg.WriteInt('CorrTool_window',self.window)
-        cfg.WriteInt('CorrTool_delta',self.delta)
-        cfg.WriteInt('CorrTool_skip',self.skip)
-        cfg.WriteFloat('CorrTool_corr_thresh',self.corr_thresh)
-    
+        cfg['CorrSettings']['CorrTool_window']=self.window
+        cfg['CorrSettings']['CorrTool_delta']=self.delta
+        cfg['CorrSettings']['CorrTool_skip']=self.skip
+        cfg['CorrSettings']['CorrTool_corr_thresh']=self.corr_thresh
+        cfg.write()
     def load_settings(self,cfg):
-        self.window=cfg.ReadInt('CorrTool_window',100)
-        self.delta=cfg.ReadInt('CorrTool_delta',75)
-        self.skip = cfg.ReadInt('CorrTool_skip',3)
-        self.corr_thresh = cfg.ReadFloat('CorrTool_corr_thresh',.3)
+        self.window=cfg['CorrSettings']['CorrTool_window']
+        self.delta=cfg['CorrSettings']['CorrTool_delta']
+        self.skip = cfg['CorrSettings']['CorrTool_skip']
+        self.corr_thresh = cfg['CorrSettings']['CorrTool_corr_thresh']
 
 class ChangeCorrSettings(wx.Dialog):
     def __init__(self, parent, id, title, settings,style):
@@ -167,14 +170,15 @@ class SiftSettings():
         self.inlier_thresh = inlier_thresh
         
     def save_settings(self,cfg):
-        cfg.WriteInt('numFeatures',self.numFeatures)
-        cfg.WriteInt('inlier_thresh',self.inlier_thresh)
-        cfg.WriteFloat('contrastThreshold',self.contrastThreshold)
-    
+        cfg['SiftSettings','numFeatures']=self.numFeatures
+        cfg['SiftSettings','inlier_thresh']=self.inlier_thresh
+        cfg['SiftSettings','contrastThreshold']=self.contrastThreshold
+        cfg.write()
+
     def load_settings(self,cfg):
-        self.numFeatures=cfg.ReadInt('numFeatures',1000)
-        self.contrastThreshold=cfg.ReadFloat('contrastThreshold',0.5)
-        self.inlier_thresh = cfg.ReadInt('inlier_thresh',12)
+        self.numFeatures=cfg['SiftSettings']['numFeatures']
+        self.contrastThreshold=cfg['SiftSettings']['contrastThreshold']
+        self.inlier_thresh = cfg['SiftSettings']['inlier_thresh']
         
 class ChangeSiftSettings(wx.Dialog):
     def __init__(self, parent, id, title, settings,style):
@@ -239,25 +243,28 @@ class CameraSettings():
         self.pix_width=pix_width
         self.pix_height=pix_height
     def save_settings(self,cfg):
-        cfg.WriteInt('sensor_height',self.sensor_height)
-        cfg.WriteInt('sensor_width',self.sensor_width)
-        cfg.WriteFloat('pix_width',self.pix_width)
-        cfg.WriteFloat('pix_height',self.pix_height)
+        cfg['Camera_Settings']['sensor_height']=self.sensor_height
+        cfg['Camera_Settings']['sensor_width']=self.sensor_width
+        cfg['Camera_Settings']['pix_width']=self.pix_width
+        cfg['Camera_Settings']['pix_height']=self.pix_height
+        cfg.write()
     def load_settings(self,cfg):
-        self.sensor_height=cfg.ReadInt('sensor_height',1040)
-        self.sensor_width=cfg.ReadInt('sensor_width',1388)
-        self.pix_width=cfg.ReadFloat('pix_width',6.5)
-        self.pix_height=cfg.ReadFloat('pix_height',6.5)
+        self.sensor_height=cfg['Camera_Settings']['sensor_height']
+        self.sensor_width=cfg['Camera_Settings']['sensor_width']
+        self.pix_width=cfg['Camera_Settings']['pix_width']
+        self.pix_height=cfg['Camera_Settings']['pix_height']
 
 class ChannelSettings():
     """simple struct for containing the parameters for the microscope"""
-    def __init__(self,channels,exposure_times=dict([]),zoffsets=dict([]),usechannels=dict([]),prot_names=dict([]),map_chan=None,def_exposure=100,def_offset=0.0,):
+    def __init__(self,channels,exposure_times=dict([]),zoffsets=dict([]),
+                 usechannels=dict([]),prot_names=dict([]),map_chan=None,
+                 def_exposure=100,def_offset=0.0,):
         #def_exposure is default exposure time in msec
        
         
         self.channels= channels
         self.def_exposure=def_exposure
-        self.def_offset=0.0
+        self.def_offset=def_offset
         
         self.exposure_times=exposure_times
         self.zoffsets=zoffsets
@@ -275,26 +282,27 @@ class ChannelSettings():
         
     def save_settings(self,cfg):    
         
-        cfg.Write('map_chan',self.map_chan)
+        cfg['ChannelSettings']['map_chan']=self.map_chan
         for ch in self.channels:
-            cfg.WriteInt('Exposures/'+ch,self.exposure_times[ch])
-            cfg.WriteFloat('ZOffsets/'+ch,self.zoffsets[ch])
-            cfg.WriteBool('UseChannel/'+ch,self.usechannels[ch])
-            cfg.Write('ProteinNames/'+ch,self.prot_names[ch])
-
+            cfg['ChannelSettings']['Exposure_'+ch]=self.exposure_times[ch]
+            cfg['ChannelSettings']['ZOffsets_'+ch]=self.zoffsets[ch]
+            cfg['ChannelSettings']['UseChannel_'+ch]=self.usechannels[ch]
+            cfg['ChannelSettings']['ProteinNames_'+ch]=self.prot_names[ch]
+        cfg.write()
 
     def load_settings(self,cfg):
         for ch in self.channels:
-            self.exposure_times[ch]=cfg.ReadInt('Exposures/'+ch, self.def_exposure)
-            self.zoffsets[ch]=cfg.ReadFloat('ZOffsets/'+ch,self.def_offset)
-            self.usechannels[ch]=cfg.ReadBool('UseChannel/'+ch,True)
-            self.prot_names[ch]=cfg.Read('ProteinNames/'+ch,ch)
-        self.map_chan=str(cfg.Read('map_chan','DAPI'))
+            self.exposure_times[ch]=cfg['ChannelSettings'].get('Exposures_'+ch,self.def_exposure)
+            self.zoffsets[ch]=cfg['ChannelSettings'].get('ZOffsets_'+ch,self.def_offset)
+            self.usechannels[ch]=cfg['ChannelSettings'].get('UseChannel_'+ch,True)
+            self.prot_names[ch]=cfg['ChannelSettings'].get('ProteinNames_'+ch,ch)
+
+        self.map_chan=str(cfg['ChannelSettings']['map_chan'])
 
 class ChangeChannelSettings(wx.Dialog):
     """simple dialog for changing the channel settings"""
     def __init__(self, parent, id, title, settings,style):
-        wx.Dialog.__init__(self, parent, id, title,style=wx.DEFAULT_DIALOG_STYLE|wx.RESIZE_BORDER|wx.EXPAND)
+        wx.Dialog.__init__(self, parent, id, title,style=wx.DEFAULT_DIALOG_STYLE, size=(420, -1))
         
         self.settings=settings
         vbox = wx.BoxSizer(wx.VERTICAL)   
@@ -402,20 +410,21 @@ class MosaicSettings:
         self.show_frames=show_frames
         self.mag=mag
     def save_settings(self,cfg):
-        cfg.WriteFloat('mosaic_mag',self.mag)
-        cfg.WriteInt('mosaic_mx',self.mx)
-        cfg.WriteInt('mosaic_my',self.my)
-        cfg.WriteInt('mosaic_overlap',self.overlap)
-        cfg.WriteBool('mosaic_show_box',self.show_box)
-        cfg.WriteBool('mosaic_show_frames',self.show_frames)
-        
+        cfg['MosaicSettings']['mosaic_mag']=self.mag
+        cfg['MosaicSettings']['mosaic_mx']=self.mx
+        cfg['MosaicSettings']['mosaic_my']=self.my
+        cfg['MosaicSettings']['mosaic_overlap']=self.overlap
+        cfg['MosaicSettings']['mosaic_show_box']=self.show_box
+        cfg['MosaicSettings']['mosaic_show_frames']=self.show_frames
+        cfg.write()
+
     def load_settings(self,cfg):
-        self.mag=cfg.ReadFloat('mosaic_mag',65.486)
-        self.mx=cfg.ReadInt('mosaic_mx',1)
-        self.my=cfg.ReadInt('mosaic_my',1)
-        self.overlap=cfg.ReadInt('mosaic_overlap',10)
-        self.show_box=cfg.WriteBool('mosaic_show_box',False)
-        self.show_frames=cfg.WriteBool('mosaic_show_frames',False)
+        self.mag=cfg['MosaicSettings']['mosaic_mag']
+        self.mx=cfg['MosaicSettings']['mosaic_mx']
+        self.my=cfg['MosaicSettings']['mosaic_my']
+        self.overlap=cfg['MosaicSettings']['mosaic_overlap']
+        self.show_box=cfg['MosaicSettings']['mosaic_show_box']
+        self.show_frames=cfg['MosaicSettings']['mosaic_show_frames']
         
   
 class ChangeCameraSettings(wx.Dialog):
@@ -505,18 +514,20 @@ class SmartSEMSettings():
         self.Z=Z
         self.WD=WD
     def save_settings(self,cfg):
-        cfg.WriteInt('SEM_mag',self.mag)
-        cfg.WriteFloat('SEM_tilt',self.tilt)
-        cfg.WriteFloat('SEM_rot',self.rot)
-        cfg.WriteFloat('SEM_Z',self.Z)
-        cfg.WriteFloat('SEM_WD',self.WD)
+        cfg['SmartSEMSettings']['SEM_mag']=self.mag
+        cfg['SmartSEMSettings']['SEM_tilt']=self.tilt
+        cfg['SmartSEMSettings']['SEM_rot']=self.rot
+        cfg['SmartSEMSettings']['SEM_Z']=self.Z
+        cfg['SmartSEMSettings']['SEM_WD']=self.WD
+        cfg.write()
+
     def load_settings(self,cfg):
-        self.mag=cfg.ReadInt('SEM_mag',1200)
-        self.tilt=cfg.ReadFloat('SEM_tilt',0.33)
-        self.rot=cfg.ReadFloat('SEM_rot',0)
-        self.Z=cfg.ReadFloat('SEM_Z',0.0125)
-        self.WD=cfg.ReadFloat('SEM_WD',0.00632568)
-        
+        self.mag=cfg['SmartSEMSettings']['SEM_mag']
+        self.tilt=cfg['SmartSEMSettings']['SEM_tilt']
+        self.rot=cfg['SmartSEMSettings']['SEM_rot']
+        self.Z=cfg['SmartSEMSettings']['SEM_Z']
+        self.WD=cfg['SmartSEMSettings']['SEM_WD']
+
 class ChangeSEMSettings(wx.Dialog):
     """simple dialog for edchanging the camera settings"""
     def __init__(self, parent, id, title, settings=SmartSEMSettings()):
@@ -550,5 +561,4 @@ class ChangeSEMSettings(wx.Dialog):
                                      rot=self.rotCtrl.GetValue(),
                                      Z=self.ZCtrl.GetValue(),
                                      WD=self.WDCtrl)
-
-
+                                     
