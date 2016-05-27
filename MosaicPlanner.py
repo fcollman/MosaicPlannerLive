@@ -1010,9 +1010,7 @@ class MosaicPanel(FigureCanvas):
         #self.draw()
         return corrval>self.CorrSettings.corr_thresh
 
-    def on_key_press(self,event="none"):
-        """function for handling key press events"""
-
+    def do_shift(self,event):
         #pull out the current bounds
         #(minx,maxx)=self.subplot.get_xbound()
         (miny,maxy)=self.subplot.get_ybound()
@@ -1034,9 +1032,9 @@ class MosaicPanel(FigureCanvas):
         #    return
         #handle arrow key presses
         if keycode == wx.WXK_DOWN:
-            dy=jump
-        elif keycode == wx.WXK_UP:
             dy=-jump
+        elif keycode == wx.WXK_UP:
+            dy=jump
         elif keycode == wx.WXK_LEFT:
             dx=-jump
         elif keycode == wx.WXK_RIGHT:
@@ -1051,6 +1049,26 @@ class MosaicPanel(FigureCanvas):
             else:
                 self.posList.shift_selected(dx,dy)
             self.draw()
+    def do_angle_shift(self,event):
+        keycode=event.GetKeyCode()
+        jump=.01
+        if keycode == wx.WXK_LEFT:
+            dtheta=-jump
+        elif keycode == wx.WXK_RIGHT:
+            dtheta=jump
+        self.posList.rotate_selected(dtheta)
+        self.draw()
+
+
+    def on_key_press(self,event="none"):
+        """function for handling key press events"""
+        keycode=event.GetKeyCode()
+        if event.AltDown():
+            if keycode in [wx.WXK_LEFT,wx.WXK_RIGHT]:
+                self.do_angle_shift(event)
+        else:
+            self.do_shift(event)
+
 
 class ZVISelectFrame(wx.Frame):
     """class extending wx.Frame for highest level handling of GUI components """

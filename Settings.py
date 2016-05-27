@@ -182,9 +182,9 @@ class SiftSettings():
         
 class ChangeSiftSettings(wx.Dialog):
     def __init__(self, parent, id, title, settings,style):
-        wx.Dialog.__init__(self, parent, id, title,style=wx.DEFAULT_DIALOG_STYLE, size=(420, -1))   
+        wx.Dialog.__init__(self, parent, id, title,style=wx.DEFAULT_DIALOG_STYLE, size=(420, -1))
         vbox =wx.BoxSizer(wx.VERTICAL)
-        
+
         self.settings=settings
         self.numFeatureTxt=wx.StaticText(self,label="max features")
         self.numFeatureIntCtrl = wx.lib.intctrl.IntCtrl( self, value=settings.numFeatures,size=(50,-1))
@@ -192,34 +192,34 @@ class ChangeSiftSettings(wx.Dialog):
         self.inlierThreshIntCtrl = wx.lib.intctrl.IntCtrl( self, value=settings.inlier_thresh,size=(50,-1))
 
         self.contrastThresholdTxt = wx.StaticText(self,label="contrast threshold")
-        self.contrastThresholdFloatCtrl = wx.lib.agw.floatspin.FloatSpin(self, 
+        self.contrastThresholdFloatCtrl = wx.lib.agw.floatspin.FloatSpin(self,
                                        value=settings.contrastThreshold,
                                        min_val=0,
                                        max_val=12.0,
                                        increment=.01,
                                        digits=2,
                                        name='',
-                                       size=(95,-1)) 
+                                       size=(95,-1))
         hbox1 = wx.BoxSizer(wx.HORIZONTAL)
         hbox2 = wx.BoxSizer(wx.HORIZONTAL)
-        
+
         hbox1.Add(self.numFeatureTxt)
         hbox1.Add(self.numFeatureIntCtrl)
         hbox1.Add(self.inlierThreshIntCtrl)
-        
+
         hbox2.Add(self.contrastThresholdTxt)
         hbox2.Add(self.contrastThresholdFloatCtrl)
         hbox2.Add(self.inlierThreshTxt)
 
-        
-       
 
-        hbox3 = wx.BoxSizer(wx.HORIZONTAL)      
+
+
+        hbox3 = wx.BoxSizer(wx.HORIZONTAL)
         ok_button = wx.Button(self,wx.ID_OK,'OK')
         cancel_button = wx.Button(self,wx.ID_CANCEL,'Cancel')
         hbox3.Add(ok_button)
         hbox3.Add(cancel_button)
-        
+
         vbox.Add(hbox1)
         vbox.Add(hbox2)
         vbox.Add(hbox3)
@@ -302,7 +302,7 @@ class ChannelSettings():
 class ChangeChannelSettings(wx.Dialog):
     """simple dialog for changing the channel settings"""
     def __init__(self, parent, id, title, settings,style):
-        wx.Dialog.__init__(self, parent, id, title,style=wx.DEFAULT_DIALOG_STYLE, size=(420, -1))
+        wx.Dialog.__init__(self, parent, id, title,style=wx.DEFAULT_DIALOG_STYLE, size=(420, 600))
         
         self.settings=settings
         vbox = wx.BoxSizer(wx.VERTICAL)   

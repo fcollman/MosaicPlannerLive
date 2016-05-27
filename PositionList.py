@@ -55,7 +55,7 @@ class posList():
         self.pos2=None
         self.dosort=True
         self.shownumbers=shownumbers
-        self.isRotated=False
+
 
     def get_next_pos(self,pos):
         self.__sort_points()
@@ -224,35 +224,46 @@ class posList():
         """set the angle attribute on each slicePosition to be 0 and update the drawing properties appropriately"""
         for pos in self.slicePositions:
             pos.setAngle(0)
-        self.isRotated=False
+
         
     def rotate_boxes(self):
-        """calculate the tangent angle of the ribbon at each point using the calcAngles function and then set the angle attribute of each slice position using setAngle"""
+        """calculate the tangent angle of the ribbon at each point using the calcAngles function and then set the angle
+        attribute of each slice position using setAngle"""
         
         theta=self.calcAngles()
         for index, pos in enumerate(self.slicePositions):
             pos.setAngle(theta[index])
-        self.isRotated=True
-            
+
+    def rotate_selected(self,dtheta):
+        """
+
+        Args:
+            dtheta: angle in radians to rotate all selected positions
+
+        Returns:None
+
+        """
+        for index, pos in enumerate(self.slicePositions):
+            if pos.selected:
+                pos.rotateAngle(dtheta)
+
     def shift_selected_curve(self,dx,dy):
-        """shift all the selected points by dx,dy in coordinates that are rotated according the curvature of the ribbon, making use of calcAngles to determine the angle
+        """shift all the selected points by dx,dy in coordinates that are rotated according the curvature of the ribbon,
+         making use of calcAngles to determine the angle
         
         keywords:
         dx,dy) the shift in microns to move each point
         
         """
      
-        theta=self.calcAngles()
+        theta=[pos.angle for pos in self.slicePositions]
         #use a rotation matrix to determine the right dx,dy in absolute coordinates
-        dx_rot=dx*cos(theta)-dy*sin(theta)
-        dy_rot=dx*sin(theta)+dy*cos(theta)
+        dx_rot=dx*cos(theta)+dy*sin(theta)
+        dy_rot=(dx*sin(theta)-dy*cos(theta))
         for index, pos in enumerate(self.slicePositions):
             if pos.selected:
                 pos.shiftPosition(dx_rot[index],dy_rot[index])
-        if self.isRotated: 
-            theta=self.calcAngles()
-            for index, pos in enumerate(self.slicePositions):
-                pos.setAngle(theta[index])
+
             
     def get_position_nearest(self,x,y):
         """return the slicePosition nearest an x,y point
@@ -369,7 +380,8 @@ class posList():
 
         
         """
-        newPosition=slicePosition(axis=self.axis,pos_list=self,x=x,y=y,z=z,edgecolor=edgecolor,withpoint=withpoint,showNumber=self.shownumbers,selected=selected)
+        newPosition=slicePosition(axis=self.axis,pos_list=self,x=x,y=y,z=z,edgecolor=edgecolor,withpoint=withpoint,
+                                  showNumber=self.shownumbers,selected=selected)
         self.slicePositions.append(newPosition)  
         self.__sort_points()
         self.updateNumbers()
@@ -858,20 +870,23 @@ class slicePosition():
         self.x=x
         self.y=y 
         self.z=z
+        self.angle = angle
         self.selected=selected
         self.activated=activated
         self.withpoint=withpoint
         self.number = number
         self.showNumber = showNumber
         self.showAngle = showAngle
+        self.quiverLength = .15
+        self.quiverLine = None
         if self.withpoint:
             self.__paintPoint()
         self.__paintMosaicBox(edgecolor)
         self.frameList= None
         self.label = None
-        self.quiverLine = None
-        self.angle = angle
-        self.angle_offset = 0
+
+
+
         if self.axis:
             self.numTxt = self.axis.text(self.x,self.y,str(self.number)+"  ",color='w',weight='bold') 
             self.numTxt.set_visible(self.showNumber)
@@ -896,11 +911,15 @@ class slicePosition():
         else:
             color='b'
         self.pointLine2D=Line2D([self.x],[self.y],marker=marker,markersize=7,markeredgewidth=1.5,markeredgecolor=color,)
-        self.pointLine2D=Line2D()
+
         self.axis.add_line(self.pointLine2D)
         if self.showAngle:
-            self.quiverLine =self.axis.quiver(self.x,self.y,.1,.1,units='width',scale=.5,headlength=3,headwidth=3,width=.005,scale_units='inches')
-              
+            u = self.quiverLength*np.sin(self.angle)
+            v = self.quiverLength*np.cos(self.angle)
+            self.quiverLine = Quiver(self.axis,self.x,self.y,u,v,units='inches',scale=.5,headlength=3,headwidth=3,
+                                     width=.02,scale_units='inches',color='w')
+            self.axis.add_artist(self.quiverLine)
+            print(self.quiverLine)
     def __paintMosaicBox(self,edgecolor='g'):
         """paint the box to represent the size of the mosaic for this position
         
@@ -1060,6 +1079,8 @@ class slicePosition():
         """private function to update the position of the matplotlib box representing the mosaic for this position"""
         if not self.axis: return None
         self.box.set_center((self.x,self.y))
+        transform = matplotlib.transforms.Affine2D().rotate_around(self.x,self.y,self.angle) + self.axis.transData
+        self.box.set_transform(transform)
         
     def __updateNumberPosition(self):
         self.numTxt.set_x(self.x)
@@ -1069,12 +1090,14 @@ class slicePosition():
         """private function to update the position of the matplotlib Line2d representing this position"""
         self.pointLine2D.set_xdata([self.x])
         self.pointLine2D.set_ydata([self.y])
-        #if self.quiverLine is not None:
+        self.quiverLine.set_offsets(np.array([self.x,self.y]))
 
 
     def __updateQuiverAngle(self):
         if self.quiverLine is not None:
-            self.quiverLine.set_UVC(.1*np.cos(self.angle),.1*np.sin(self.angle),None)
+            u=self.quiverLength*np.sin(self.angle)
+            v=self.quiverLength*np.cos(self.angle)
+            self.quiverLine.set_UVC(u,v,None)
 
     def __updateLabelPosition(self):
         """private function to update the position of the label representing this position"""
@@ -1106,12 +1129,15 @@ class slicePosition():
             del self.label
             self.label = None
 
-    def offsetAngle(self,offset):
+    def rotateAngle(self,offset):
         """
 
-        :param offset: amount in radians to increase or decrease angle associated with position
-        :return:
+        :param offset: amount in radians to increase or decrease angle associated with this position
+        :return: None
         """
+        newangle = self.angle + offset
+        self.setAngle(newangle)
+
     def setAngle(self,angle):
         """set the angle of the ribbon at this position, updating thing accordingly appropriately
         
@@ -1120,11 +1146,12 @@ class slicePosition():
         
         """
         if not self.axis: return None
-        self.angle=angle+self.angle_offset
+        self.angle=angle
         transform = matplotlib.transforms.Affine2D().rotate_around(self.x,self.y,angle) + self.axis.transData
+        self.box.set_transform(transform)
         self.__updateFramesLayout()
         self.__updateQuiverAngle()
-        self.box.set_transform(transform)
+
     
     def set_box_visible(self,visible):
         """update the visibility of the mosaic box
@@ -1235,3 +1262,5 @@ class slicePosition():
             self.frameList.destroy()
         if not self.numTxt == None:
             self.numTxt.remove()
+        if self.quiverLine is not None:
+            self.quiverLine.remove()
