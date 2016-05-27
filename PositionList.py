@@ -26,6 +26,7 @@ import matplotlib.patches
 import matplotlib.transforms
 from matplotlib import path
 from matplotlib.lines import Line2D
+from matplotlib.quiver import Quiver
 #from matplotlib.nxutils import points_inside_poly
 from CenterRectangle import CenterRectangle
 from Transform import Transform
@@ -310,7 +311,9 @@ class posList():
                 badones=badones[1:]    
             
         #use the slope to the left for these points we are fixing up
-        theta[badones]=theta[badones-1]   
+        theta[badones]=theta[badones-1]
+        #for i,pos in enumerate(self.slicePositions):
+        #    pos.setAngle(theta[i])
         return theta
 
     def getXYZ(self):
@@ -410,7 +413,7 @@ class posList():
             self.SmartSEMSettings=SEMsetting  
     def add_from_posList(self,posList):
         for pos in posList.slicePositions:
-            newPosition=slicePosition(axis=self.axis,pos_list=self,x=pos.x,y=pox.y,z=pos.z,
+            newPosition=slicePosition(axis=self.axis,pos_list=self,x=pos.x,y=pos.y,z=pos.z,
                 showNumber=pos.shownumbers,edgecolor=pos.edgecolor,withpoint=pos.withpoint,
                 selected=pos.selected,number=pos.number)
             self.slicePositions.append(newPosition)  
@@ -615,7 +618,7 @@ class posList():
             newZ=griddata(planePoints[:,0:2],planePoints[:,2],points,'nearest')
         else:
             newZ=np.zeros(len(self.slicePositions));
-            for index,pos in enumerate(slicePositions):
+            for index,pos in enumerate(self.slicePositions):
                 if pos.Z is not None:
                     newZ[index]=pos.Z-zoffset
                     
@@ -674,7 +677,7 @@ class posList():
             newZ=griddata(planePoints[:,0:2],planePoints[:,2],points,'nearest')
         else:
             newZ=np.zeros(len(self.slicePositions));
-            for index,pos in enumerate(slicePositions):
+            for index,pos in enumerate(self.slicePositions):
                 if pos.Z is not None:
                     newZ[index]=pos.Z-zoffset
                     
@@ -836,7 +839,8 @@ class posList():
 class slicePosition():
     """class which contains information about a single position in the position list, and is responsible for keeping 
     its matplotlib representation up to date via function calls which are mostly managed by its posList"""
-    def __init__(self,axis,pos_list,x,y,withpoint=True,selected=False,edgecolor='g',number=-1,showNumber=False,z=None): 
+    def __init__(self,axis,pos_list,x,y,withpoint=True,selected=False, activated = True,
+                 edgecolor='g',number=-1,showNumber=False,z=None,angle = 0,showAngle=True):
         """constructor function
         
         keywords:
@@ -855,15 +859,19 @@ class slicePosition():
         self.y=y 
         self.z=z
         self.selected=selected
+        self.activated=activated
         self.withpoint=withpoint
         self.number = number
         self.showNumber = showNumber
+        self.showAngle = showAngle
         if self.withpoint:
             self.__paintPoint()
         self.__paintMosaicBox(edgecolor)
         self.frameList= None
         self.label = None
-        self.angle = 0
+        self.quiverLine = None
+        self.angle = angle
+        self.angle_offset = 0
         if self.axis:
             self.numTxt = self.axis.text(self.x,self.y,str(self.number)+"  ",color='w',weight='bold') 
             self.numTxt.set_visible(self.showNumber)
@@ -879,13 +887,19 @@ class slicePosition():
         if not self.axis:
             return None
         print self.axis
+        if self.activated:
+            marker = 'o'
+        else:
+            marker = 'x'
         if self.selected:
             color='r'
         else:
             color='b'
-        self.pointLine2D=Line2D([self.x],[self.y],marker='x',markersize=7,markeredgewidth=1.5,markeredgecolor=color,)
+        self.pointLine2D=Line2D([self.x],[self.y],marker=marker,markersize=7,markeredgewidth=1.5,markeredgecolor=color,)
+        self.pointLine2D=Line2D()
         self.axis.add_line(self.pointLine2D)
-     
+        if self.showAngle:
+            self.quiverLine =self.axis.quiver(self.x,self.y,.1,.1,units='width',scale=.5,headlength=3,headwidth=3,width=.005,scale_units='inches')
               
     def __paintMosaicBox(self,edgecolor='g'):
         """paint the box to represent the size of the mosaic for this position
@@ -1055,7 +1069,13 @@ class slicePosition():
         """private function to update the position of the matplotlib Line2d representing this position"""
         self.pointLine2D.set_xdata([self.x])
         self.pointLine2D.set_ydata([self.y])
-    
+        #if self.quiverLine is not None:
+
+
+    def __updateQuiverAngle(self):
+        if self.quiverLine is not None:
+            self.quiverLine.set_UVC(.1*np.cos(self.angle),.1*np.sin(self.angle),None)
+
     def __updateLabelPosition(self):
         """private function to update the position of the label representing this position"""
         if not self.axis: return None
@@ -1085,7 +1105,13 @@ class slicePosition():
             self.label.remove()
             del self.label
             self.label = None
-                    
+
+    def offsetAngle(self,offset):
+        """
+
+        :param offset: amount in radians to increase or decrease angle associated with position
+        :return:
+        """
     def setAngle(self,angle):
         """set the angle of the ribbon at this position, updating thing accordingly appropriately
         
@@ -1094,9 +1120,10 @@ class slicePosition():
         
         """
         if not self.axis: return None
-        self.angle=angle
+        self.angle=angle+self.angle_offset
         transform = matplotlib.transforms.Affine2D().rotate_around(self.x,self.y,angle) + self.axis.transData
         self.__updateFramesLayout()
+        self.__updateQuiverAngle()
         self.box.set_transform(transform)
     
     def set_box_visible(self,visible):
@@ -1148,7 +1175,11 @@ class slicePosition():
         if not self.axis: return None
         self.__updateMosaicSize()
         self.__updateFramesLayout()
-               
+
+    def set_activated(self,activated):
+        self.activated=activated
+        self.__updatePointActivated()
+
     def set_selected(self,selected):
         """set this point to be selected or not
         
@@ -1175,7 +1206,14 @@ class slicePosition():
         if not isselect==self.selected:
             self.selected=isselect
             self.__updatePointSelect()
-    
+    def __updatePointActivated(self):
+        if not self.axis: return None
+        if self.activated:
+            marker = 'o'
+        else:
+            marker = 'x'
+        self.pointLine2D.set_marker(marker)
+
     def __updatePointSelect(self):
         """private function for updating the color of the point,depending on its selected state"""
         if not self.axis: return None

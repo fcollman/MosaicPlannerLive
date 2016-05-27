@@ -52,6 +52,7 @@ from Settings import (MosaicSettings, CameraSettings,SiftSettings,ChangeCameraSe
 from configobj import ConfigObj
 
 STOP_TOKEN = 'STOP!!!'
+DEFAULT_SETTINGS_FILE = 'MosaicPlannerSettings.default.cfg'
 SETTINGS_FILE = 'MosaicPlannerSettings.cfg'
 
 def file_save_process(queue,stop_token, metadata_dictionary):
@@ -164,6 +165,7 @@ class MosaicToolbar(NavBarImproved):
         cameraBmp     = wx.Image('icons/new/camera.png',   wx.BITMAP_TYPE_PNG).ConvertToBitmap()
         liveBmp       = wx.Image('icons/new/livemode.png', wx.BITMAP_TYPE_PNG).ConvertToBitmap()
         batmanBmp     = wx.Image('icons/new/batman.png',   wx.BITMAP_TYPE_PNG).ConvertToBitmap()
+        activateBmp   = wx.Image('icons/activate-icon.png',wx.BITMAP_TYPE_PNG).ConvertToBitmap()
         #mosaicBmp     = wx.Image('icons/new/mosaic_camera.png', wx.BITMAP_TYPE_PNG).ConvertToBitmap()
 
 
@@ -174,9 +176,10 @@ class MosaicToolbar(NavBarImproved):
         self.snapHereTool    = self.add_user_tool('snaphere',7,cameraBmp,True,'move scope and snap image here')
         self.snapPictureTool = self.add_user_tool('snappic',8,mosaicBmp,True,'take 3x3 mosaic on click')
         self.selectNear      = self.add_user_tool('selectnear',9,selectnearBmp,True,'Add Nearest Point to selection')
-        self.addTool         = self.add_user_tool('add', 10, addpointBmp, True, 'Add a Point')
-        self.oneTool         = self.add_user_tool('selectone', 11, oneBmp, True, 'Choose pointLine2D 1')
-        self.twoTool         = self.add_user_tool('selecttwo', 12, twoBmp, True, 'Choose pointLine2D 2')
+        self.activateNear    = self.add_user_tool('toggleactivate',10,activateBmp,True,'Toggle Activation of nearest point to selection')
+        self.addTool         = self.add_user_tool('add', 11, addpointBmp, True, 'Add a Point')
+        self.oneTool         = self.add_user_tool('selectone', 12, oneBmp, True, 'Choose pointLine2D 1')
+        self.twoTool         = self.add_user_tool('selecttwo', 13, twoBmp, True, 'Choose pointLine2D 2')
 
         self.AddSeparator()
         self.AddSeparator() # batman - why called twice, why called at all!, maybe add comment?
@@ -529,6 +532,19 @@ class MosaicPanel(FigureCanvas):
         #self.channel_settings
         #self.pos_list
         #self.imgSrc
+        binstr=self.imgSrc.mmc.getProperty(self.imgSrc.mmc.getCameraDevice(),'Binning')
+        numchan=0
+        for ch in self.channel_settings.usechannels.values:
+            if ch:
+                k+=1
+
+        self.channel_settings.usechannels[ch]
+        caption = "about to capture %d sections, binning is %s, numchannel is %d"%\
+                  (len(self.posList.slicePositions),binstr,numchan)
+        dlg = wx.MessageDialog(self,caption=caption, style = wx.OK|wx.CANCEL)
+        button_pressed = dlg.ShowModal()
+        if button_pressed == wx.ID_CANCEL:
+            return None
 
         #get an output directory
         dlg=wx.DirDialog(self,message="Pick output directory",defaultPath= os.path.split(self.rootPath)[0])
@@ -590,31 +606,34 @@ class MosaicPanel(FigureCanvas):
         goahead = True
         #loop over positions
         for i,pos in enumerate(self.posList.slicePositions):
-            if not goahead:
-                break
-            if not self.imgSrc.mmc.isContinuousFocusEnabled():
-                print "autofocus not enabled when moving between sections.. quiting"
-                break
-            (goahead, skip) = self.progress.Update(i*numFrames,'section %d of %d'%(i+1,numSections))
-            #turn on autofocus
-            self.ResetPiezo()
-            if pos.frameList is None:
-                self.multiDacq(outdir,pos.x,pos.y,i)
-            else:
-                for j,fpos in enumerate(pos.frameList.slicePositions):
-                    if not goahead:
-                        print "breaking out!"
-                        break
-                    if not self.imgSrc.mmc.isContinuousFocusEnabled():
-                        print "autofocus no longer enabled while moving between frames.. quiting"
-                        break
-                    self.multiDacq(outdir,fpos.x,fpos.y,i,j)
-                    self.ResetPiezo()
-                    (goahead, skip)=self.progress.Update((i*numFrames) + j+1,'section %d of %d, frame %d'%(i+1,numSections,j))
+            if pos.activated:
+                if not goahead:
+                    break
+                if not self.imgSrc.mmc.isContinuousFocusEnabled():
+                    print "autofocus not enabled when moving between sections.. "
+                    goahead=False
+                    break
+                (goahead, skip) = self.progress.Update(i*numFrames,'section %d of %d'%(i,numSections-1))
+                #turn on autofocus
+                self.ResetPiezo()
+                if pos.frameList is None:
+                    self.multiDacq(outdir,pos.x,pos.y,i)
+                else:
+                    for j,fpos in enumerate(pos.frameList.slicePositions):
+                        if not goahead:
+                            print "breaking out!"
+                            break
+                        if not self.imgSrc.mmc.isContinuousFocusEnabled():
+                            print "autofocus no longer enabled while moving between frames.. quiting"
+                            goahead = False
+                            break
+                        self.multiDacq(outdir,fpos.x,fpos.y,i,j)
+                        self.ResetPiezo()
+                        (goahead, skip)=self.progress.Update((i*numFrames) + j+1,'section %d of %d, frame %d'%(i,numSections-1,j))
 
-            wx.Yield()
+                wx.Yield()
         if not goahead:
-            print "user cancelled the acquisition "
+            print "acquisition stopped prematurely"
             print "section %d"%(i)
             if pos.frameList is not None:
                 print "frame %d"%(j)
@@ -765,6 +784,9 @@ class MosaicPanel(FigureCanvas):
                         if not evt.key=='shift':
                             self.posList.set_select_all(False)
                         pos.set_selected(True)
+                    if (mode == 'toggleactivate'):
+                        pos=self.posList.get_position_nearest(evt.xdata,evt.ydata)
+                        pos.set_activated((not pos.activated))
                     elif (mode == 'add'):
                         print ('add point at',evt.xdata,evt.ydata)
                         self.posList.add_position(evt.xdata,evt.ydata)
@@ -917,12 +939,22 @@ class MosaicPanel(FigureCanvas):
     def on_fastforward_tool(self,event):
 
         goahead=True
+        numsections = 0
+
+        ffprogress = wx.ProgressDialog("A progress box", "Time elapsed", 100 ,
+        style=wx.PD_CAN_ABORT | wx.PD_ELAPSED_TIME  )
+
         #keep doing this till the step_tool says it shouldn't go forward anymore
+
         while (goahead):
             wx.Yield()
             goahead=self.step_tool()
             self.on_crop_tool()
             self.draw()
+            numsections += 1
+            if goahead:
+                #check if the progress bar has been cancelled and update it
+               (goahead, skip) = ffprogress.Update(numsections,'section %d'%(numsections))
 
         #call up a box and make a beep alerting the user for help
         wx.MessageBox('Fast Forward Aborted, Help me','Info')
@@ -1060,6 +1092,9 @@ class ZVISelectFrame(wx.Frame):
         #recursively call old init function
         wx.Frame.__init__(self, parent, title=title, size=(1550,885),pos=(5,5))
         #self.cfg = wx.Config('settings')
+        if not os.path.isfile(SETTINGS_FILE):
+            from shutil import copyfile
+            copyfile(DEFAULT_SETTINGS_FILE,SETTINGS_FILE)
         self.cfg = ConfigObj(SETTINGS_FILE,unrepr=True)
         #setup a mosaic panel
         self.mosaicCanvas=MosaicPanel(self,config=self.cfg)
