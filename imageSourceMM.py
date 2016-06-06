@@ -10,7 +10,7 @@ import os
 
 class imageSource():
     
-    def __init__(self,configFile,channelGroupName='Channels',use_focus_plane  = False,focus_points=None,transpose_xy = False):
+    def __init__(self,configFile,channelGroupName='Channels',use_focus_plane  = False,focus_points=None,transpose_xy = False,logfile='MP_MM.txt'):
       #NEED TO IMPLEMENT IF NOT MICROMANAGER
      
         self.configFile=configFile
@@ -19,7 +19,7 @@ class imageSource():
         self.mmc.enableDebugLog(True)
         now=datetime.datetime.now()
         #logfile=now.strftime('%Y-%m-%d_%H:%M:%S_log.txt')
-        logfile = 'testme.txt'
+
         currpath=os.path.split(os.path.realpath(__file__))[0]
         self.mmc.setPrimaryLogFile(os.path.join(currpath,logfile))
         self.mmc.loadSystemConfiguration(self.configFile)
@@ -79,6 +79,17 @@ class imageSource():
         b = -d/norm[2]
         return ax,ay,b
 
+    def set_binning(self,bin=1):
+        cam = self.mmc.getCameraDevice()
+        binstring = "%dx%d"%(bin,bin)
+        self.mmc.setProperty(cam,'Binning',binstring)
+
+    def get_binning(self):
+        cam = self.mmc.getCameraDevice()
+        binstring = self.mmc.getProperty(cam,'Binning')
+        (bx,by)=binstring.split('x')
+        return int(bx)
+
     def image_based_autofocus(self,chan=None):
         if chan is not None:
             self.set_channel(chan)
@@ -88,7 +99,10 @@ class imageSource():
     def get_max_pixel_value(self):
         bit_depth=self.mmc.getImageBitDepth()
         return np.power(2,bit_depth)-1
-        
+
+    def get_exposure(self):
+        return self.mmc.getExposure()
+
     def set_exposure(self,exp_msec):
       #NEED TO IMPLEMENT IF NOT MICROMANAGER
         self.mmc.setExposure(exp_msec)

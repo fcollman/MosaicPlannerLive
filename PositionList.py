@@ -919,7 +919,7 @@ class slicePosition():
             self.quiverLine = Quiver(self.axis,self.x,self.y,u,v,units='inches',scale=.5,headlength=3,headwidth=3,
                                      width=.02,scale_units='inches',color='w')
             self.axis.add_artist(self.quiverLine)
-            print(self.quiverLine)
+
     def __paintMosaicBox(self,edgecolor='g'):
         """paint the box to represent the size of the mosaic for this position
         

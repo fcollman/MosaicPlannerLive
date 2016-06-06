@@ -93,7 +93,7 @@ class VideoView(QtGui.QWidget):
             self.chnButtons.append(btn)
             
             gridlay.addWidget(btn,i,0)
-            
+
             spnBox=QtGui.QSpinBox(self)
             spnBox.setRange(1,10000)
             spnBox.setSingleStep(25)

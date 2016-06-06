@@ -532,16 +532,18 @@ class MosaicPanel(FigureCanvas):
         #self.channel_settings
         #self.pos_list
         #self.imgSrc
+        self.imgSrc.mmc.setProperty(self.imgSrc.mmc.getCameraDevice(),'Binning','1x1')
+
         binstr=self.imgSrc.mmc.getProperty(self.imgSrc.mmc.getCameraDevice(),'Binning')
         numchan=0
-        for ch in self.channel_settings.usechannels.values:
+        for ch in self.channel_settings.usechannels.values():
             if ch:
-                k+=1
+                numchan+=1
 
-        self.channel_settings.usechannels[ch]
+
         caption = "about to capture %d sections, binning is %s, numchannel is %d"%\
                   (len(self.posList.slicePositions),binstr,numchan)
-        dlg = wx.MessageDialog(self,caption=caption, style = wx.OK|wx.CANCEL)
+        dlg = wx.MessageDialog(self,message=caption, style = wx.OK|wx.CANCEL)
         button_pressed = dlg.ShowModal()
         if button_pressed == wx.ID_CANCEL:
             return None
@@ -583,6 +585,9 @@ class MosaicPanel(FigureCanvas):
             self.ResetPiezo()
             self.imgSrc.move_stage(currpos.x,currpos.y)
             currpos=self.posList.get_prev_pos(currpos)
+            if currpos is not None:
+                if not currpos.activated:
+                    break
             wx.Yield()
 
 
@@ -642,6 +647,7 @@ class MosaicPanel(FigureCanvas):
         self.saveProcess.join()
         print "save process ended"
         self.progress.Destroy()
+        self.imgSrc.mmc.setProperty(self.imgSrc.mmc.getCameraDevice(),'Binning','2x2')
 
 
     def edit_channels(self,event="none"):
@@ -714,6 +720,12 @@ class MosaicPanel(FigureCanvas):
     def launch_MManager_browser(self, event=None):
         global win
         win = MMPropertyBrowser(self.imgSrc.mmc)
+        win.show()
+
+    def launch_snap(self, event=None):
+        global win
+        from Snap import SnapView
+        win = SnapView(self.imgSrc,exposure_times=self.channel_settings.exposure_times)
         win.show()
 
     def launch_ASI(self, event=None):
@@ -958,6 +970,7 @@ class MosaicPanel(FigureCanvas):
 
         #call up a box and make a beep alerting the user for help
         wx.MessageBox('Fast Forward Aborted, Help me','Info')
+        ffprogress.Destroy()
 
     def step_tool(self):
         """function for performing a step, assuming point1 and point2 have been selected
@@ -1052,6 +1065,8 @@ class MosaicPanel(FigureCanvas):
     def do_angle_shift(self,event):
         keycode=event.GetKeyCode()
         jump=.01
+        if event.ShiftDown():
+            jump=10*jump
         if keycode == wx.WXK_LEFT:
             dtheta=-jump
         elif keycode == wx.WXK_RIGHT:
@@ -1092,6 +1107,7 @@ class ZVISelectFrame(wx.Frame):
     ID_TRANSPOSE_XY = wx.NewId()
     ID_EDIT_ZSTACK = wx.NewId()
     ID_ASIAUTOFOCUS = wx.NewId()
+    ID_SNAPCONTROL = wx.NewId()
 
     # ID_Alfred = wx.NewId()
 
@@ -1181,7 +1197,7 @@ class ZVISelectFrame(wx.Frame):
         self.focus_correction_plane = Imaging_Menu.Append(self.ID_EDIT_FOCUS_CORRECTION,'Edit Focus Correction Plane',kind = wx.ITEM_NORMAL)
         self.use_focus_correction = Imaging_Menu.Append(self.ID_USE_FOCUS_CORRECTION,'Use Focus Correction?','Use Focus Correction For Mapping',kind=wx.ITEM_CHECK)
         self.launch_ASIControl = Imaging_Menu.Append(self.ID_ASIAUTOFOCUS, 'Allen ASI AutoFocus Control', kind= wx.ITEM_NORMAL)
-
+        self.launch_Snap = Imaging_Menu.Append(self.ID_SNAPCONTROL,'Snap single channel images',kind = wx.ITEM_NORMAL)
 
         self.Bind(wx.EVT_MENU, self.toggle_use_focus_correction,id=self.ID_USE_FOCUS_CORRECTION)
         self.Bind(wx.EVT_MENU, self.mosaicCanvas.edit_Zstack_settings,id=self.ID_EDIT_ZSTACK)
@@ -1192,6 +1208,8 @@ class ZVISelectFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.mosaicCanvas.launch_MManager_browser, id = self.ID_MM_PROP_BROWSER)
         self.Bind(wx.EVT_MENU, self.mosaicCanvas.edit_focus_correction_plane, id = self.ID_EDIT_FOCUS_CORRECTION)
         self.Bind(wx.EVT_MENU, self.mosaicCanvas.launch_ASI,id = self.ID_ASIAUTOFOCUS)
+        self.Bind(wx.EVT_MENU, self.mosaicCanvas.launch_snap,id = self.ID_SNAPCONTROL)
+
 
         Imaging_Menu.Check(self.ID_USE_FOCUS_CORRECTION,self.cfg['MosaicPlanner']['use_focus_correction'])
 
