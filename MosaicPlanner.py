@@ -529,6 +529,14 @@ class MosaicPanel(FigureCanvas):
 
     def on_run_acq(self,event="none"):
         print "running"
+        from SetupAlerts import SetupAlertDialog
+
+        dlg = SetupAlertDialog(self.cfg['smtp'])
+        dlg.setModal(True)
+        dlg.show()
+        alert_settings = dlg.getSettings()
+
+
         #self.channel_settings
         #self.pos_list
         #self.imgSrc
@@ -725,8 +733,10 @@ class MosaicPanel(FigureCanvas):
     def launch_snap(self, event=None):
         global win
         from Snap import SnapView
-        win = SnapView(self.imgSrc,exposure_times=self.channel_settings.exposure_times)
-        win.show()
+        dlg = SnapView(self.imgSrc,exposure_times=self.channel_settings.exposure_times)
+        dlg.setModal(True)
+        dlg.show()
+        self.channel_settings.exposure_times = dlg.getExposureTimes()
 
     def launch_ASI(self, event=None):
          global win

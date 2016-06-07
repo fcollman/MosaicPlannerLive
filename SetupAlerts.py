@@ -2,15 +2,30 @@
 # -*- coding: utf-8 -*-
 # based on pyqtgraph\examples\ImageItem.py
 from PyQt4 import QtCore, QtGui, uic
-import numpy as np
+import os.path
 
-class SetupAlertDialog(QtGui.QWidget):
+
+class SetupAlertDialog(QtGui.QDialog):
     def __init__(self,settings):
         super(SetupAlertDialog,self).__init__()
 
         self.settings = settings
         self.initUI()
 
+    def getSettings(self):
+        mysettings = dict([])
+        for key in self.settings.keys():
+            mysettings[key]=self.settings[key]
+        mysettings['username']=str(self.usernameField.text())
+        mysettings['password']=str(self.passwordField.text())
+        toText = str(self.toField.toPlainText())
+        print(toText)
+        tolist = toText.split('\n')
+        tolist = [n for n in tolist if len(n)>0]
+        print(tolist)
+        mysettings['to']=tolist
+        mysettings['session']=str(self.sessionField.text())
+        return mysettings
 
     def initUI(self):
 
@@ -18,30 +33,46 @@ class SetupAlertDialog(QtGui.QWidget):
         filename = os.path.join(currpath,'SetupAlertDialog.ui')
         uic.loadUi(filename,self)
 
+        self.serverLabel.setText(settings['server'])
+        self.portLabel.setText(str(settings['port']))
+
+
     def closeEvent(self,evt):
-        self.mmc.stopSequenceAcquisition()
-        print "stopped acquisition"
-        #if self.timer is not None:
-        #    print "cancelling timer if it exists"
-        #    self.timer.cancel()
-        self.ended = True
-        #self.destroy()
+
         return QtGui.QWidget.closeEvent(self,evt)
-        #evt.accept()
+
 
 def launchDialog(settings):
     import sys
-    imgSrc.set_binning(1)
+
     dlg = SetupAlertDialog(settings)
-    #vidview.setGeometry(250,50,1100,1000)
-    dlg.show()
 
     dlg.setWindowTitle('Setup Alerts')
+    dlg.show()
 
     if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
         QtGui.QApplication.instance().exec_()
+    thesettings = dlg.getSettings()
+    print(thesettings)
 
-    return dlg.getSettings()
+    import smtplib
+    from email.mime.text import MIMEText
+
+    toaddr = "forrest.collman@gmail.com"
+    smtpserver = smtplib.SMTP(thesettings['server'],thesettings['port'])
+    smtpserver.ehlo()
+    smtpserver.starttls()
+    smtpserver.ehlo()
+    smtpserver.login(thesettings['username'],thesettings['password'])
+
+    msg = MIMEText('This is a test email')
+    msg['Subject']=thesettings['session']
+    msg['From']=thesettings['username']
+    msg['To']=toaddr
+    smtpserver.sendmail(thesettings['username'],toaddr,msg.as_string())
+    smtpserver.close()
+
+    return thesettings
 
 if __name__ == '__main__':
 
@@ -62,9 +93,6 @@ if __name__ == '__main__':
     settings = cfg['smtp']
     print settings
 
-    launchSnap(imgSrc,dict([]))
-    #app.exec_()
-    print "got out of the event loop"
-    imgSrc.mmc.reset()
-    print "reset micromanager core"
+    launchDialog(settings)
+
     sys.exit()

@@ -13,7 +13,7 @@ from imageSourceMM import imageSource
 #         self.plot.rotate(-90)
 #         self.gradient.setOrientation('bottom')
 
-class SnapView(QtGui.QWidget):
+class SnapView(QtGui.QDialog):
     def __init__(self,imgSrc,exposure_times=dict([]),channelGroup="Channels"):
         super(SnapView,self).__init__()
 
@@ -47,7 +47,7 @@ class SnapView(QtGui.QWidget):
     def initUI(self):
 
         currpath=os.path.split(os.path.realpath(__file__))[0]
-        filename = os.path.join(currpath,'Snap.ui')
+        filename = os.path.join(currpath,'Snap2.ui')
         uic.loadUi(filename,self)
 
 
@@ -275,16 +275,20 @@ class SnapView(QtGui.QWidget):
 def launchSnap(imgSrc,exposure_times):
     import sys  
     imgSrc.set_binning(1)
-    vidview = SnapView(imgSrc,exposure_times)
+    dlg = SnapView(imgSrc,exposure_times)
+    dlg.setWindowTitle('snap view')
     #vidview.setGeometry(250,50,1100,1000)
-    vidview.show()
+    dlg.setModal(True)
+    dlg.show()
 
-    vidview.setWindowTitle('snap view')
+
     
     if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
         QtGui.QApplication.instance().exec_()
     imgSrc.set_binning(2)
-    return vidview.getExposureTimes()
+    exp= dlg.getExposureTimes()
+    print(exp)
+    return exp
 
 if __name__ == '__main__':
 
