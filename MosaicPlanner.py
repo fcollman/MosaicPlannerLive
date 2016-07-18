@@ -531,10 +531,10 @@ class MosaicPanel(FigureCanvas):
         print "running"
         from SetupAlerts import SetupAlertDialog
 
-        dlg = SetupAlertDialog(self.cfg['smtp'])
-        dlg.setModal(True)
-        dlg.show()
-        alert_settings = dlg.getSettings()
+        #dlg = SetupAlertDialog(self.cfg['smtp'])
+        #dlg.setModal(True)
+        #dlg.show()
+        #alert_settings = dlg.getSettings()
 
 
         #self.channel_settings
