@@ -476,6 +476,7 @@ class MosaicPanel(FigureCanvas):
             zplanes_to_visit = [currZ]
         #print 'zplanes_to_visit : ',zplanes_to_visit
 
+
         for z_index, zplane in enumerate(zplanes_to_visit):
             for k,ch in enumerate(self.channel_settings.channels):
                 #print datetime.datetime.now().time()," start channel",ch, " zplane", zplane
