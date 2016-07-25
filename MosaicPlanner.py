@@ -50,10 +50,12 @@ from Settings import (MosaicSettings, CameraSettings,SiftSettings,ChangeCameraSe
                       ChangeZstackSettings, ZstackSettings,)
 
 from configobj import ConfigObj
+from validate import Validator
 
 STOP_TOKEN = 'STOP!!!'
 DEFAULT_SETTINGS_FILE = 'MosaicPlannerSettings.default.cfg'
 SETTINGS_FILE = 'MosaicPlannerSettings.cfg'
+MODEL_FILE = 'MosaicPlannerSettingsModel.cfg'
 
 def file_save_process(queue,stop_token, metadata_dictionary):
     while True:
@@ -450,7 +452,7 @@ class MosaicPanel(FigureCanvas):
         if self.imgSrc.has_hardware_autofocus():
             #wait till autofocus settles
             while not self.imgSrc.is_hardware_autofocus_done():
-                time.sleep(.2)
+                time.sleep(self.cfg['MosaicPlanner']['AutoFocusDt'])
                 attempts+=1
                 if attempts>50:
                     print "not auto-focusing correctly.. giving up after 10 seconds"
@@ -1168,7 +1170,12 @@ class ZVISelectFrame(wx.Frame):
         if not os.path.isfile(SETTINGS_FILE):
             from shutil import copyfile
             copyfile(DEFAULT_SETTINGS_FILE,SETTINGS_FILE)
-        self.cfg = ConfigObj(SETTINGS_FILE,unrepr=True)
+        self.cfg = ConfigObj(SETTINGS_FILE,unrepr=True,configspec=MODEL_FILE)
+        val = Validator()
+        test = self.cfg.validate(val)
+        if not test:
+            print "config file did not pass validation.. quitting"
+            return
         #setup a mosaic panel
         self.mosaicCanvas=MosaicPanel(self,config=self.cfg)
 
