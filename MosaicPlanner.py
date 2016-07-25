@@ -449,8 +449,9 @@ class MosaicPanel(FigureCanvas):
         #print datetime.datetime.now().time()," starting autofocus"
         if self.imgSrc.has_hardware_autofocus():
             #wait till autofocus settles
+            time.sleep(self.cfg['MosaicPlanner']['autofocus_wait'])
             while not self.imgSrc.is_hardware_autofocus_done():
-                time.sleep(.2)
+                time.sleep(self.cfg['MosaicPlanner']['autofocus_sleep'])
                 attempts+=1
                 if attempts>50:
                     print "not auto-focusing correctly.. giving up after 10 seconds"
@@ -476,29 +477,56 @@ class MosaicPanel(FigureCanvas):
             zplanes_to_visit = [currZ]
         #print 'zplanes_to_visit : ',zplanes_to_visit
 
+        def software_acquire():
+            for z_index, zplane in enumerate(zplanes_to_visit):
+                for k,ch in enumerate(self.channel_settings.channels):
+                    #print datetime.datetime.now().time()," start channel",ch, " zplane", zplane
+                    prot_name=self.channel_settings.prot_names[ch]
+                    path=os.path.join(outdir,prot_name)
+                    if self.channel_settings.usechannels[ch]:
+                        #ti = time.clock()*1000
+                        #print time.clock(),'start'
+                        if not hold_focus:
+                            z = zplane + self.channel_settings.zoffsets[ch]
+                            if not z == presentZ:
+                                self.imgSrc.set_z(z)
+                                presentZ = z
+                        self.imgSrc.set_exposure(self.channel_settings.exposure_times[ch])
+                        self.imgSrc.set_channel(ch)
+                        #t2 = time.clock()*1000
+                        #print time.clock(),t2-ti, 'ms to get to snap image from start'
 
-        for z_index, zplane in enumerate(zplanes_to_visit):
-            for k,ch in enumerate(self.channel_settings.channels):
-                #print datetime.datetime.now().time()," start channel",ch, " zplane", zplane
-                prot_name=self.channel_settings.prot_names[ch]
-                path=os.path.join(outdir,prot_name)
-                if self.channel_settings.usechannels[ch]:
-                    #ti = time.clock()*1000
-                    #print time.clock(),'start'
-                    if not hold_focus:
-                        z = zplane + self.channel_settings.zoffsets[ch]
-                        if not z == presentZ:
-                            self.imgSrc.set_z(z)
-                            presentZ = z
-                    self.imgSrc.set_exposure(self.channel_settings.exposure_times[ch])
-                    self.imgSrc.set_channel(ch)
-                    #t2 = time.clock()*1000
-                    #print time.clock(),t2-ti, 'ms to get to snap image from start'
+                        data=self.imgSrc.snap_image()
+                        #t3 = time.clock()*1000
+                        #print time.clock(),t3-t2, 'ms to snap image'
+                        self.dataQueue.put((slice_index,frame_index, z_index, prot_name,path,data,ch,x,y,z,))
 
-                    data=self.imgSrc.snap_image()
-                    #t3 = time.clock()*1000
-                    #print time.clock(),t3-t2, 'ms to snap image'
-                    self.dataQueue.put((slice_index,frame_index, z_index, prot_name,path,data,ch,x,y,z,))
+        def hardware_acquire():
+
+            for z_index, zplane in enumerate(zplanes_to_visit):
+
+                self.exposure_arduino.startTimedPattern()
+                for k,ch in enumerate(self.channel_settings.channels):
+                    #print datetime.datetime.now().time()," start channel",ch, " zplane", zplane
+                    prot_name=self.channel_settings.prot_names[ch]
+                    path=os.path.join(outdir,prot_name)
+                    if self.channel_settings.usechannels[ch]:
+                        #ti = time.clock()*1000
+                        #print time.clock(),'start'
+                        if not hold_focus:
+                            z = zplane + self.channel_settings.zoffsets[ch]
+                            if not z == presentZ:
+                                self.imgSrc.set_z(z)
+                                presentZ = z
+                        self.imgSrc.set_exposure(self.channel_settings.exposure_times[ch])
+                        self.imgSrc.set_channel(ch)
+                        #t2 = time.clock()*1000
+                        #print time.clock(),t2-ti, 'ms to get to snap image from start'
+
+                        data=self.imgSrc.snap_image()
+                        #t3 = time.clock()*1000
+                        #print time.clock(),t3-t2, 'ms to snap image'
+                        self.dataQueue.put((slice_index,frame_index, z_index, prot_name,path,data,ch,x,y,z,))
 
         if not hold_focus:
             self.imgSrc.set_z(currZ)
@@ -594,6 +622,8 @@ class MosaicPanel(FigureCanvas):
                 if not os.path.isdir(thedir):
                     os.makedirs(thedir)
 
+
+
     def on_run_acq(self,event="none"):
         print "running"
         from SetupAlerts import SetupAlertDialog
@@ -643,6 +673,12 @@ class MosaicPanel(FigureCanvas):
         numFrames,numSections = self.setup_progress_bar()
 
         hold_focus = not (self.zstack_settings.zstack_flag or chrom_correction)
+
+        if self.cfg['MosaicPlanner']['hardware_trigger']:
+            channels = [ch for ch in self.channel_settings.channels if self.channel_settings.usechannels[ch]]
+            success=self.imgSrc.setup_hardware_triggering(channels)
+
+
 
         goahead = True
         #loop over positions

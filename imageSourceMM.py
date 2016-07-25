@@ -7,10 +7,14 @@ import wx
 from retry import retry
 import datetime
 import os
+from MMArduino import MMArduino
 
 class imageSource():
     
-    def __init__(self,configFile,channelGroupName='Channels',use_focus_plane  = False,focus_points=None,transpose_xy = False,logfile='MP_MM.txt'):
+    def __init__(self,configFile,channelGroupName='Channels',
+                 use_focus_plane  = False, focus_points=None,
+                 transpose_xy = False, logfile='MP_MM.txt',
+                 MasterArduinoPort = None, interframe_time= 10):
       #NEED TO IMPLEMENT IF NOT MICROMANAGER
      
         self.configFile=configFile
@@ -44,8 +48,13 @@ class imageSource():
         self.use_focus_plane = use_focus_plane
         if use_focus_plane:
             assert (focus_points is not None)
-            self.define_focal_plane(points)
+            self.define_focal_plane(focus_points)
 
+        if MasterArduinoPort is not None:
+            self.masterArduino = MMArduino(port=MasterArduinoPort)
+        else:
+            self.masterArduino = None
+        self.interframe_time = interframe_time
         #set the exposure to use
     def define_focal_plane(self,points):
         if points.shape[1]>3:
@@ -78,6 +87,48 @@ class imageSource():
         ay=-norm[1]/norm[2]
         b = -d/norm[2]
         return ax,ay,b
+
+    def setup_hardware_triggering(self,channels,exposure_times):
+
+        #set up triggering to "Hardware" to load all the
+        self.mmc.setConfig('Triggering','Hardware')
+        self.mmc.waitForConfig('Triggering','Hardware')
+
+        #get the first channel config
+        cfg = self.mmc.getConfigData(self.channelGroupName,channels[0])
+        #loop over the properties in this channel
+        for i in range(cfg.size()):
+            #pull out the device and property
+            setting=cfg.getSetting(i)
+            dev = setting.getDeviceLabel()
+            prop = setting.getPropertyName()
+
+            #if its sequencable, then load the sequence
+            if self.mmc.isPropertySequenceable(dev,prop):
+                #set it up for hardware triggering
+                propseq = [self.mmc.getConfigData(self.channelGroupName,channels[k]).getSetting(i).getPropertyValue() for k in range(len(channels))]
+                self.mmc.loadPropertySequence(dev,prop,propseq)
+            #otherwise then we need it to be constant
+            else:
+                #check that it is constant across channels
+                valuefirst = setting.getPropertyValue()
+                for channel in channels:
+                    thisconfig = self.mmc.getConfigData(self.channelGroupName,channel)
+                    thissetting = thisconfig.getSetting(i)
+                    thisvalue = thissetting.getPropertyValue()
+                    #if its not constant, then we can't hardware trigger this
+                    if thisvalue != valuefirst:
+                        self.mmc.setConfig('Triggering','Software')
+                        self.mmc.waitForConfig('Triggering','Software')
+                        return False
+
+                #set it to that constant state
+                self.mmc.setProperty(dev,prop,valuefirst)
+                self.mmc.waitForDevice(dev)
+        self.masterArduino.setupExposure(exposure_times,self.interframe_time)
+        self.numberHardwareChannels = len(exposure_times)
+        self.mmc.prepareSequenceAcquisition(self.mmc.getCameraDevice())
+
 
     def set_binning(self,bin=1):
         cam = self.mmc.getCameraDevice()
@@ -139,7 +190,18 @@ class imageSource():
         return self.mmc.isContinuousFocusLocked()
         
 
-    
+    def take_hardware_snap(self):
+
+        self.mmc.startSequenceAcquisition(self.numberHardwareChannels,0,True)
+        images = []
+        while self.mmc.isSequenceRunning():
+            if self.mmc.getRemainingImageCount()>0:
+                images.append(self.mmc.popNextImage())
+        for i in range(self.numberHardwareChannels-len(images)):
+            images.append(self.mmc.popNextImage())
+        return images
+
+
     def take_image(self,x,y):
         #do not need to re-implement
         #moves scope to x,y - focus scope - snap picture

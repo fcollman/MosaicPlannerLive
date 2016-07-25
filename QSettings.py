@@ -96,6 +96,143 @@ class ChangeStageResetSettings(QtGui.QDialog):
                                   resetPosition=self.resetPosition_SpinBox.value(),
                                   invertCompensation=self.invertCompensation_checkBox.isChecked())
 
+
+class ChannelSettings():
+    """simple struct for containing the parameters for the microscope"""
+    def __init__(self,channels,exposure_times=dict([]),zoffsets=dict([]),
+                 usechannels=dict([]),prot_names=dict([]),map_chan=None,
+                 def_exposure=100,def_offset=0.0,):
+        #def_exposure is default exposure time in msec
+
+
+        self.channels= channels
+        self.def_exposure=def_exposure
+        self.def_offset=def_offset
+
+        self.exposure_times=exposure_times
+        self.zoffsets=zoffsets
+        self.usechannels=usechannels
+        self.prot_names=prot_names
+
+        if map_chan is None:
+            for ch in self.channels:
+                if 'dapi' in ch.lower():
+                    map_chan = ch
+        if map_chan is None:
+            map_chan = channels[0]
+
+        self.map_chan = map_chan
+
+    def save_settings(self,cfg):
+
+        cfg['ChannelSettings']['map_chan']=self.map_chan
+        for ch in self.channels:
+            cfg['ChannelSettings']['Exposure_'+ch]=self.exposure_times[ch]
+            cfg['ChannelSettings']['ZOffsets_'+ch]=self.zoffsets[ch]
+            cfg['ChannelSettings']['UseChannel_'+ch]=self.usechannels[ch]
+            cfg['ChannelSettings']['ProteinNames_'+ch]=self.prot_names[ch]
+        cfg.write()
+
+    def load_settings(self,cfg):
+        for ch in self.channels:
+            self.exposure_times[ch]=cfg['ChannelSettings'].get('Exposures_'+ch,self.def_exposure)
+            self.zoffsets[ch]=cfg['ChannelSettings'].get('ZOffsets_'+ch,self.def_offset)
+            self.usechannels[ch]=cfg['ChannelSettings'].get('UseChannel_'+ch,True)
+            self.prot_names[ch]=cfg['ChannelSettings'].get('ProteinNames_'+ch,ch)
+
+        self.map_chan=str(cfg['ChannelSettings']['map_chan'])
+
+
+class ChangeChannelSettings(wx.Dialog):
+    """simple dialog for changing the channel settings"""
+    def __init__(self, parent, id, title, settings,style):
+        wx.Dialog.__init__(self, parent, id, title,style=wx.DEFAULT_DIALOG_STYLE, size=(420, 600))
+
+        self.settings=settings
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        Nch=len(settings.channels)
+        print Nch
+
+        gridSizer=wx.FlexGridSizer(rows=Nch+3,cols=6,vgap=5,hgap=5)
+
+
+        gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label="chan"),border=5)
+        gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label="protein"),border=5)
+        gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label="use?"),border=5)
+        gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label="exposure"),border=5)
+        gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label="map?"),border=5)
+        gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label="zoffset     "),border=5)
+
+        self.ProtNameCtrls=[]
+        self.UseCtrls=[]
+        self.ExposureCtrls=[]
+        self.MapRadCtrls=[]
+        self.ZOffCtrls=[]
+
+        for ch in settings.channels:
+            hbox =wx.BoxSizer(wx.HORIZONTAL)
+            Txt=wx.StaticText(self,label=ch)
+            ProtText=wx.TextCtrl(self,value=settings.prot_names[ch])
+            ChBox = wx.CheckBox(self)
+            ChBox.SetValue(settings.usechannels[ch])
+            IntCtrl=wx.lib.intctrl.IntCtrl( self, value=settings.exposure_times[ch],size=(50,-1))
+            FloatCtrl=wx.lib.agw.floatspin.FloatSpin(self,
+                                       value=settings.zoffsets[ch],
+                                       min_val=-3.0,
+                                       max_val=3.0,
+                                       increment=.1,
+                                       digits=2,
+                                       name='',
+                                       size=(95,-1))
+
+            if ch is settings.channels[0]:
+                RadBut = wx.RadioButton(self,-1,'',style=wx.RB_GROUP)
+            else:
+                RadBut = wx.RadioButton(self,-1,'')
+            if ch == settings.map_chan:
+                RadBut.SetValue(True)
+
+            gridSizer.Add(Txt,0,flag=wx.ALL|wx.EXPAND,border=5)
+            gridSizer.Add(ProtText,1,flag=wx.ALL|wx.EXPAND,border=5)
+            gridSizer.Add(ChBox,0,flag=wx.ALL|wx.EXPAND,border=5)
+            gridSizer.Add(IntCtrl,0,border=5)
+            gridSizer.Add(RadBut,0,flag=wx.ALL|wx.EXPAND,border=5)
+            gridSizer.Add(FloatCtrl,0,flag=wx.ALL|wx.EXPAND,border=5)
+
+            self.ProtNameCtrls.append(ProtText)
+            self.UseCtrls.append(ChBox)
+            self.ExposureCtrls.append(IntCtrl)
+            self.MapRadCtrls.append(RadBut)
+            self.ZOffCtrls.append(FloatCtrl)
+
+
+        hbox = wx.BoxSizer(wx.HORIZONTAL)
+        ok_button = wx.Button(self,wx.ID_OK,'OK')
+        cancel_button = wx.Button(self,wx.ID_CANCEL,'Cancel')
+        hbox.Add(ok_button)
+        hbox.Add(cancel_button)
+
+        vbox.Add(gridSizer)
+        vbox.Add(hbox)
+
+        self.SetSizer(vbox)
+
+
+    def GetSettings(self):
+        prot_names=dict([])
+        usechannels=dict([])
+        exposure_times=dict([])
+        zoffsets=dict([])
+
+        for i,ch in enumerate(self.settings.channels):
+            prot_names[ch]=self.ProtNameCtrls[i].GetValue()
+            usechannels[ch]=self.UseCtrls[i].GetValue()
+            exposure_times[ch]=self.ExposureCtrls[i].GetValue()
+            if self.MapRadCtrls[i].GetValue():
+                map_chan=ch
+            zoffsets[ch]=self.ZOffCtrls[i].GetValue()
+        return ChannelSettings(self.settings.channels,exposure_times=exposure_times,zoffsets=zoffsets,usechannels=usechannels,prot_names=prot_names,map_chan=map_chan)
+
 if __name__ == '__main__':
     import sys
     app = QtGui.QApplication(sys.argv)
@@ -107,10 +244,20 @@ if __name__ == '__main__':
     mmc = MMCorePy.CMMCore()
     mmc.loadSystemConfiguration(configFile)
     print "loaded configuration file"
-    settings = StageResetSettings()
-    resetSettings=ChangeStageResetSettings(mmc,settings)
+    #settings = StageResetSettings()
+    #resetSettings=ChangeStageResetSettings(mmc,settings)
     #resetSettings.setModal(True)
-    resetSettings.show()
+    #resetSettings.show()
+    exposure_times={'a':100,'b':100,'c':100,'d':100}
+    zoffsets={'a':0,'b':0,'c':0,'d':0}
+    usechannels={'a':True,'b':True,'c':True,'d':True}
+    prot_names={'a':'prota','b':'protb','c':'propc','d':'protd'}
+    map_chan='c'
+    def_exposure=100
+    def_offset=0.0
+
+    settings = ChannelSettings(channels=['a','b','c','d'],)
+
     app.exec_()
     settings=resetSettings.getSettings()
     print(settings)
