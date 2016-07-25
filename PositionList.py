@@ -37,7 +37,8 @@ import json
   
 class posList():
     """class for holding, altering, and plotting the position list"""
-    def __init__(self,axis,mosaic_settings=MosaicSettings(),camera_settings=CameraSettings(),shownumbers=False):
+    def __init__(self,axis,mosaic_settings=MosaicSettings(),camera_settings=CameraSettings(),
+                 shownumbers=False,sort_on_add=True):
         """initialization function
         
         keywords)
@@ -55,10 +56,11 @@ class posList():
         self.pos2=None
         self.dosort=True
         self.shownumbers=shownumbers
+        self.sort_on_add = sort_on_add
 
 
     def get_next_pos(self,pos):
-        self.__sort_points()
+        #self.__sort_points()
         myindex=self.slicePositions.index(pos)
         if (myindex)==len(self.slicePositions)-1:
             return None     
@@ -383,7 +385,8 @@ class posList():
         newPosition=slicePosition(axis=self.axis,pos_list=self,x=x,y=y,z=z,edgecolor=edgecolor,withpoint=withpoint,
                                   showNumber=self.shownumbers,selected=selected)
         self.slicePositions.append(newPosition)  
-        self.__sort_points()
+        if self.sort_on_add:
+            self.__sort_points()
         self.updateNumbers()
         return newPosition
     
@@ -949,7 +952,8 @@ class slicePosition():
         #only do this if the current list is empty
         if self.frameList==None:
             #the frame list will be another posList with the same camera_settings, but the default MosaicSettings (i.e. a 1x1)
-            self.frameList=posList(self.axis,mosaic_settings=MosaicSettings(mag=self.pos_list.mosaic_settings.mag),camera_settings=self.pos_list.camera_settings)
+            self.frameList=posList(self.axis,mosaic_settings=MosaicSettings(mag=self.pos_list.mosaic_settings.mag),
+                                   camera_settings=self.pos_list.camera_settings,sort_on_add=False)
             (fh,fw)=self.pos_list.calcFrameSize()
             (h,w)=self.pos_list.calcMosaicSize()  
             #use the point class to add the offsets from the upper left necessary to make the grid
@@ -969,7 +973,8 @@ class slicePosition():
         if not self.axis: return None
         """paint the individual frames for this position using an algorithm which should take into account the angle of the slice's tilt"""
         if self.frameList==None:
-            self.frameList=posList(self.axis,mosaic_settings=MosaicSettings(mag=self.pos_list.mosaic_settings.mag),camera_settings=self.pos_list.camera_settings)
+            self.frameList=posList(self.axis,mosaic_settings=MosaicSettings(mag=self.pos_list.mosaic_settings.mag),
+                                   camera_settings=self.pos_list.camera_settings,sort_on_add=False)
             (fh,fw)=self.pos_list.calcFrameSize()
             (h,w)=self.pos_list.calcMosaicSize() 
             alpha=(self.pos_list.mosaic_settings.overlap*1.0)/100

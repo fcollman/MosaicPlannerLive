@@ -436,10 +436,12 @@ class MosaicPanel(FigureCanvas):
                 f.write(self.channel_settings.prot_names[ch] + "\t" + "%f\t%s\n" % (self.channel_settings.exposure_times[ch],ch))
 
 
-    def multiDacq(self,outdir,x,y,slice_index,frame_index=0):
+    def multiDacq(self,outdir,x,y,slice_index,frame_index=0,hold_focus = False):
 
         #print datetime.datetime.now().time()," starting multiDAcq, autofocus on"
-        self.imgSrc.set_hardware_autofocus_state(True)
+        if not hold_focus:
+            if self.imgSrc.has_hardware_autofocus():
+                self.imgSrc.set_hardware_autofocus_state(True)
         #print datetime.datetime.now().time()," starting stage move"
         self.imgSrc.move_stage(x,y)
         wx.Yield()
@@ -454,8 +456,8 @@ class MosaicPanel(FigureCanvas):
                     print "not auto-focusing correctly.. giving up after 10 seconds"
                     break
 
-
-            self.imgSrc.set_hardware_autofocus_state(False) #turn off autofocus
+            if not hold_focus:
+                self.imgSrc.set_hardware_autofocus_state(False) #turn off autofocus
 
         else:
             score=self.imgSrc.image_based_autofocus(chan=self.channel_settings.map_chan)
@@ -474,6 +476,7 @@ class MosaicPanel(FigureCanvas):
             zplanes_to_visit = [currZ]
         #print 'zplanes_to_visit : ',zplanes_to_visit
 
+
         for z_index, zplane in enumerate(zplanes_to_visit):
             for k,ch in enumerate(self.channel_settings.channels):
                 #print datetime.datetime.now().time()," start channel",ch, " zplane", zplane
@@ -483,9 +486,10 @@ class MosaicPanel(FigureCanvas):
                     #ti = time.clock()*1000
                     #print time.clock(),'start'
                     z = zplane + self.channel_settings.zoffsets[ch]
-                    if not z == presentZ:
-                        self.imgSrc.set_z(z)
-                        presentZ = z
+                    if not hold_focus:
+                        if not z == presentZ:
+                            self.imgSrc.set_z(z)
+                            presentZ = z
                     self.imgSrc.set_exposure(self.channel_settings.exposure_times[ch])
                     self.imgSrc.set_channel(ch)
                     #t2 = time.clock()*1000
@@ -494,9 +498,13 @@ class MosaicPanel(FigureCanvas):
                     data=self.imgSrc.snap_image()
                     #t3 = time.clock()*1000
                     #print time.clock(),t3-t2, 'ms to snap image'
-                    self.dataQueue.put((slice_index,frame_index, z_index, prot_name,path,data,ch,x,y,z,))
-        self.imgSrc.set_z(currZ)
-        self.imgSrc.set_hardware_autofocus_state(True)
+                    self.dataQueue.put((slice_index,frame_index, z_index, prot_name,path,data,ch,x,y,z))
+
+        if not hold_focus:
+            self.imgSrc.set_z(currZ)
+            if self.imgSrc.has_hardware_autofocus():
+                self.imgSrc.set_hardware_autofocus_state(True)
+        #self.imgSrc.set_hardware_autofocus_state(True)
 
     def ResetPiezo(self):
 
@@ -526,70 +534,25 @@ class MosaicPanel(FigureCanvas):
                 if islocked:
                     self.imgSrc.mmc.enableContinuousFocus(True)
 
-
-    def on_run_acq(self,event="none"):
-        print "running"
-        from SetupAlerts import SetupAlertDialog
-
-        dlg = SetupAlertDialog(self.cfg['smtp'])
-        dlg.setModal(True)
-        dlg.show()
-        alert_settings = dlg.getSettings()
-
-
-        #self.channel_settings
-        #self.pos_list
-        #self.imgSrc
-        self.imgSrc.mmc.setProperty(self.imgSrc.mmc.getCameraDevice(),'Binning','1x1')
-
-        binstr=self.imgSrc.mmc.getProperty(self.imgSrc.mmc.getCameraDevice(),'Binning')
-        numchan=0
-        for ch in self.channel_settings.usechannels.values():
-            if ch:
-                numchan+=1
-
-
-        caption = "about to capture %d sections, binning is %s, numchannel is %d"%\
-                  (len(self.posList.slicePositions),binstr,numchan)
-        dlg = wx.MessageDialog(self,message=caption, style = wx.OK|wx.CANCEL)
-        button_pressed = dlg.ShowModal()
-        if button_pressed == wx.ID_CANCEL:
-            return None
-
-        #get an output directory
-        dlg=wx.DirDialog(self,message="Pick output directory",defaultPath= os.path.split(self.rootPath)[0])
-        button_pressed = dlg.ShowModal()
-        if button_pressed == wx.ID_CANCEL:
-            wx.MessageBox("You didn't enter a save directory... \n Aborting aquisition")
-            return None
-
-        outdir=dlg.GetPath()
-        dlg.Destroy()
-
-
-        metadata_dictionary = {
-        'channelname'    : self.channel_settings.prot_names,
-        '(height,width)' : self.imgSrc.get_sensor_size(),
-        'ScaleFactorX'   : self.imgSrc.get_pixel_size(),
-        'ScaleFactorY'   : self.imgSrc.get_pixel_size(),
-        'exp_time'       : self.channel_settings.exposure_times,
-        }
-        #setup output directories
-        for k,ch in enumerate(self.channel_settings.channels):
+    def summarize_channel_settings(self):
+        numchan = 0
+        chrom_correction = False
+        for ch in self.channel_settings.channels:
             if self.channel_settings.usechannels[ch]:
-                thedir=os.path.join(outdir,self.channel_settings.prot_names[ch])
-                if not os.path.isdir(thedir):
-                    os.makedirs(thedir)
+                numchan+=1
+                if (self.channel_settings.zoffsets[ch] != 0.0):
+                    chrom_correction = True
+        return numchan,chrom_correction
 
-        self.write_session_metadata(outdir)
-
+    def move_safe_to_start(self):
         #step the stage back to the first position, position by position
         #so as to not lose the immersion oil
         (x,y)=self.imgSrc.get_xy()
         currpos=self.posList.get_position_nearest(x,y)
+
+        #turn on autofocus
+        self.imgSrc.set_hardware_autofocus_state(True)
         while currpos is not None:
-            #turn on autofocus
-            self.imgSrc.set_hardware_autofocus_state(True)
             self.ResetPiezo()
             self.imgSrc.move_stage(currpos.x,currpos.y)
             currpos=self.posList.get_prev_pos(currpos)
@@ -597,12 +560,7 @@ class MosaicPanel(FigureCanvas):
                 if not currpos.activated:
                     break
             wx.Yield()
-
-
-        self.dataQueue = mp.Queue()
-        self.saveProcess =  mp.Process(target=file_save_process,args=(self.dataQueue,STOP_TOKEN, metadata_dictionary))
-        self.saveProcess.start()
-
+    def setup_progress_bar(self):
         hasFrameList = self.posList.slicePositions[0].frameList is not None
         numSections = len(self.posList.slicePositions)
         if hasFrameList:
@@ -614,7 +572,79 @@ class MosaicPanel(FigureCanvas):
         self.progress = wx.ProgressDialog("A progress box", "Time remaining", maxProgress ,
         style=wx.PD_CAN_ABORT | wx.PD_ELAPSED_TIME | wx.PD_REMAINING_TIME)
 
+        return numFrames,numSections
 
+    def get_output_dir(self):
+         #get an output directory
+        dlg=wx.DirDialog(self,message="Pick output directory",defaultPath= os.path.split(self.rootPath)[0])
+        button_pressed = dlg.ShowModal()
+        if button_pressed == wx.ID_CANCEL:
+            wx.MessageBox("You didn't enter a save directory... \n Aborting aquisition")
+            return None
+        outdir=dlg.GetPath()
+        dlg.Destroy()
+
+        return outdir
+
+    def make_channel_directories(self,outdir):
+        #setup output directories
+        for k,ch in enumerate(self.channel_settings.channels):
+            if self.channel_settings.usechannels[ch]:
+                thedir=os.path.join(outdir,self.channel_settings.prot_names[ch])
+                if not os.path.isdir(thedir):
+                    os.makedirs(thedir)
+
+    def on_run_acq(self,event="none"):
+        print "running"
+        from SetupAlerts import SetupAlertDialog
+
+        #dlg = SetupAlertDialog(self.cfg['smtp'])
+        #dlg.setModal(True)
+        #dlg.show()
+        #alert_settings = dlg.getSettings()
+
+
+        #self.channel_settings
+        #self.pos_list
+        #self.imgSrc
+
+        #set the binning to 1
+        self.imgSrc.set_binning(1)
+        binning=self.imgSrc.get_binning()
+        numchan,chrom_correction = self.summarize_channel_settings()
+
+        caption = "about to capture %d sections, binning is %dx%d, numchannel is %d"%\
+                  (len(self.posList.slicePositions),binning,binning,numchan)
+        dlg = wx.MessageDialog(self,message=caption, style = wx.OK|wx.CANCEL)
+        button_pressed = dlg.ShowModal()
+        if button_pressed == wx.ID_CANCEL:
+            return None
+
+        outdir = self.get_output_dir()
+        if outdir is None:
+            return None
+
+        self.make_channel_directories(outdir)
+
+        self.write_session_metadata(outdir)
+
+        self.move_safe_to_start()
+
+        self.dataQueue = mp.Queue()
+        metadata_dictionary = {
+        'channelname'    : self.channel_settings.prot_names,
+        '(height,width)' : self.imgSrc.get_sensor_size(),
+        'ScaleFactorX'   : self.imgSrc.get_pixel_size(),
+        'ScaleFactorY'   : self.imgSrc.get_pixel_size(),
+        'exp_time'       : self.channel_settings.exposure_times,
+        }
+        self.saveProcess =  mp.Process(target=file_save_process,args=(self.dataQueue,STOP_TOKEN, metadata_dictionary))
+        self.saveProcess.start()
+
+
+        numFrames,numSections = self.setup_progress_bar()
+
+        hold_focus = not (self.zstack_settings.zstack_flag or chrom_correction)
 
         goahead = True
         #loop over positions
@@ -630,7 +660,7 @@ class MosaicPanel(FigureCanvas):
                 #turn on autofocus
                 self.ResetPiezo()
                 if pos.frameList is None:
-                    self.multiDacq(outdir,pos.x,pos.y,i)
+                    self.multiDacq(outdir,pos.x,pos.y,i,hold_focus=hold_focus)
                 else:
                     for j,fpos in enumerate(pos.frameList.slicePositions):
                         if not goahead:
@@ -640,7 +670,7 @@ class MosaicPanel(FigureCanvas):
                             print "autofocus no longer enabled while moving between frames.. quiting"
                             goahead = False
                             break
-                        self.multiDacq(outdir,fpos.x,fpos.y,i,j)
+                        self.multiDacq(outdir,fpos.x,fpos.y,i,j,hold_focus)
                         self.ResetPiezo()
                         (goahead, skip)=self.progress.Update((i*numFrames) + j+1,'section %d of %d, frame %d'%(i,numSections-1,j))
 
@@ -655,8 +685,7 @@ class MosaicPanel(FigureCanvas):
         self.saveProcess.join()
         print "save process ended"
         self.progress.Destroy()
-        self.imgSrc.mmc.setProperty(self.imgSrc.mmc.getCameraDevice(),'Binning','2x2')
-
+        self.imgSrc.set_binning(2)
 
     def edit_channels(self,event="none"):
         dlg = ChangeChannelSettings(None, -1, title = "Channel Settings", settings = self.channel_settings,style=wx.OK)
