@@ -485,8 +485,8 @@ class MosaicPanel(FigureCanvas):
                 if self.channel_settings.usechannels[ch]:
                     #ti = time.clock()*1000
                     #print time.clock(),'start'
+                    z = zplane + self.channel_settings.zoffsets[ch]
                     if not hold_focus:
-                        z = zplane + self.channel_settings.zoffsets[ch]
                         if not z == presentZ:
                             self.imgSrc.set_z(z)
                             presentZ = z
@@ -498,7 +498,7 @@ class MosaicPanel(FigureCanvas):
                     data=self.imgSrc.snap_image()
                     #t3 = time.clock()*1000
                     #print time.clock(),t3-t2, 'ms to snap image'
-                    self.dataQueue.put((slice_index,frame_index, z_index, prot_name,path,data,ch,x,y,z,))
+                    self.dataQueue.put((slice_index,frame_index, z_index, prot_name,path,data,ch,x,y,z))
 
         if not hold_focus:
             self.imgSrc.set_z(currZ)
@@ -607,6 +607,8 @@ class MosaicPanel(FigureCanvas):
         #self.channel_settings
         #self.pos_list
         #self.imgSrc
+
+        #set the binning to 1
         self.imgSrc.set_binning(1)
         binning=self.imgSrc.get_binning()
         numchan,chrom_correction = self.summarize_channel_settings()
