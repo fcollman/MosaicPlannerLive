@@ -92,6 +92,8 @@ class imageSource():
 
         #set up triggering to "Hardware" to load all the
         self.mmc.setConfig('Triggering','Hardware')
+        #do it twice to work around bug in Andor Zyla camera's, can't really hurt
+        self.mmc.setConfig('Triggering','Hardware')
         self.mmc.waitForConfig('Triggering','Hardware')
 
         #get the first channel config
@@ -108,6 +110,8 @@ class imageSource():
                 #set it up for hardware triggering
                 propseq = [self.mmc.getConfigData(self.channelGroupName,channels[k]).getSetting(i).getPropertyValue() for k in range(len(channels))]
                 self.mmc.loadPropertySequence(dev,prop,propseq)
+                self.mmc.startPropertySequence(dev,prop)
+
             #otherwise then we need it to be constant
             else:
                 #check that it is constant across channels
@@ -127,8 +131,11 @@ class imageSource():
                 self.mmc.waitForDevice(dev)
         self.masterArduino.setupExposure(exposure_times,self.interframe_time)
         self.numberHardwareChannels = len(exposure_times)
-        self.mmc.prepareSequenceAcquisition(self.mmc.getCameraDevice())
+        self.mmc.startContinuousSequenceAcquisition(0)
 
+    def startHardwareSequence(self):
+        assert(self.masterArduino is not None)
+        self.masterArduino.startTimedPattern()
 
     def set_binning(self,bin=1):
         cam = self.mmc.getCameraDevice()
@@ -319,7 +326,12 @@ class imageSource():
     def get_pixel_size(self):
         #NEED TO IMPLEMENT IF NOT MICROMANAGER
         return self.mmc.getPixelSizeUm()
-    
+
+    def get_image(self):
+        while self.mmc.getRemainingImageCount()==0:
+            time.sleep(.001)
+        return self.mmc.popNextImage()
+
     def get_frame_size_um(self):
         (sensor_width,sensor_height)=self.get_sensor_size()
         pixsize = self.get_pixel_size()

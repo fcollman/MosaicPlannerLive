@@ -12,7 +12,7 @@ class MMArduino(object):
         self.ser.timeout =.5
         self.ser.open()
         time.sleep(2)
-    def sendMessage(self,message,debug=True):
+    def sendMessage(self,message,debug=False):
         cmd = bytearray(message)
         answer = self.sendDirect(message,len(message))
         if debug:

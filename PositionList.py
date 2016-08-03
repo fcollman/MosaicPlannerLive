@@ -955,14 +955,17 @@ class slicePosition():
             #use the point class to add the offsets from the upper left necessary to make the grid
             UL= Point(self.x,self.y)-Point(w/2,h/2)
             alpha=(self.pos_list.mosaic_settings.overlap*1.0)/100
-            for x in range(self.pos_list.mosaic_settings.mx):
-                delX=Point(x*fw+(fw/2)-x*alpha*fw,0)
-                for y in range(self.pos_list.mosaic_settings.my):
-                    delY=Point(0,y*fh+(fh/2)-y*alpha*fh)
+
+            for y in range(self.pos_list.mosaic_settings.my):
+                delY=Point(0,y*fh+(fh/2)-y*alpha*fh)
+                for x in range(self.pos_list.mosaic_settings.mx):
+                    delX=Point(x*fw+(fw/2)-x*alpha*fw,0)
+
                     #calculates the position for this frame
                     thispoint=UL+delX+delY
                     #make the frameList boxes be cyan in color
                     self.frameList.add_position(thispoint.x,thispoint.y,withpoint=False,edgecolor='c')
+
             self.frameList.set_mosaic_visible(True)  
 
     def __paintFramesTilted(self):

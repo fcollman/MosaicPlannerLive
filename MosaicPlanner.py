@@ -330,7 +330,9 @@ class MosaicPanel(FigureCanvas):
         self.imgSrc=None
         while self.imgSrc is None:
             try:
-                self.imgSrc=imageSource(self.MM_config_file)
+                self.imgSrc=imageSource(self.MM_config_file,
+                                        MasterArduinoPort=self.cfg['MMArduino']['port'],
+                                        interframe_time=self.cfg['MMArduino']['interframe_time'])
             except:
                 traceback.print_exc(file=sys.stdout)
                 dlg = wx.MessageBox("Error Loading Micromanager\n check scope and re-select config file","MM Error")
@@ -477,6 +479,9 @@ class MosaicPanel(FigureCanvas):
             zplanes_to_visit = [currZ]
         #print 'zplanes_to_visit : ',zplanes_to_visit
 
+        num_chan, chrom_correction = self.summarize_channel_settings()
+
+
         def software_acquire():
             for z_index, zplane in enumerate(zplanes_to_visit):
                 for k,ch in enumerate(self.channel_settings.channels):
@@ -499,34 +504,28 @@ class MosaicPanel(FigureCanvas):
                         data=self.imgSrc.snap_image()
                         #t3 = time.clock()*1000
                         #print time.clock(),t3-t2, 'ms to snap image'
-                        self.dataQueue.put((slice_index,frame_index, z_index, prot_name,path,data,ch,x,y,z,))
+                        self.dataQueue.put((slice_index,frame_index, z_index, prot_name,path,data,ch,x,y,z))
 
         def hardware_acquire():
-
             for z_index, zplane in enumerate(zplanes_to_visit):
-
-                self.exposure_arduino.startTimedPattern()
+                z = zplane
+                if not hold_focus:
+                    if not z == presentZ:
+                        self.imgSrc.set_z(z)
+                        presentZ = z
+                self.imgSrc.startHardwareSequence()
                 for k,ch in enumerate(self.channel_settings.channels):
                     #print datetime.datetime.now().time()," start channel",ch, " zplane", zplane
                     prot_name=self.channel_settings.prot_names[ch]
                     path=os.path.join(outdir,prot_name)
                     if self.channel_settings.usechannels[ch]:
-                        #ti = time.clock()*1000
-                        #print time.clock(),'start'
-                        if not hold_focus:
-                            z = zplane + self.channel_settings.zoffsets[ch]
-                            if not z == presentZ:
-                                self.imgSrc.set_z(z)
-                                presentZ = z
-                        self.imgSrc.set_exposure(self.channel_settings.exposure_times[ch])
-                        self.imgSrc.set_channel(ch)
-                        #t2 = time.clock()*1000
-                        #print time.clock(),t2-ti, 'ms to get to snap image from start'
+                        data = self.imgSrc.get_image()
+                        self.dataQueue.put((slice_index,frame_index, z_index, prot_name,path,data,ch,x,y,z))
 
-                        data=self.imgSrc.snap_image()
-                        #t3 = time.clock()*1000
-                        #print time.clock(),t3-t2, 'ms to snap image'
-                        self.dataQueue.put((slice_index,frame_index, z_index, prot_name,path,data,ch,x,y,z,))
+        if (self.cfg['MosaicPlanner']['hardware_trigger'] == True) and (chrom_correction == False):
+            hardware_acquire()
+        else:
+            software_acquire()
 
         if not hold_focus:
             self.imgSrc.set_z(currZ)
@@ -623,7 +622,13 @@ class MosaicPanel(FigureCanvas):
                     os.makedirs(thedir)
 
 
-
+    def show_summary_dialog(self):
+        caption = "about to capture %d sections, binning is %dx%d, numchannel is %d"%\
+                  (len(self.posList.slicePositions),binning,binning,numchan)
+        dlg = wx.MessageDialog(self,message=caption, style = wx.OK|wx.CANCEL)
+        button_pressed = dlg.ShowModal()
+        if button_pressed == wx.ID_CANCEL:
+            return None
     def on_run_acq(self,event="none"):
         print "running"
         from SetupAlerts import SetupAlertDialog
@@ -641,12 +646,7 @@ class MosaicPanel(FigureCanvas):
         binning=self.imgSrc.get_binning()
         numchan,chrom_correction = self.summarize_channel_settings()
 
-        caption = "about to capture %d sections, binning is %dx%d, numchannel is %d"%\
-                  (len(self.posList.slicePositions),binning,binning,numchan)
-        dlg = wx.MessageDialog(self,message=caption, style = wx.OK|wx.CANCEL)
-        button_pressed = dlg.ShowModal()
-        if button_pressed == wx.ID_CANCEL:
-            return None
+
 
         outdir = self.get_output_dir()
         if outdir is None:
@@ -676,7 +676,8 @@ class MosaicPanel(FigureCanvas):
 
         if self.cfg['MosaicPlanner']['hardware_trigger']:
             channels = [ch for ch in self.channel_settings.channels if self.channel_settings.usechannels[ch]]
-            success=self.imgSrc.setup_hardware_triggering(channels)
+            exp_times = [self.channel_settings.exposure_times[exp] for exp in self.channel_settings.exposure_times if self.channel_settings.usechannels[exp]]
+            success=self.imgSrc.setup_hardware_triggering(channels,exp_times)
 
 
 
