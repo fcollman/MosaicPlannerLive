@@ -623,12 +623,13 @@ class MosaicPanel(FigureCanvas):
 
 
     def show_summary_dialog(self):
-        caption = "about to capture %d sections, binning is %dx%d, numchannel is %d"%\
-                  (len(self.posList.slicePositions),binning,binning,numchan)
+        binning=self.imgSrc.get_binning()
+        caption = "about to capture %d sections, binning is %dx%d, numchannel is %d"%(len(self.posList.slicePositions),binning,binning,numchan)
         dlg = wx.MessageDialog(self,message=caption, style = wx.OK|wx.CANCEL)
         button_pressed = dlg.ShowModal()
         if button_pressed == wx.ID_CANCEL:
-            return None
+            return False
+
     def on_run_acq(self,event="none"):
         print "running"
         from SetupAlerts import SetupAlertDialog
@@ -645,6 +646,14 @@ class MosaicPanel(FigureCanvas):
         self.imgSrc.set_binning(1)
         binning=self.imgSrc.get_binning()
         numchan,chrom_correction = self.summarize_channel_settings()
+
+
+        caption = "about to capture %d sections, binning is %dx%d, numchannel is %d"%(len(self.posList.slicePositions),binning,binning,numchan)
+        dlg = wx.MessageDialog(self,message=caption, style = wx.OK|wx.CANCEL)
+        button_pressed = dlg.ShowModal()
+        if button_pressed == wx.ID_CANCEL:
+            return False
+
 
 
 
@@ -721,6 +730,8 @@ class MosaicPanel(FigureCanvas):
         print "save process ended"
         self.progress.Destroy()
         self.imgSrc.set_binning(2)
+        if self.cfg['MosaicPlanner']['hardware_trigger']:
+            self.imgSrc.stop_hardware_triggering()
 
     def edit_channels(self,event="none"):
         dlg = ChangeChannelSettings(None, -1, title = "Channel Settings", settings = self.channel_settings,style=wx.OK)

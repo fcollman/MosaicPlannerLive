@@ -37,7 +37,8 @@ import json
   
 class posList():
     """class for holding, altering, and plotting the position list"""
-    def __init__(self,axis,mosaic_settings=MosaicSettings(),camera_settings=CameraSettings(),shownumbers=False):
+    def __init__(self,axis,mosaic_settings=MosaicSettings(),camera_settings=CameraSettings(),
+                 shownumbers=False,dosort=True):
         """initialization function
         
         keywords)
@@ -53,7 +54,7 @@ class posList():
         #start with point1 and 2 not defined
         self.pos1=None
         self.pos2=None
-        self.dosort=True
+        self.dosort=dosort
         self.shownumbers=shownumbers
 
 
@@ -383,7 +384,8 @@ class posList():
         newPosition=slicePosition(axis=self.axis,pos_list=self,x=x,y=y,z=z,edgecolor=edgecolor,withpoint=withpoint,
                                   showNumber=self.shownumbers,selected=selected)
         self.slicePositions.append(newPosition)  
-        self.__sort_points()
+        if self.dosort:
+            self.__sort_points()
         self.updateNumbers()
         return newPosition
     
@@ -730,12 +732,13 @@ class posList():
         trans)an optional transform object which will cause the points to be saved to the file, not with their original
         coordinates, but with the coordinates run through the trans.transform(x,y) method
         """  
-
-        self.__sort_points()
+        if self.dosort:
+            self.__sort_points()
         writer = csv.writer(open(filename, 'wb'), delimiter=',')
         count=0;
         for index,pos in enumerate(self.slicePositions):
-            pos.frameList.__sort_points(vertsort=True)
+
+            #pos.frameList.__sort_points(vertsort=True)
             for frameindex,framepos in enumerate(pos.frameList.slicePositions):
                 count=count+1;
                 if trans==None:
@@ -780,7 +783,8 @@ class posList():
         trans)an optional transform object which will cause the points to be saved to the file, not with their original
         coordinates, but with the coordinates run through the trans.transform(x,y) method
         """  
-        self.__sort_points()
+        if self.dosort:
+            self.__sort_points()
         writer = csv.writer(open(filename, 'wb'), delimiter=',',quoting=csv.QUOTE_NONNUMERIC)
         writer.writerow(["Slide","","","","",""])
         writer.writerow(["Name","Width","Height","Description",'',''])
@@ -791,7 +795,7 @@ class posList():
         writer.writerow(["Comments","PositionX","PositionY","PositionZ","Color","Classification"])
         
         for index,pos in enumerate(self.slicePositions):
-            pos.frameList.__sort_points(vertsort=True)
+            #pos.frameList.__sort_points(vertsort=True)
             for frameindex,framepos in enumerate(pos.frameList.slicePositions):
                 if trans==None:
                     writer.writerow(["S%03d_F%03d"%(index,frameindex),framepos.x,framepos.y,0," blue "," blue "])    
@@ -949,22 +953,32 @@ class slicePosition():
         #only do this if the current list is empty
         if self.frameList==None:
             #the frame list will be another posList with the same camera_settings, but the default MosaicSettings (i.e. a 1x1)
-            self.frameList=posList(self.axis,mosaic_settings=MosaicSettings(mag=self.pos_list.mosaic_settings.mag),camera_settings=self.pos_list.camera_settings)
+            self.frameList=posList(self.axis,mosaic_settings=MosaicSettings(mag=self.pos_list.mosaic_settings.mag),
+                                   camera_settings=self.pos_list.camera_settings,shownumbers=False,dosort=False)
             (fh,fw)=self.pos_list.calcFrameSize()
             (h,w)=self.pos_list.calcMosaicSize()  
             #use the point class to add the offsets from the upper left necessary to make the grid
             UL= Point(self.x,self.y)-Point(w/2,h/2)
             alpha=(self.pos_list.mosaic_settings.overlap*1.0)/100
+            evenodd = True
+            for x in range(self.pos_list.mosaic_settings.mx-1,-1,-1):
+                delX=Point((x*fw+(fw/2)-x*alpha*fw),0)
+                if evenodd:
+                    yrange = range(self.pos_list.mosaic_settings.my)
+                    evenodd = False
+                else:
+                    yrange = range(self.pos_list.mosaic_settings.my -1, -1,-1)
+                    evenodd = True
+                print yrange
+                for y in yrange:
+                    delY=Point(0,y*fh+(fh/2)-y*alpha*fh)
 
-            for y in range(self.pos_list.mosaic_settings.my):
-                delY=Point(0,y*fh+(fh/2)-y*alpha*fh)
-                for x in range(self.pos_list.mosaic_settings.mx):
-                    delX=Point(x*fw+(fw/2)-x*alpha*fw,0)
 
                     #calculates the position for this frame
                     thispoint=UL+delX+delY
                     #make the frameList boxes be cyan in color
                     self.frameList.add_position(thispoint.x,thispoint.y,withpoint=False,edgecolor='c')
+                    #evenodd *= -1
 
             self.frameList.set_mosaic_visible(True)  
 
@@ -972,7 +986,8 @@ class slicePosition():
         if not self.axis: return None
         """paint the individual frames for this position using an algorithm which should take into account the angle of the slice's tilt"""
         if self.frameList==None:
-            self.frameList=posList(self.axis,mosaic_settings=MosaicSettings(mag=self.pos_list.mosaic_settings.mag),camera_settings=self.pos_list.camera_settings)
+            self.frameList=posList(self.axis,mosaic_settings=MosaicSettings(mag=self.pos_list.mosaic_settings.mag),camera_settings=self.pos_list.camera_settings,
+                                   dosort=False)
             (fh,fw)=self.pos_list.calcFrameSize()
             (h,w)=self.pos_list.calcMosaicSize() 
             alpha=(self.pos_list.mosaic_settings.overlap*1.0)/100

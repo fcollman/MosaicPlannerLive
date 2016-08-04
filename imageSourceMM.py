@@ -88,6 +88,11 @@ class imageSource():
         b = -d/norm[2]
         return ax,ay,b
 
+    def stop_hardware_triggering(self):
+        self.mmc.stopSequenceAcquisition()
+        self.mmc.setConfig('Triggering','Software')
+        self.mmc.setConfig('Triggering','Software')
+
     def setup_hardware_triggering(self,channels,exposure_times):
 
         #set up triggering to "Hardware" to load all the
