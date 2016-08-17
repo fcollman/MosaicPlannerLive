@@ -335,7 +335,9 @@ class imageSource():
     def get_image(self):
         while self.mmc.getRemainingImageCount()==0:
             time.sleep(.001)
-        return self.mmc.popNextImage()
+        data = self.mmc.popNextImage()
+        return self.flip_image(data)
+
 
     def get_frame_size_um(self):
         (sensor_width,sensor_height)=self.get_sensor_size()
@@ -385,9 +387,11 @@ class imageSource():
             print "we failed on 5 attempts to snap properly... freakout!"
             return None
         data = self.mmc.getImage()
+        data = self.flip_image(data)
+        return data
 
 
-
+    def flip_image(self,data):
 
         (flipx,flipy,trans) = self.get_image_flip()
         if trans:
