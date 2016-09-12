@@ -332,7 +332,8 @@ class MosaicPanel(FigureCanvas):
             try:
                 self.imgSrc=imageSource(self.MM_config_file,
                                         MasterArduinoPort=self.cfg['MMArduino']['port'],
-                                        interframe_time=self.cfg['MMArduino']['interframe_time'])
+                                        interframe_time=self.cfg['MMArduino']['interframe_time'],
+                                        filtswitch = self.cfg['MosaicPlanner']['filter_switch'])
             except:
                 traceback.print_exc(file=sys.stdout)
                 dlg = wx.MessageBox("Error Loading Micromanager\n check scope and re-select config file","MM Error")
@@ -684,8 +685,15 @@ class MosaicPanel(FigureCanvas):
         hold_focus = not (self.zstack_settings.zstack_flag or chrom_correction)
 
         if self.cfg['MosaicPlanner']['hardware_trigger']:
+            #iterates over channels/exposure times in appropriate order
             channels = [ch for ch in self.channel_settings.channels if self.channel_settings.usechannels[ch]]
-            exp_times = [self.channel_settings.exposure_times[exp] for exp in self.channel_settings.exposure_times if self.channel_settings.usechannels[exp]]
+            exp_times = [self.channel_settings.exposure_times[ch] for ch in self.channel_settings.channels if self.channel_settings.usechannels[ch]]
+            for k,ch in enumerate(self.channel_settings.channels):
+                print 'Channel:', ch
+                print 'Exposure:', self.channel_settings.exposure_times[ch]
+            for k in range(len(channels)):
+                print 'Exposure in order:', exp_times[k]
+                print 'Channel in order:', channels[k]
             success=self.imgSrc.setup_hardware_triggering(channels,exp_times)
 
 
@@ -1416,10 +1424,10 @@ class ZVISelectFrame(wx.Frame):
         self.cfg['MosaicPlanner']['savetransform']=self.save_transformed.IsChecked()
         self.cfg['MosaicPlanner']['transposexy']=self.transpose_xy.IsChecked()
         #save the camera settings
-        self.mosaicPanel.posList.camera_settings.save_settings(self.cfg)
+        self.mosaicCanvas.posList.camera_settings.save_settings(self.cfg)
 
         #save the mosaic options
-        self.mosaicPanel.posList.mosaic_settings.save_settings(self.cfg)
+        self.mosaicCanvas.posList.mosaic_settings.save_settings(self.cfg)
 
         #save the SEMSettings
         self.SmartSEMSettings.save_settings(self.cfg)
@@ -1428,7 +1436,7 @@ class ZVISelectFrame(wx.Frame):
 
         self.cfg['MosaicPlanner']['default_arraypath']=self.array_filepicker.GetPath()
 
-        focal_pos_lis_string = self.mosaicPanel.focusCorrectionList.to_json()
+        focal_pos_lis_string = self.mosaicCanvas.focusCorrectionList.to_json()
         #jsonpickle.encode(self.mosaicPanel.focusCorrectionList)
         self.cfg['MosaicPlanner']["focal_pos_list_pickle"]=focal_pos_lis_string
         self.cfg.write()

@@ -14,7 +14,7 @@ class imageSource():
     def __init__(self,configFile,channelGroupName='Channels',
                  use_focus_plane  = False, focus_points=None,
                  transpose_xy = False, logfile='MP_MM.txt',
-                 MasterArduinoPort = None, interframe_time= 10):
+                 MasterArduinoPort = None, interframe_time= 10, filtswitch = None):
       #NEED TO IMPLEMENT IF NOT MICROMANAGER
      
         self.configFile=configFile
@@ -55,7 +55,25 @@ class imageSource():
         else:
             self.masterArduino = None
         self.interframe_time = interframe_time
+        self.filtswitch = filtswitch
+        print 'filtswitch:', filtswitch
+
+        if self.filtswitch is not None:
+            print 'hello'
+            #sets filterwheel to empty slot during setup/mapping if wheel is present
+            self.mmc.setConfig('Triggering','Hardware')
+            self.mmc.waitForConfig('Triggering','Hardware')
+            self.mmc.setConfig('Triggering','Hardware')
+            # self.mmc.setProperty(filtswitch,'State','5')
+
+            self.mmc.loadPropertySequence(filtswitch,'State','5')
+            self.mmc.startPropertySequence(filtswitch,'State')
+            self.masterArduino.MoveFilter()
+            self.mmc.stopPropertySequence(filtswitch,'State')
+            self.mmc.setConfig('Triggering','Software')
+            self.mmc.setConfig('Triggering','Software')
         #set the exposure to use
+
     def define_focal_plane(self,points):
         if points.shape[1]>3:
             self.plane_tuple = self.planeFit(points)
