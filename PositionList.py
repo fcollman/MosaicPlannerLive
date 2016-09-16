@@ -563,16 +563,16 @@ class posList():
         writer.writerow(['','','','','',''])
         writer.writerow(['','','','','',''])
         writer.writerow(["Positions",'','','','',''])
-        writer.writerow(["Comments","PositionX","PositionY","PositionZ","Color","Classification"])
+        writer.writerow(["Comments","PositionX","PositionY","PositionZ","Color","Classification","Angle"])
    
         for index,pos in enumerate(self.slicePositions):
             #"Comments","PositionX","PositionY","PositionZ","Color","Classification"
             #"1000000",-29541.755,6144.1,0.000000," blue "," blue"
             if trans == None:
-                writer.writerow(["%d"%(100000+index),pos.x,pos.y,pos.z," blue "," blue "])
+                writer.writerow(["%d"%(100000+index),pos.x,pos.y,pos.z," blue "," blue ",pos.angle])
             else:
                 (xt,yt)=trans.transform(pos.x,pos.y)
-                writer.writerow(["%d"%(100000+index),xt,yt,pos.z," blue "," blue "])
+                writer.writerow(["%d"%(100000+index),xt,yt,pos.z," blue "," blue ",pos.angle])
     
     
     def save_position_list_uM(self,filename,trans=None):
