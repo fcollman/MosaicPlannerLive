@@ -465,4 +465,23 @@ class imageSource():
         flip_y = int(self.mmc.getProperty(cam,"TransposeMirrorY"))==1
         trans = int(self.mmc.getProperty(cam,"TransposeXY"))==1
 
-        return (flip_x,flip_y,trans) 
+        return (flip_x,flip_y,trans)
+
+    def move_safe_and_focus(self,x,y):
+        #lower objective, move the stage to position x,y
+        focus_stage=self.mmc.getFocusDevice()
+        self.mmc.setRelativePosition(focus_stage,-3000.0)
+        self.mmc.waitForDevice(focus_stage)
+        time.sleep(1)
+        self.set_xy(x,y)
+        self.mmc.setRelativePosition(focus_stage,2700.0)
+        self.mmc.waitForDevice(focus_stage)
+        i = 0
+        while not self.mmc.isContinuousFocusLocked():
+            self.mmc.setRelativePosition(focus_stage,10.0)
+            self.mmc.waitForDevice(focus_stage)
+            self.mmc.enableContinuousFocus(True)
+            self.mmc.waitForDevice(self.mmc.getAutoFocusDevice())
+            i = i+1
+            if i==30:
+                break
