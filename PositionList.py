@@ -647,6 +647,31 @@ class posList():
                 (xt,yt)=trans.transform(pos.x,pos.y)
                 writer.writerow(["p%03.3d"%(index),xt,yt,newZ[index]+zoffset,'','',''])
     
+    def save_position_list_JSON(self,filename,trans=None):
+        #save the positionlist to JSON format, include position x, y, angle, mosaic settings, channel settings
+        self.__sort_points()
+
+        poslist=[]
+        for index,pos in enumerate(self.slicePositions):
+
+            if trans == None:
+                posdict={"POS": [{"SECTION": "%d"%(100000+index),"X": pos.x,"Y": pos.y,"ANGLE": pos.angle}]}
+
+            else:
+                (xt,yt)=trans.transform(pos.x,pos.y)
+                posdict={"POS": [{"SECTION": "%d"%(100000+index),"X": xt,"Y": yt,"ANGLE": pos.angle}]}
+
+            poslist.append(posdict)
+
+        dict={"MOSAIC": [{"MOSAICX": 1,"MOSAICY": 1,"OVERLAP": 10}],
+        "CHANNELS": {},
+        "POSITIONS":poslist}
+
+        thestring=json.JSONEncoder().encode(dict)
+        file = open(filename,'w')
+        file.write(thestring)
+        file.close()
+
     def write_position_ZENczsh(self,SingleTileRegions,index,x,y,z):
 
         SingleTileRegion=ET.SubElement(SingleTileRegions,"SingleTileRegion")
