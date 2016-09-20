@@ -663,7 +663,7 @@ class posList():
 
             poslist.append(posdict)
 
-        dict={"MOSAIC": [{"MOSAICX": 1,"MOSAICY": 1,"OVERLAP": 10}],
+        dict={"MOSAIC": [{"MOSAICX": self.mosaic_settings.mx,"MOSAICY": self.mosaic_settings.my,"OVERLAP": self.mosaic_settings.overlap}],
         "CHANNELS": {},
         "POSITIONS":poslist}
 
