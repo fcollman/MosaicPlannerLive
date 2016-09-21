@@ -1464,7 +1464,7 @@ class ZVISelectFrame(wx.Frame):
         elif self.array_formatBox.GetValue()=='ZEN':
             self.mosaicCanvas.posList.add_from_file_ZEN(self.array_filepicker.GetPath())
         elif self.array_formatBox.GetValue()=='JSON': #MultiRibbons
-            print "not yet implemented"
+            self.mosaicCanvas.posList.add_from_file_JSON(self.array_filepicker.GetPath())
 
         self.mosaicCanvas.draw()
 
