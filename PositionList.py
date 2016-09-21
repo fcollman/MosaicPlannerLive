@@ -561,6 +561,7 @@ class posList():
         ifile  = open(filename, "rb")
         thestring = ifile.read()
         thedict = json.JSONDecoder().decode(thestring)
+        print thedict
         #posdict = thedict['POSITIONS']
         #reader = csv.reader(open(filename, 'rb'), delimiter=',')
         #rownum = 0
