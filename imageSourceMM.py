@@ -467,7 +467,7 @@ class imageSource():
 
         return (flip_x,flip_y,trans)
 
-    def move_safe_and_focus(self,x,y):
+    def move_safe_and_focus(self,x,y): #MultiRibbons
         #lower objective, move the stage to position x,y
         focus_stage=self.mmc.getFocusDevice()
         self.mmc.setRelativePosition(focus_stage,-3000.0)

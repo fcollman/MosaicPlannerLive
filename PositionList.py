@@ -647,7 +647,7 @@ class posList():
                 (xt,yt)=trans.transform(pos.x,pos.y)
                 writer.writerow(["p%03.3d"%(index),xt,yt,newZ[index]+zoffset,'','',''])
     
-    def save_position_list_JSON(self,filename,trans=None):
+    def save_position_list_JSON(self,filename,trans=None): #MultiRibbons
         #save the positionlist to JSON format, include position x, y, angle, mosaic settings, channel settings
         self.__sort_points()
 

@@ -1346,7 +1346,7 @@ class ZVISelectFrame(wx.Frame):
 
         self.array_load_button=wx.Button(self,id=wx.ID_ANY,label="Load",name="load button")
         self.array_formatBox=wx.ComboBox(self,id=wx.ID_ANY,value='AxioVision',\
-        size=wx.DefaultSize,choices=['uManager','AxioVision','SmartSEM','OMX','ZEN'], name='File Format For Position List')
+        size=wx.DefaultSize,choices=['uManager','AxioVision','SmartSEM','OMX','ZEN','JSON'], name='File Format For Position List') #MultiRibbons
         self.array_formatBox.SetEditable(False)
         self.array_save_button=wx.Button(self,id=wx.ID_ANY,label="Save",name="save button")
         self.array_saveframes_button=wx.Button(self,id=wx.ID_ANY,label="Save Frames",name="save-frames button")
@@ -1463,6 +1463,8 @@ class ZVISelectFrame(wx.Frame):
             self.SmartSEMSettings=SEMsetting
         elif self.array_formatBox.GetValue()=='ZEN':
             self.mosaicCanvas.posList.add_from_file_ZEN(self.array_filepicker.GetPath())
+        elif self.array_formatBox.GetValue()=='JSON': #MultiRibbons
+            print "not yet implemented"
 
         self.mosaicCanvas.draw()
 
@@ -1493,6 +1495,11 @@ class ZVISelectFrame(wx.Frame):
                 self.mosaicCanvas.posList.save_position_list_uM(self.array_filepicker.GetPath(),trans=self.Transform)
             else:
                 self.mosaicCanvas.posList.save_position_list_uM(self.array_filepicker.GetPath(),trans=None)
+        elif self.array_formatBox.GetValue()=='JSON': #MultiRibbons
+            if self.save_transformed.IsChecked():
+                self.mosaicCanvas.posList.save_position_list_JSON(self.array_filepicker.GetPath(),trans=self.Transform)
+            else:
+                self.mosaicCanvas.posList.save_position_list_JSON(self.array_filepicker.GetPath(),trans=None)
 
     def on_image_collect_load(self,event):
         path=self.imgCollectDirPicker.GetPath()
@@ -1514,6 +1521,8 @@ class ZVISelectFrame(wx.Frame):
                 self.mosaicCanvas.posList.save_frame_list_SmartSEM(self.array_filepicker.GetPath(),SEMS=self.SmartSEMSettings,trans=self.Transform)
             else:
                 self.mosaicCanvas.posList.save_frame_list_SmartSEM(self.array_filepicker.GetPath(),SEMS=self.SmartSEMSettings,trans=None)
+        elif self.array_formatBox.GetValue()=='JSON': #MultiRibbons
+            print "not yet implemented"
 
     def toggle_relative_motion(self,event):
         """event handler for handling the toggling of the relative motion"""
