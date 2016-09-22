@@ -568,7 +568,7 @@ class posList():
         self.p1=-1
         self.p2=-1
         for i in range(len(thedict["POSITIONS"])):
-            newPosition=slicePosition(axis=self.axis,pos_list=self,x=thedict["POSITIONS"][i]["POSX"],y=thedict["POSITIONS"][i]["POSY"],z=None,showNumber=self.shownumbers)
+            newPosition=slicePosition(axis=self.axis,pos_list=self,x=thedict["POSITIONS"][i]["X"],y=thedict["POSITIONS"][i]["Y"],z=None,showNumber=self.shownumbers)
             self.slicePositions.append(newPosition)
         ifile.close()
         self.updateNumbers()
