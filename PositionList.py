@@ -562,27 +562,14 @@ class posList():
         thestring = ifile.read()
         thedict = json.JSONDecoder().decode(thestring)
         print thedict
-        #posdict = thedict['POSITIONS']
-        #reader = csv.reader(open(filename, 'rb'), delimiter=',')
-        #rownum = 0
-        #row_count = sum(1 for row in csv.reader(open(filename, 'rb'), delimiter=',') )
-        #headerrows=7
-        #self.xpos=np.zeros(row_count-headerrows)
-        #self.ypos=np.zeros(row_count-headerrows)
-        #self.selected=np.zeros(row_count-headerrows,dtype=bool)
-        #self.p1=-1
-        #self.p2=-1
-        #for row in reader:
-            #if rownum >headerrows-1:
-                #if len(row)>0:
-                    #z=row[3]
-                    #if len(z)==0:
-                        #z=None
-                    #else:
-                        #z=float(z)
-                    #newPosition=slicePosition(axis=self.axis,pos_list=self,x=float(row[1]),y=float(row[2]),z=z,showNumber=self.shownumbers)
-                    #self.slicePositions.append(newPosition)
-            #rownum += 1
+        self.xpos=np.zeros(len(thedict["POSITIONS"]))
+        self.ypos=np.zeros(len(thedict["POSITIONS"]))
+        self.selected=np.zeros(len(thedict["POSITIONS"]),dtype=bool)
+        self.p1=-1
+        self.p2=-1
+        for i in range(len(thedict["POSITIONS"])):
+            newPosition=slicePosition(axis=self.axis,pos_list=self,x=thedict["POSITIONS"][i]["POSX"],y=thedict["POSITIONS"][i]["POSY"],z=None,showNumber=self.shownumbers)
+            self.slicePositions.append(newPosition)
         ifile.close()
         self.updateNumbers()
 
@@ -770,11 +757,11 @@ class posList():
         for index,pos in enumerate(self.slicePositions):
 
             if trans == None:
-                posdict={"POS": [{"SECTION": "%d"%(100000+index),"X": pos.x,"Y": pos.y,"ANGLE": pos.angle}]}
+                posdict={"SECTION": "%d"%(100000+index),"X": pos.x,"Y": pos.y,"ANGLE": pos.angle}
 
             else:
                 (xt,yt)=trans.transform(pos.x,pos.y)
-                posdict={"POS": [{"SECTION": "%d"%(100000+index),"X": xt,"Y": yt,"ANGLE": pos.angle}]}
+                posdict={"SECTION": "%d"%(100000+index),"X": xt,"Y": yt,"ANGLE": pos.angle}
 
             poslist.append(posdict)
 
