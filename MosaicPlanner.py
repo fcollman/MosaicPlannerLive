@@ -47,7 +47,7 @@ from NavigationToolBarImproved import NavigationToolbar2Wx_improved as NavBarImp
 from Settings import (MosaicSettings, CameraSettings,SiftSettings,ChangeCameraSettings, ImageSettings,
                        ChangeImageMetadata, SmartSEMSettings, ChangeSEMSettings, ChannelSettings,
                        ChangeChannelSettings, ChangeSiftSettings, CorrSettings,ChangeCorrSettings,
-                      ChangeZstackSettings, ZstackSettings, MultiRibbonSettings) #MultiRibbons
+                      ChangeZstackSettings, ZstackSettings, MultiRibbonSettings)
 
 from configobj import ConfigObj
 
