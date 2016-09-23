@@ -134,6 +134,7 @@ class MosaicToolbar(NavBarImproved):
     ON_RUN = wx.NewId()
     ON_SNAP = wx.NewId()
     ON_CROP = wx.NewId()
+    ON_RUN_MULTI = wx.NewId() #MultiRibbons
 
     def __init__(self, plotCanvas):
         """
@@ -197,6 +198,7 @@ class MosaicToolbar(NavBarImproved):
         self.gridTool=self.AddCheckTool(self.ON_GRID,gridBmp,wx.NullBitmap,'toggle rotate boxes')
         self.rotateTool=self.AddCheckTool(self.ON_ROTATE,rotateBmp,wx.NullBitmap,'toggle rotate boxes')
         self.runAcqTool=self.AddSimpleTool(self.ON_RUN,batmanBmp,'Acquire AT Data','run_tool')
+        self.runMultiAcqTool=self.AddSimpleTool(self.ON_RUN_MULTI,batmanBmp,'MultiRibbons','run_multi_tool') #MultiRibbons
 
         #setup the controls for the mosaic
         self.showmagCheck = wx.CheckBox(self)
