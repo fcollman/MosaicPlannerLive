@@ -561,4 +561,28 @@ class ChangeSEMSettings(wx.Dialog):
                                      rot=self.rotCtrl.GetValue(),
                                      Z=self.ZCtrl.GetValue(),
                                      WD=self.WDCtrl)
-                                     
+
+ class MultiRibbonSettings(wx.Dialog): #MultiRibbons
+    """dialog for setting multiribbon aquisition"""
+    def __init__(self, parent, id, title, settings,style):
+        wx.Dialog.__init__(self, parent, id, title,style=wx.DEFAULT_DIALOG_STYLE, size=(420, 600))
+
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        gridSizer=wx.FlexGridSizer(rows=4,cols=6,vgap=5,hgap=5)
+        gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label="ribbon#"),border=5)
+        gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label=" "),border=5)
+        gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label="browse"),border=5)
+        gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label="load"),border=5)
+        gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label="outdir"),border=5)
+        gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label="choose"),border=5)
+
+        hbox = wx.BoxSizer(wx.HORIZONTAL)
+        ok_button = wx.Button(self,wx.ID_OK,'OK')
+        cancel_button = wx.Button(self,wx.ID_CANCEL,'Cancel')
+        hbox.Add(ok_button)
+        hbox.Add(cancel_button)
+
+        vbox.Add(gridSizer)
+        vbox.Add(hbox)
+
+        self.SetSizer(vbox)

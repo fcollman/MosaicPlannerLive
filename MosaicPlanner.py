@@ -47,7 +47,7 @@ from NavigationToolBarImproved import NavigationToolbar2Wx_improved as NavBarImp
 from Settings import (MosaicSettings, CameraSettings,SiftSettings,ChangeCameraSettings, ImageSettings,
                        ChangeImageMetadata, SmartSEMSettings, ChangeSEMSettings, ChannelSettings,
                        ChangeChannelSettings, ChangeSiftSettings, CorrSettings,ChangeCorrSettings,
-                      ChangeZstackSettings, ZstackSettings,)
+                      ChangeZstackSettings, ZstackSettings, MultiRibbonSettings) #MultiRibbons
 
 from configobj import ConfigObj
 
@@ -168,7 +168,7 @@ class MosaicToolbar(NavBarImproved):
         batmanBmp     = wx.Image('icons/new/batman.png',   wx.BITMAP_TYPE_PNG).ConvertToBitmap()
         activateBmp   = wx.Image('icons/activate-icon.png',wx.BITMAP_TYPE_PNG).ConvertToBitmap()
         #mosaicBmp     = wx.Image('icons/new/mosaic_camera.png', wx.BITMAP_TYPE_PNG).ConvertToBitmap()
-
+        checkBmp     = wx.Image('icons/new/1446777170_Check.png',wx.BITMAP_TYPE_PNG).ConvertToBitmap() #MultiRibbons
 
         self.DeleteTool(self.wx_ids['Subplots']) # batman - what is this? add comment above it?
 
@@ -198,7 +198,7 @@ class MosaicToolbar(NavBarImproved):
         self.gridTool=self.AddCheckTool(self.ON_GRID,gridBmp,wx.NullBitmap,'toggle rotate boxes')
         self.rotateTool=self.AddCheckTool(self.ON_ROTATE,rotateBmp,wx.NullBitmap,'toggle rotate boxes')
         self.runAcqTool=self.AddSimpleTool(self.ON_RUN,batmanBmp,'Acquire AT Data','run_tool')
-        self.runMultiAcqTool=self.AddSimpleTool(self.ON_RUN_MULTI,batmanBmp,'MultiRibbons','run_multi_tool') #MultiRibbons
+        self.runMultiAcqTool=self.AddSimpleTool(self.ON_RUN_MULTI,checkBmp,'MultiRibbons','run_multi_tool') #MultiRibbons
 
         #setup the controls for the mosaic
         self.showmagCheck = wx.CheckBox(self)
@@ -258,6 +258,7 @@ class MosaicToolbar(NavBarImproved):
         wx.EVT_TOOL(self, self.ON_ROTATE, self.canvas.on_rotate_tool)
         wx.EVT_TOOL(self, self.ON_SNAP, self.canvas.on_snap_tool)
         wx.EVT_TOOL(self, self.ON_CROP, self.canvas.on_crop_tool)
+        wx.EVT_TOOL(self, self.ON_RUN_MULTI, self.canvas.on_run_multi_acq)
 
         self.Realize()
 
@@ -1179,6 +1180,14 @@ class MosaicPanel(FigureCanvas):
         else:
             self.do_shift(event)
 
+    def on_run_multi_acq(self,event="none"): #MultiRibbons
+        #print "running"
+        dlg = MultiRibbonSettings(None, -1, title = "Multiribbon Settings", settings = self.channel_settings,style=wx.OK)
+        ret=dlg.ShowModal()
+        if ret == wx.ID_OK:
+            print "save settings"
+
+        dlg.Destroy()
 
 class ZVISelectFrame(wx.Frame):
     """class extending wx.Frame for highest level handling of GUI components """
