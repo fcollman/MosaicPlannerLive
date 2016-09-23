@@ -562,7 +562,7 @@ class ChangeSEMSettings(wx.Dialog):
                                      Z=self.ZCtrl.GetValue(),
                                      WD=self.WDCtrl)
 
- class MultiRibbonSettings(wx.Dialog): #MultiRibbons
+class MultiRibbonSettings(wx.Dialog): #MultiRibbons
     """dialog for setting multiribbon aquisition"""
     def __init__(self, parent, id, title, settings,style):
         wx.Dialog.__init__(self, parent, id, title,style=wx.DEFAULT_DIALOG_STYLE, size=(420, 600))
