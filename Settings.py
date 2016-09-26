@@ -576,6 +576,17 @@ class MultiRibbonSettings(wx.Dialog): #MultiRibbons
         gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label="outdir"),border=5)
         gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label="choose"),border=5)
 
+        self.ribbon_label=wx.StaticText(self,id=wx.ID_ANY,label="0")
+        self.ribbon_load_button=wx.Button(self,id=wx.ID_ANY,label="Load",name="load button")
+        self.ribbon_filepicker=wx.FilePickerCtrl(self,message='Select an array file',\
+        path="",name='arrayFilePickerCtrl1',\
+        style=wx.FLP_USE_TEXTCTRL, size=wx.Size(300,20),wildcard='*.*')
+
+        self.ribbon_filepickersizer=wx.BoxSizer(wx.HORIZONTAL)
+        self.ribbon_filepickersizer.Add(self.ribbon_label,0,wx.EXPAND)
+        self.ribbon_filepickersizer.Add(self.ribbon_filepicker,1,wx.EXPAND)
+        self.ribbon_filepickersizer.Add(self.ribbon_load_button,0,wx.EXPAND)
+
         hbox = wx.BoxSizer(wx.HORIZONTAL)
         ok_button = wx.Button(self,wx.ID_OK,'OK')
         cancel_button = wx.Button(self,wx.ID_CANCEL,'Cancel')
