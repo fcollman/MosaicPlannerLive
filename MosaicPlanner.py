@@ -1189,6 +1189,8 @@ class MosaicPanel(FigureCanvas):
 
         dlg.Destroy()
 
+
+
 class ZVISelectFrame(wx.Frame):
     """class extending wx.Frame for highest level handling of GUI components """
     ID_RELATIVEMOTION = wx.NewId()

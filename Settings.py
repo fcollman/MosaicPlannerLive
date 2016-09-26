@@ -17,6 +17,7 @@
 # 
 #===============================================================================
 import wx
+from PositionList import posList
 
 class ZstackSettings():
 
@@ -565,32 +566,25 @@ class ChangeSEMSettings(wx.Dialog):
 class MultiRibbonSettings(wx.Dialog): #MultiRibbons
     """dialog for setting multiribbon aquisition"""
     def __init__(self, parent, id, title, settings,style):
-        wx.Dialog.__init__(self, parent, id, title,style=wx.DEFAULT_DIALOG_STYLE, size=(1000, 600))
+        wx.Dialog.__init__(self, parent, id, title,style=wx.DEFAULT_DIALOG_STYLE, size=(1500, 300))
 
         vbox = wx.BoxSizer(wx.VERTICAL)
-        gridSizer=wx.FlexGridSizer(rows=4,cols=3,vgap=5,hgap=5)
+        gridSizer=wx.FlexGridSizer(rows=5,cols=3,vgap=5,hgap=5)
         gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label="ribbon#"),border=5)
         gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label="array file"),border=5)
         gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label=" "),border=5)
-        #gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label=" "),border=5)
-        #gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label="select folder"),border=5)
-        #gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label=" "),border=5)
-        #gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label="0"),border=5)
-        self.ribbon_label=wx.StaticText(self,id=wx.ID_ANY,label="0")
-        self.ribbon_load_button=wx.Button(self,id=wx.ID_ANY,label="Load",name="load button")
-        self.ribbon_filepicker=wx.FilePickerCtrl(self,message='Select an array file',\
-        path="",name='arrayFilePickerCtrl1',\
-        style=wx.FLP_USE_TEXTCTRL, size=wx.Size(300,20),wildcard='*.*')
 
-        #self.ribbon_filepickersizer=wx.BoxSizer(wx.HORIZONTAL)
-        #self.ribbon_filepickersizer.Add(self.ribbon_label,0,wx.EXPAND)
-        #self.ribbon_filepickersizer.Add(self.ribbon_filepicker,1,wx.EXPAND)
-        #self.ribbon_filepickersizer.Add(self.ribbon_load_button,0,wx.EXPAND)
         for i in range(4):
-            #self.ribbon_label=wx.StaticText(self,id=wx.ID_ANY,label='0')
+            self.ribbon_label=wx.StaticText(self,id=wx.ID_ANY,label=str(i))
+            self.ribbon_load_button=wx.Button(self,id=wx.ID_ANY,label="Load",name="load button")
+            self.ribbon_filepicker=wx.FilePickerCtrl(self,message='Select an array file',\
+            path="",name='arrayFilePickerCtrl1',\
+            style=wx.FLP_USE_TEXTCTRL, size=wx.Size(1000,20),wildcard='*.*')
             gridSizer.Add(self.ribbon_label,0,wx.EXPAND,border=5)
             gridSizer.Add(self.ribbon_filepicker,1,wx.EXPAND,border=5)
             gridSizer.Add(self.ribbon_load_button,0,wx.EXPAND,border=5)
+
+        #self.Bind(wx.EVT_BUTTON, self.on_ribbon_load,self.ribbon_load_button)
 
         hbox = wx.BoxSizer(wx.HORIZONTAL)
         ok_button = wx.Button(self,wx.ID_OK,'OK')
@@ -602,3 +596,7 @@ class MultiRibbonSettings(wx.Dialog): #MultiRibbons
         vbox.Add(hbox)
 
         self.SetSizer(vbox)
+
+        #def on_ribbon_load(self,event="none"):
+            #posList.add_from_file_JSON(self.array_filepicker.GetPath())
+            #self.mosaicCanvas.draw()
