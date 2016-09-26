@@ -565,16 +565,16 @@ class ChangeSEMSettings(wx.Dialog):
 class MultiRibbonSettings(wx.Dialog): #MultiRibbons
     """dialog for setting multiribbon aquisition"""
     def __init__(self, parent, id, title, settings,style):
-        wx.Dialog.__init__(self, parent, id, title,style=wx.DEFAULT_DIALOG_STYLE, size=(420, 600))
+        wx.Dialog.__init__(self, parent, id, title,style=wx.DEFAULT_DIALOG_STYLE, size=(1000, 600))
 
         vbox = wx.BoxSizer(wx.VERTICAL)
-        gridSizer=wx.FlexGridSizer(rows=4,cols=6,vgap=5,hgap=5)
+        gridSizer=wx.FlexGridSizer(rows=4,cols=3,vgap=5,hgap=5)
         gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label="ribbon#"),border=5)
+        gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label="array file"),border=5)
         gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label=" "),border=5)
-        gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label="browse"),border=5)
-        gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label="load"),border=5)
-        gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label="outdir"),border=5)
-        gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label="choose"),border=5)
+        #gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label=" "),border=5)
+        #gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label="select folder"),border=5)
+        #gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label=" "),border=5)
         #gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label="0"),border=5)
         self.ribbon_label=wx.StaticText(self,id=wx.ID_ANY,label="0")
         self.ribbon_load_button=wx.Button(self,id=wx.ID_ANY,label="Load",name="load button")
@@ -586,9 +586,11 @@ class MultiRibbonSettings(wx.Dialog): #MultiRibbons
         #self.ribbon_filepickersizer.Add(self.ribbon_label,0,wx.EXPAND)
         #self.ribbon_filepickersizer.Add(self.ribbon_filepicker,1,wx.EXPAND)
         #self.ribbon_filepickersizer.Add(self.ribbon_load_button,0,wx.EXPAND)
-        gridSizer.Add(self.ribbon_label,0,wx.EXPAND,border=5)
-        gridSizer.Add(self.ribbon_filepicker,1,wx.EXPAND,border=5)
-        gridSizer.Add(self.ribbon_load_button,0,wx.EXPAND,border=5)
+        for i in range(4):
+            self.ribbon_label=wx.StaticText(self,id=wx.ID_ANY,label=i)
+            gridSizer.Add(self.ribbon_label,0,wx.EXPAND,border=5)
+            gridSizer.Add(self.ribbon_filepicker,1,wx.EXPAND,border=5)
+            gridSizer.Add(self.ribbon_load_button,0,wx.EXPAND,border=5)
 
         hbox = wx.BoxSizer(wx.HORIZONTAL)
         ok_button = wx.Button(self,wx.ID_OK,'OK')
