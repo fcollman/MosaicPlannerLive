@@ -587,7 +587,7 @@ class MultiRibbonSettings(wx.Dialog): #MultiRibbons
         #self.ribbon_filepickersizer.Add(self.ribbon_filepicker,1,wx.EXPAND)
         #self.ribbon_filepickersizer.Add(self.ribbon_load_button,0,wx.EXPAND)
         for i in range(4):
-            self.ribbon_label=wx.StaticText(self,id=wx.ID_ANY,label=i)
+            self.ribbon_label=wx.StaticText(self,id=wx.ID_ANY,label='0')
             gridSizer.Add(self.ribbon_label,0,wx.EXPAND,border=5)
             gridSizer.Add(self.ribbon_filepicker,1,wx.EXPAND,border=5)
             gridSizer.Add(self.ribbon_load_button,0,wx.EXPAND,border=5)
