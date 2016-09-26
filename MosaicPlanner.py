@@ -47,7 +47,7 @@ from NavigationToolBarImproved import NavigationToolbar2Wx_improved as NavBarImp
 from Settings import (MosaicSettings, CameraSettings,SiftSettings,ChangeCameraSettings, ImageSettings,
                        ChangeImageMetadata, SmartSEMSettings, ChangeSEMSettings, ChannelSettings,
                        ChangeChannelSettings, ChangeSiftSettings, CorrSettings,ChangeCorrSettings,
-                      ChangeZstackSettings, ZstackSettings,)
+                      ChangeZstackSettings, ZstackSettings, DirectorySettings, ChangeDirectorySettings)
 
 from configobj import ConfigObj
 
@@ -358,6 +358,19 @@ class MosaicPanel(FigureCanvas):
         self.CorrSettings = CorrSettings()
         self.CorrSettings.load_settings(config)
 
+        # load directory settings
+
+        self.default_path = self.cfg['Directories']['Default Path']
+        self.directory_settings = DirectorySettings()
+        self.directory_settings.load_settings(config)
+        self.edit_Directory_settings(default_path=self.default_path)
+        print 'Sample_ID:', self.directory_settings.Sample_ID
+        print 'Ribbon_ID:', self.directory_settings.Ribbon_ID
+        print 'Session_ID:', self.directory_settings.Session_ID
+        print 'Map Number:', self.directory_settings.Map_num
+        # self.rootPath = self.directory_settings.create_directory(config, kind='map')
+        # print self.rootPath
+        self.directory_settings.create_directory(config,kind='map')
         # load Zstack settings
         self.zstack_settings = ZstackSettings()
         self.zstack_settings.load_settings(config)
@@ -401,7 +414,7 @@ class MosaicPanel(FigureCanvas):
         self.imgSrc.mmc.unloadAllDevices()
 
     def on_load(self,rootPath):
-        self.rootPath=rootPath
+        self.rootPath = rootPath
         print "transpose toggle state",self.imgSrc.transpose_xy
         self.mosaicImage=MosaicImage(self.subplot,self.posone_plot,self.postwo_plot,self.corrplot,self.imgSrc,rootPath,figure=self.figure)
         self.on_crop_tool()
@@ -484,6 +497,8 @@ class MosaicPanel(FigureCanvas):
 
 
         def software_acquire():
+            currZ=self.imgSrc.get_z()
+            presentZ = currZ
             for z_index, zplane in enumerate(zplanes_to_visit):
                 for k,ch in enumerate(self.channel_settings.channels):
                     #print datetime.datetime.now().time()," start channel",ch, " zplane", zplane
@@ -508,6 +523,8 @@ class MosaicPanel(FigureCanvas):
                         self.dataQueue.put((slice_index,frame_index, z_index, prot_name,path,data,ch,x,y,z))
 
         def hardware_acquire():
+            currZ=self.imgSrc.get_z()
+            presentZ = currZ
             for z_index, zplane in enumerate(zplanes_to_visit):
                 z = zplane
                 if not hold_focus:
@@ -603,14 +620,18 @@ class MosaicPanel(FigureCanvas):
         return numFrames,numSections
 
     def get_output_dir(self):
-         #get an output directory
-        dlg=wx.DirDialog(self,message="Pick output directory",defaultPath= os.path.split(self.rootPath)[0])
-        button_pressed = dlg.ShowModal()
-        if button_pressed == wx.ID_CANCEL:
-            wx.MessageBox("You didn't enter a save directory... \n Aborting aquisition")
-            return None
-        outdir=dlg.GetPath()
-        dlg.Destroy()
+        #gets output directory for session
+
+        cfg = self.cfg
+        outdir = self.directory_settings.create_directory(cfg,kind = 'data')
+        if outdir is not None:
+            dlg=wx.DirDialog(self,message="Pick output directory",defaultPath=outdir)
+            button_pressed = dlg.ShowModal()
+            if button_pressed == wx.ID_CANCEL:
+                wx.MessageBox("You didn't enter a save directory... \n Aborting acquisition")
+                return None
+
+            dlg.Destroy()
 
         return outdir
 
@@ -649,8 +670,9 @@ class MosaicPanel(FigureCanvas):
         numchan,chrom_correction = self.summarize_channel_settings()
 
 
-        caption = "about to capture %d sections, binning is %dx%d, numchannel is %d"%(len(self.posList.slicePositions),binning,binning,numchan)
-        dlg = wx.MessageDialog(self,message=caption, style = wx.OK|wx.CANCEL)
+        Caption = "about to capture %d sections, binning is %dx%d, numchannel is %d"%(len(self.posList.slicePositions),binning,binning,numchan)
+        dlg = wx.MessageDialog(self,message=Caption, style = wx.OK|wx.CANCEL)
+
         button_pressed = dlg.ShowModal()
         if button_pressed == wx.ID_CANCEL:
             return False
@@ -793,6 +815,14 @@ class MosaicPanel(FigureCanvas):
         self.cfg['MosaicPlanner']['MM_config_file'] = self.MM_config_file
         self.cfg.write()
 
+        dlg.Destroy()
+
+    def edit_Directory_settings(self,default_path,event="none",):
+        dlg = ChangeDirectorySettings(None,-1,title = "Enter Sample Information",settings = self.directory_settings,style = wx.OK)
+        ret = dlg.ShowModal()
+        if ret == wx.ID_OK:
+            self.directory_settings = dlg.get_settings(default_path)
+            self.directory_settings.save_settings(self.cfg)
         dlg.Destroy()
 
     def edit_Zstack_settings(self,event = "none"):
