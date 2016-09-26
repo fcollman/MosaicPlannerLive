@@ -17,6 +17,117 @@
 # 
 #===============================================================================
 import wx
+import os
+
+class DirectorySettings():
+
+    def __init__(self,Sample_ID = None, Ribbon_ID = None, Session_ID = None,Map_num= None,default_path = None ):
+
+        self.default_path = default_path
+        self.Sample_ID = Sample_ID
+        self.Ribbon_ID = Ribbon_ID
+        self.Session_ID = Session_ID
+        self.Map_num = Map_num
+
+
+
+    def save_settings(self,cfg):
+        cfg['Directories']['Sample_ID'] = self.Sample_ID
+        cfg['Directories']['Ribbon_ID'] = self.Ribbon_ID
+        cfg['Directories']['Session_ID'] = self.Session_ID
+        cfg['Directories']['Map_num'] = self.Map_num
+        cfg.write()
+
+    def load_settings(self,cfg):
+        self.default_path = cfg['Directories']['Default Path']
+        self.Sample_ID = cfg['Directories']['Sample_ID']
+        self.Ribbon_ID = cfg['Directories']['Ribbon_ID']
+        self.Session_ID = cfg['Directories']['Session_ID']
+        self.Map_num = cfg['Directories']['Map_num']
+
+    def create_directory(self,cfg,kind):
+        root = self.default_path
+        print 'root:', root
+        if kind == 'map':
+            map_folder = os.path.join(root,self.Sample_ID,'raw','map',self.Ribbon_ID,self.Map_num)
+            if not os.path.exists(map_folder):
+                os.makedirs(map_folder)
+                cfg['MosaicPlanner']['default_imagepath'] = map_folder
+                # return map_folder
+            else:
+                # return map_folder
+                cfg['MosaicPlanner']['default_imagepath'] = map_folder
+        elif kind == 'data':
+            data_folder = os.path.join(root,self.Sample_ID,'raw','data',self.Ribbon_ID,self.Session_ID)
+            if not os.path.exists(data_folder):
+                os.makedirs(data_folder)
+                return data_folder
+            else:
+                wx.MessageBox("Path already exists! \n Aborting acquisition")
+                return None
+        else:
+            return None
+
+
+
+
+class ChangeDirectorySettings(wx.Dialog):
+    def __init__(self,parent, id,style, settings, title="Enter Sample Information"):
+        wx.Dialog.__init__(self, parent, id, title, style= wx.DEFAULT_DIALOG_STYLE, size= (420,-1))
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        self.settings = settings
+
+        self.SampleID_txt = wx.StaticText(self, label = "Sample ID:")
+        self.SampleID_Ctrl = wx.TextCtrl(self)
+
+        self.Ribbon_txt = wx.StaticText(self, label= "Ribbon Number:")
+        self.RibbonInt_Ctrl = wx.lib.intctrl.IntCtrl(self,value = 0, min = 0, max = None, allow_none = False)
+
+        self.Session_txt = wx.StaticText(self,label = "Session Number:")
+        self.SessionInt_Ctrl = wx.lib.intctrl.IntCtrl(self,value = 0, min=0, max = None, allow_none = False)
+
+        self.Map_txt = wx.StaticText(self,label = "Map Number:")
+        self.MapInt_Ctrl = wx.lib.intctrl.IntCtrl(self,value = 0, min = 0 , max = None, allow_none = False)
+
+
+
+
+        ok_button = wx.Button(self,wx.ID_OK,'OK')
+        cancel_button = wx.Button(self,wx.ID_CANCEL,'Cancel')
+        hbox1 = wx.BoxSizer(wx.HORIZONTAL)
+        hbox2 = wx.BoxSizer(wx.HORIZONTAL)
+        hbox3 = wx.BoxSizer(wx.HORIZONTAL)
+        hbox4 = wx.BoxSizer(wx.HORIZONTAL)
+        hbox5 = wx.BoxSizer(wx.HORIZONTAL)
+        hbox1.Add(self.SampleID_txt)
+        hbox1.Add(self.SampleID_Ctrl)
+        hbox2.Add(self.Ribbon_txt)
+        hbox2.Add(self.RibbonInt_Ctrl)
+        hbox3.Add(self.Session_txt)
+        hbox3.Add(self.SessionInt_Ctrl)
+        hbox4.Add(self.Map_txt)
+        hbox4.Add(self.MapInt_Ctrl)
+        hbox5.Add(ok_button)
+        hbox5.Add(cancel_button)
+        vbox.Add(hbox1)
+        vbox.Add(hbox2)
+        vbox.Add(hbox3)
+        vbox.Add(hbox4)
+        vbox.Add(hbox5)
+        self.SetSizer(vbox)
+
+    def get_settings(self,default_path):
+        Ribbon_num = str(self.RibbonInt_Ctrl.GetValue())
+        Ribbon_ID = 'Ribbon' + Ribbon_num.zfill(4) # insures the ribbon ID that is passed is of the form Ribbon0000
+        Session_ID = 'session' + str(self.SessionInt_Ctrl.GetValue())
+        Sample_ID = self.SampleID_Ctrl.GetValue()
+        Map_num = 'map' + str(self.MapInt_Ctrl.GetValue())
+        return DirectorySettings(Sample_ID,Ribbon_ID,Session_ID,Map_num,default_path)
+
+
+
+
+
 
 class ZstackSettings():
 
@@ -37,6 +148,7 @@ class ZstackSettings():
         self.zstack_number = cfg['ZStackSettings']['zstack_number']
         print self.zstack_number,type(self.zstack_number)
         self.zstack_number = int(self.zstack_number + (1 - self.zstack_number % 2))
+
 
 class ChangeZstackSettings(wx.Dialog):
     def __init__(self, parent, id, title, settings,style):
@@ -83,6 +195,17 @@ class ChangeZstackSettings(wx.Dialog):
         stacksize   = self.znumberIntCtrl.GetValue()
         delta       = self.zdeltaFloatCtrl.GetValue()
         return ZstackSettings(zstack_delta = delta,zstack_number = stacksize,zstack_flag = flag)
+
+
+
+
+
+
+
+
+
+
+
 
 class CorrSettings():
 
