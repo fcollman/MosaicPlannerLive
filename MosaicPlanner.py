@@ -1185,7 +1185,8 @@ class MosaicPanel(FigureCanvas):
         dlg = MultiRibbonSettings(None, -1, title = "Multiribbon Settings", settings = self.channel_settings,style=wx.OK)
         ret=dlg.ShowModal()
         if ret == wx.ID_OK:
-            print "save settings"
+            path1=dlg.GetSettings()
+            print path1
 
         dlg.Destroy()
 
