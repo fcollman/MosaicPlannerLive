@@ -1186,7 +1186,7 @@ class MosaicPanel(FigureCanvas):
         ret=dlg.ShowModal()
         if ret == wx.ID_OK:
             path1=dlg.GetSettings()
-            print path1
+            print path1, type(path1), len(path1)
 
         dlg.Destroy()
 

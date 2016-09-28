@@ -574,7 +574,8 @@ class MultiRibbonSettings(wx.Dialog): #MultiRibbons
         gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label="array file"),border=5)
         gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label=" "),border=5)
 
-        for i in range(1):
+        self.RibbonFilePath = []
+        for i in range(4):
             self.ribbon_label=wx.StaticText(self,id=wx.ID_ANY,label=str(i))
             self.ribbon_load_button=wx.Button(self,id=wx.ID_ANY,label="Load",name="load button")
             self.ribbon_filepicker=wx.FilePickerCtrl(self,message='Select an array file',\
@@ -582,8 +583,10 @@ class MultiRibbonSettings(wx.Dialog): #MultiRibbons
             style=wx.FLP_USE_TEXTCTRL, size=wx.Size(1000,20),wildcard='*.*')
             gridSizer.Add(self.ribbon_label,0,wx.EXPAND,border=5)
             gridSizer.Add(self.ribbon_filepicker,1,wx.EXPAND,border=5)
-            gridSizer.Add(self.ribbon_load_button,0,wx.EXPAND,border=5)
+            gridSizer.Add(self.ribbon_label,0,wx.EXPAND,border=5)
+            #gridSizer.Add(self.ribbon_load_button,0,wx.EXPAND,border=5)
             #self.ribbon_filepicker.GetPath()
+            self.RibbonFilePath.append(self.ribbon_filepicker)
 
         hbox = wx.BoxSizer(wx.HORIZONTAL)
         ok_button = wx.Button(self,wx.ID_OK,'OK')
@@ -597,5 +600,10 @@ class MultiRibbonSettings(wx.Dialog): #MultiRibbons
         self.SetSizer(vbox)
 
     def GetSettings(self):
-        pathway1 = self.ribbon_filepicker.GetPath()
-        return pathway1
+        #pathway=dict([])
+        pathway=[]
+        for i in range(4):
+            #pathway[i]=self.RibbonFilePath[i].GetPath()
+            newpath=self.RibbonFilePath[i].GetPath()
+            pathway.append(newpath)
+        return pathway
