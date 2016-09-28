@@ -17,7 +17,7 @@
 # 
 #===============================================================================
 import wx
-#from PositionList import posList
+import os
 
 class ZstackSettings():
 
@@ -577,15 +577,13 @@ class MultiRibbonSettings(wx.Dialog): #MultiRibbons
         self.RibbonFilePath = []
         for i in range(4):
             self.ribbon_label=wx.StaticText(self,id=wx.ID_ANY,label=str(i))
-            self.ribbon_load_button=wx.Button(self,id=wx.ID_ANY,label="Load",name="load button")
+            self.ribbon_load_button=wx.Button(self,id=wx.ID_ANY,label=" ",name="load button")
             self.ribbon_filepicker=wx.FilePickerCtrl(self,message='Select an array file',\
             path="",name='arrayFilePickerCtrl1',\
-            style=wx.FLP_USE_TEXTCTRL, size=wx.Size(1000,20),wildcard='*.*')
+            style=wx.FLP_USE_TEXTCTRL, size=wx.Size(600,20),wildcard='*.*')
             gridSizer.Add(self.ribbon_label,0,wx.EXPAND,border=5)
             gridSizer.Add(self.ribbon_filepicker,1,wx.EXPAND,border=5)
-            gridSizer.Add(self.ribbon_label,0,wx.EXPAND,border=5)
-            #gridSizer.Add(self.ribbon_load_button,0,wx.EXPAND,border=5)
-            #self.ribbon_filepicker.GetPath()
+            gridSizer.Add(self.ribbon_load_button,0,wx.EXPAND,border=5)
             self.RibbonFilePath.append(self.ribbon_filepicker)
 
         hbox = wx.BoxSizer(wx.HORIZONTAL)

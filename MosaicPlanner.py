@@ -1182,13 +1182,37 @@ class MosaicPanel(FigureCanvas):
 
     def on_run_multi_acq(self,event="none"): #MultiRibbons
         #print "running"
+        poslistpath=[]
         dlg = MultiRibbonSettings(None, -1, title = "Multiribbon Settings", settings = self.channel_settings,style=wx.OK)
         ret=dlg.ShowModal()
         if ret == wx.ID_OK:
-            path1=dlg.GetSettings()
-            print path1, type(path1), len(path1)
-
+            poslistpath=dlg.GetSettings()
+            print poslistpath
         dlg.Destroy()
+
+        print poslistpath, "test"
+        #load all 4 ribbons as one posList for display
+        for i in range(4):
+            self.posList.add_from_file_JSON(poslistpath[i])
+        self.draw()
+
+        caption = "about to capture multiple ribbons"
+        dlg = wx.MessageDialog(self,message=caption, style = wx.OK|wx.CANCEL)
+        button_pressed = dlg.ShowModal()
+        if button_pressed == wx.ID_CANCEL:
+            return False
+
+        self.posList.select_all()
+        self.draw()
+        self.posList.delete_selected()
+        self.draw()
+
+        #outdir = self.get_output_dir()
+        #if outdir is None:
+            #return None
+        self.posList.add_from_file_JSON(poslistpath[0])
+        self.draw()
+        #self.posList.add_from_file_JSON(poslistpath[1])
 
 
 
