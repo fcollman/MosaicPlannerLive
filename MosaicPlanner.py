@@ -1181,20 +1181,21 @@ class MosaicPanel(FigureCanvas):
             self.do_shift(event)
 
     def on_run_multi_acq(self,event="none"): #MultiRibbons
-        #print "running"
+        #pick position lists
         poslistpath=[]
         dlg = MultiRibbonSettings(None, -1, title = "Multiribbon Settings", settings = self.channel_settings,style=wx.OK)
         ret=dlg.ShowModal()
         if ret == wx.ID_OK:
             poslistpath=dlg.GetSettings()
-            print poslistpath
         dlg.Destroy()
+        print "poslistpath:", poslistpath
 
-        print poslistpath, "test"
-        #load all 4 ribbons as one posList for display
-        for i in range(4):
-            self.posList.add_from_file_JSON(poslistpath[i])
-        self.draw()
+        #load all ribbons as one posList for display
+        for rib in range(4):
+            self.posList.add_from_file_JSON(poslistpath[rib])
+            self.posList.set_frames_visible(True)
+            self.draw()
+        print self.posList.mosaic_settings.mx, self.posList.mosaic_settings.my, self.posList.mosaic_settings.overlap
 
         caption = "about to capture multiple ribbons"
         dlg = wx.MessageDialog(self,message=caption, style = wx.OK|wx.CANCEL)
@@ -1202,18 +1203,109 @@ class MosaicPanel(FigureCanvas):
         if button_pressed == wx.ID_CANCEL:
             return False
 
-        self.posList.select_all()
-        self.draw()
-        self.posList.delete_selected()
-        self.draw()
+        self.imgSrc.set_binning(1)
+        binning=self.imgSrc.get_binning()
+        numchan,chrom_correction = self.summarize_channel_settings()
 
-        #outdir = self.get_output_dir()
-        #if outdir is None:
-            #return None
-        self.posList.add_from_file_JSON(poslistpath[0])
-        self.draw()
-        #self.posList.add_from_file_JSON(poslistpath[1])
+        #pick output directories
+        outdir =[]
+        for rib in range(4):
+            newoutdir = self.get_output_dir()
+            if newoutdir is None:
+                return None
+            outdir.append(newoutdir)
+        print "outdir:", outdir, type(outdir), len(outdir)
 
+
+
+        for rib in range(1): #loop through all ribbons
+            #clear position list
+            self.posList.select_all()
+            self.draw()
+            self.posList.delete_selected()
+            self.draw()
+
+            #load poslist from JSON file
+            self.posList.add_from_file_JSON(poslistpath[rib])
+            self.posList.set_frames_visible(True)
+            self.draw()
+
+            #from on_run_acq
+            self.make_channel_directories(outdir[rib])
+
+            self.write_session_metadata(outdir[rib])
+
+            self.move_safe_to_start()
+
+            self.dataQueue = mp.Queue()
+            metadata_dictionary = {
+            'channelname'    : self.channel_settings.prot_names,
+            '(height,width)' : self.imgSrc.get_sensor_size(),
+            'ScaleFactorX'   : self.imgSrc.get_pixel_size(),
+            'ScaleFactorY'   : self.imgSrc.get_pixel_size(),
+            'exp_time'       : self.channel_settings.exposure_times,
+            }
+            self.saveProcess =  mp.Process(target=file_save_process,args=(self.dataQueue,STOP_TOKEN, metadata_dictionary))
+            self.saveProcess.start()
+
+            numFrames,numSections = self.setup_progress_bar()
+
+            hold_focus = not (self.zstack_settings.zstack_flag or chrom_correction)
+
+            if self.cfg['MosaicPlanner']['hardware_trigger']:
+                #iterates over channels/exposure times in appropriate order
+                channels = [ch for ch in self.channel_settings.channels if self.channel_settings.usechannels[ch]]
+                exp_times = [self.channel_settings.exposure_times[ch] for ch in self.channel_settings.channels if self.channel_settings.usechannels[ch]]
+                for k,ch in enumerate(self.channel_settings.channels):
+                    print 'Channel:', ch
+                    print 'Exposure:', self.channel_settings.exposure_times[ch]
+                for k in range(len(channels)):
+                    print 'Exposure in order:', exp_times[k]
+                    print 'Channel in order:', channels[k]
+                success=self.imgSrc.setup_hardware_triggering(channels,exp_times)
+
+            goahead = True
+            #loop over positions
+            for i,pos in enumerate(self.posList.slicePositions):
+                if pos.activated:
+                    if not goahead:
+                        break
+                    if not self.imgSrc.mmc.isContinuousFocusEnabled():
+                        print "autofocus not enabled when moving between sections.. "
+                        goahead=False
+                        break
+                    (goahead, skip) = self.progress.Update(i*numFrames,'section %d of %d'%(i,numSections-1))
+                    #turn on autofocus
+                    self.ResetPiezo()
+                    if pos.frameList is None:
+                        self.multiDacq(outdir[rib],pos.x,pos.y,i,hold_focus=hold_focus)
+                    else:
+                        for j,fpos in enumerate(pos.frameList.slicePositions):
+                            if not goahead:
+                                print "breaking out!"
+                                break
+                            if not self.imgSrc.mmc.isContinuousFocusEnabled():
+                                print "autofocus no longer enabled while moving between frames.. quiting"
+                                goahead = False
+                                break
+                            self.multiDacq(outdir[rib],fpos.x,fpos.y,i,j,hold_focus)
+                            self.ResetPiezo()
+                            (goahead, skip)=self.progress.Update((i*numFrames) + j+1,'section %d of %d, frame %d'%(i,numSections-1,j))
+
+                    wx.Yield()
+            if not goahead:
+                print "acquisition stopped prematurely"
+                print "section %d"%(i)
+                if pos.frameList is not None:
+                    print "frame %d"%(j)
+
+            self.dataQueue.put(STOP_TOKEN)
+            self.saveProcess.join()
+            print "save process ended, ribbon %d of 3"%(rib)
+            self.progress.Destroy()
+            self.imgSrc.set_binning(2)
+            if self.cfg['MosaicPlanner']['hardware_trigger']:
+                self.imgSrc.stop_hardware_triggering()
 
 
 class ZVISelectFrame(wx.Frame):
