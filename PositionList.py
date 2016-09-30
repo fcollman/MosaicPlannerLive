@@ -235,6 +235,13 @@ class posList():
         for index, pos in enumerate(self.slicePositions):
             pos.setAngle(theta[index])
 
+    def rotate_boxes_angle(self):
+        """use angle from loaded JSON position list and then set the angle
+        attribute of each slice position using setAngle"""
+
+        for index, pos in enumerate(self.slicePositions):
+            pos.setAngle(pos.angle)
+
     def rotate_selected(self,dtheta):
         """
 
@@ -568,15 +575,12 @@ class posList():
         self.p1=-1
         self.p2=-1
         for i in range(len(thedict["POSITIONS"])):
-            newPosition=slicePosition(axis=self.axis,pos_list=self,x=thedict["POSITIONS"][i]["X"],y=thedict["POSITIONS"][i]["Y"],z=None,showNumber=self.shownumbers)
+            newPosition=slicePosition(axis=self.axis,pos_list=self,x=thedict["POSITIONS"][i]["X"],\
+            y=thedict["POSITIONS"][i]["Y"],z=None,angle=thedict["POSITIONS"][i]["ANGLE"],showNumber=self.shownumbers)
             self.slicePositions.append(newPosition)
-        #self.mosaic_settings.mx = 3
-        #self.mosaic_settings.my = 7
-        #self.mosaic_settings.overlap = 20
         self.mosaic_settings.mx = thedict["MOSAIC"]["MOSAICX"]
         self.mosaic_settings.my = thedict["MOSAIC"]["MOSAICY"]
         self.mosaic_settings.overlap = thedict["MOSAIC"]["OVERLAP"]
-        #self.set_mosaic_settings(self.mosaic_settings)
         ifile.close()
         self.updateNumbers()
 
@@ -772,7 +776,7 @@ class posList():
 
             poslist.append(posdict)
 
-        dict={"MOSAIC": [{"MOSAICX": self.mosaic_settings.mx,"MOSAICY": self.mosaic_settings.my,"OVERLAP": self.mosaic_settings.overlap}],
+        dict={"MOSAIC": {"MOSAICX": self.mosaic_settings.mx,"MOSAICY": self.mosaic_settings.my,"OVERLAP": self.mosaic_settings.overlap},
         "CHANNELS": {},
         "POSITIONS":poslist}
 

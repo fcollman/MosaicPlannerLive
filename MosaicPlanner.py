@@ -1193,6 +1193,7 @@ class MosaicPanel(FigureCanvas):
         #load all ribbons as one posList for display
         for rib in range(4):
             self.posList.add_from_file_JSON(poslistpath[rib])
+            self.posList.rotate_boxes_angle()
             self.posList.set_frames_visible(True)
             self.draw()
         print self.posList.mosaic_settings.mx, self.posList.mosaic_settings.my, self.posList.mosaic_settings.overlap
@@ -1216,9 +1217,7 @@ class MosaicPanel(FigureCanvas):
             outdir.append(newoutdir)
         print "outdir:", outdir, type(outdir), len(outdir)
 
-
-
-        for rib in range(1): #loop through all ribbons
+        for rib in range(4): #loop through all ribbons
             #clear position list
             self.posList.select_all()
             self.draw()
@@ -1227,6 +1226,7 @@ class MosaicPanel(FigureCanvas):
 
             #load poslist from JSON file
             self.posList.add_from_file_JSON(poslistpath[rib])
+            self.posList.rotate_boxes_angle()
             self.posList.set_frames_visible(True)
             self.draw()
 
@@ -1303,9 +1303,9 @@ class MosaicPanel(FigureCanvas):
             self.saveProcess.join()
             print "save process ended, ribbon %d of 3"%(rib)
             self.progress.Destroy()
-            self.imgSrc.set_binning(2)
-            if self.cfg['MosaicPlanner']['hardware_trigger']:
-                self.imgSrc.stop_hardware_triggering()
+        self.imgSrc.set_binning(2)
+        if self.cfg['MosaicPlanner']['hardware_trigger']:
+            self.imgSrc.stop_hardware_triggering()
 
 
 class ZVISelectFrame(wx.Frame):

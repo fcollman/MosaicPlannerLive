@@ -566,7 +566,7 @@ class ChangeSEMSettings(wx.Dialog):
 class MultiRibbonSettings(wx.Dialog): #MultiRibbons
     """dialog for setting multiribbon aquisition"""
     def __init__(self, parent, id, title, settings,style):
-        wx.Dialog.__init__(self, parent, id, title,style=wx.DEFAULT_DIALOG_STYLE, size=(1500, 300))
+        wx.Dialog.__init__(self, parent, id, title,style=wx.DEFAULT_DIALOG_STYLE, size=(1000, 300))
 
         vbox = wx.BoxSizer(wx.VERTICAL)
         gridSizer=wx.FlexGridSizer(rows=5,cols=3,vgap=5,hgap=5)
@@ -580,7 +580,7 @@ class MultiRibbonSettings(wx.Dialog): #MultiRibbons
             self.ribbon_load_button=wx.Button(self,id=wx.ID_ANY,label=" ",name="load button")
             self.ribbon_filepicker=wx.FilePickerCtrl(self,message='Select an array file',\
             path="",name='arrayFilePickerCtrl1',\
-            style=wx.FLP_USE_TEXTCTRL, size=wx.Size(600,20),wildcard='*.*')
+            style=wx.FLP_USE_TEXTCTRL, size=wx.Size(800,20),wildcard='*.*')
             gridSizer.Add(self.ribbon_label,0,wx.EXPAND,border=5)
             gridSizer.Add(self.ribbon_filepicker,1,wx.EXPAND,border=5)
             gridSizer.Add(self.ribbon_load_button,0,wx.EXPAND,border=5)
