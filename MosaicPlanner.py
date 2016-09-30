@@ -1196,7 +1196,7 @@ class MosaicPanel(FigureCanvas):
             self.posList.rotate_boxes_angle()
             self.posList.set_frames_visible(True)
             self.draw()
-        print self.posList.mosaic_settings.mx, self.posList.mosaic_settings.my, self.posList.mosaic_settings.overlap
+        #print self.posList.mosaic_settings.mx, self.posList.mosaic_settings.my, self.posList.mosaic_settings.overlap
 
         caption = "about to capture multiple ribbons"
         dlg = wx.MessageDialog(self,message=caption, style = wx.OK|wx.CANCEL)
@@ -1235,7 +1235,9 @@ class MosaicPanel(FigureCanvas):
 
             self.write_session_metadata(outdir[rib])
 
-            self.move_safe_to_start()
+            #self.move_safe_to_start()
+            #lower objective, move the stage to the first section of the ribbon
+            self.imgSrc.move_safe_and_focus(self.posList.slicePositions[0].x,self.posList.slicePositions[0].y)
 
             self.dataQueue = mp.Queue()
             metadata_dictionary = {
