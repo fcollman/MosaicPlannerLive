@@ -1235,7 +1235,7 @@ class MosaicPanel(FigureCanvas):
 
             self.write_session_metadata(outdir[rib])
 
-            #self.move_safe_to_start()
+            #self.move_safe_to_start() - do not use
             #lower objective, move the stage to the first section of the ribbon
             self.imgSrc.move_safe_and_focus(self.posList.slicePositions[0].x,self.posList.slicePositions[0].y)
 
@@ -1251,6 +1251,7 @@ class MosaicPanel(FigureCanvas):
             self.saveProcess.start()
 
             numFrames,numSections = self.setup_progress_bar()
+            print "numFrames:", numFrames, "numSections:", numSections
 
             hold_focus = not (self.zstack_settings.zstack_flag or chrom_correction)
 
@@ -1292,7 +1293,7 @@ class MosaicPanel(FigureCanvas):
                                 break
                             self.multiDacq(outdir[rib],fpos.x,fpos.y,i,j,hold_focus)
                             self.ResetPiezo()
-                            (goahead, skip)=self.progress.Update((i*numFrames) + j+1,'section %d of %d, frame %d'%(i,numSections-1,j))
+                            (goahead, skip)=self.progress.Update((i*numFrames) + j,'ribbon %d of %d, section %d of %d, frame %d'%(rib,3,i,numSections-1,j))
 
                     wx.Yield()
             if not goahead:
