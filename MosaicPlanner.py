@@ -47,7 +47,7 @@ from NavigationToolBarImproved import NavigationToolbar2Wx_improved as NavBarImp
 from Settings import (MosaicSettings, CameraSettings,SiftSettings,ChangeCameraSettings, ImageSettings,
                        ChangeImageMetadata, SmartSEMSettings, ChangeSEMSettings, ChannelSettings,
                        ChangeChannelSettings, ChangeSiftSettings, CorrSettings,ChangeCorrSettings,
-                      ChangeZstackSettings, ZstackSettings, DirectorySettings, ChangeDirectorySettings)
+                      ChangeZstackSettings, ZstackSettings, DirectorySettings, ChangeDirectorySettings, RibbonNumberDialog)
 
 from configobj import ConfigObj
 
@@ -361,16 +361,35 @@ class MosaicPanel(FigureCanvas):
         # load directory settings
 
         self.default_path = self.cfg['Directories']['Default Path']
-        self.directory_settings = DirectorySettings()
-        self.directory_settings.load_settings(config)
-        self.edit_Directory_settings(default_path=self.default_path)
-        print 'Sample_ID:', self.directory_settings.Sample_ID
-        print 'Ribbon_ID:', self.directory_settings.Ribbon_ID
-        print 'Session_ID:', self.directory_settings.Session_ID
-        print 'Map Number:', self.directory_settings.Map_num
-        # self.rootPath = self.directory_settings.create_directory(config, kind='map')
-        # print self.rootPath
-        self.directory_settings.create_directory(config,kind='map')
+        self.outdirdict = {}
+        self.multiribbon_boolean = self.askMultiribbons()
+        if not self.multiribbon_boolean:
+
+            self.directory_settings = DirectorySettings()
+            self.directory_settings.load_settings(config)
+            self.edit_Directory_settings(self.directory_settings,self.default_path)
+            print 'Sample_ID:', self.directory_settings.Sample_ID
+            print 'Ribbon_ID:', self.directory_settings.Ribbon_ID
+            print 'Session_ID:', self.directory_settings.Session_ID
+            print 'Map Number:', self.directory_settings.Map_num
+            self.directory_settings.create_directory(config,kind='map')
+            self.outdirdict[self.directory_settings.Ribbon_ID] = self.get_output_dir(self.directory_settings)
+
+        else:
+            self.Ribbon_Num = self.get_ribbon_number()
+
+
+            for i in range(self.Ribbon_Num):
+                self.directory_settings = self.edit_Directory_settings(self.default_path)
+                self.outdirdict[str(self.directory_settings.Ribbon_ID)] = self.get_output_dir(self.directory_settings)
+            self.directory_settings.create_directory(config, kind= 'multi_map')
+
+
+
+            for key,value in self.outdirdict.iteritems():
+                print key,value
+
+
         # load Zstack settings
         self.zstack_settings = ZstackSettings()
         self.zstack_settings.load_settings(config)
@@ -406,6 +425,21 @@ class MosaicPanel(FigureCanvas):
         self.canvas.mpl_connect('button_press_event', self.on_press)
         self.canvas.mpl_connect('button_release_event', self.on_release)
         self.canvas.mpl_connect('key_press_event', self.on_key)
+
+    def askMultiribbons(self):
+        dlg = wx.MessageDialog(self,message = "Are you imaging multiple ribbons?",style = wx.YES|wx.NO)
+        button_pressed = dlg.ShowModal()
+        if button_pressed == wx.ID_YES:
+            return True
+        else:
+            return False
+
+    def get_ribbon_number(self):
+        dlg = RibbonNumberDialog(None,-1,style = wx.ID_OK)
+        dlg.ShowModal()
+        Ribbon_Num = dlg.GetValue()
+        dlg.Destroy()
+        return Ribbon_Num
 
     def handle_close(self,evt=None):
         print "handling close"
@@ -452,7 +486,7 @@ class MosaicPanel(FigureCanvas):
                 f.write(self.channel_settings.prot_names[ch] + "\t" + "%f\t%s\n" % (self.channel_settings.exposure_times[ch],ch))
 
 
-    def multiDacq(self,outdir,x,y,slice_index,frame_index=0,hold_focus = False):
+    def multiDacq(self,outdir,chrome_correction,x,y,current_z,slice_index,frame_index=0,hold_focus = False):
 
         #print datetime.datetime.now().time()," starting multiDAcq, autofocus on"
         if not hold_focus:
@@ -481,24 +515,23 @@ class MosaicPanel(FigureCanvas):
             print score
 
         #print datetime.datetime.now().time()," starting multichannel acq"
-        currZ=self.imgSrc.get_z()
-        presentZ = currZ
+        presentZ = current_z
         #print 'flag is,',self.zstack_settings.zstack_flag
 
         if self.zstack_settings.zstack_flag:
             furthest_distance = self.zstack_settings.zstack_delta * (self.zstack_settings.zstack_number-1)/2
-            zplanes_to_visit = [(currZ-furthest_distance) + i*self.zstack_settings.zstack_delta for i in range(self.zstack_settings.zstack_number)]
+            zplanes_to_visit = [(current_z-furthest_distance) + i*self.zstack_settings.zstack_delta for i in range(self.zstack_settings.zstack_number)]
 
         else:
-            zplanes_to_visit = [currZ]
+            zplanes_to_visit = [current_z]
         #print 'zplanes_to_visit : ',zplanes_to_visit
 
-        num_chan, chrom_correction = self.summarize_channel_settings()
+        # num_chan, chrom_correction = self.summarize_channel_settings()
 
 
-        def software_acquire():
-            currZ=self.imgSrc.get_z()
-            presentZ = currZ
+        def software_acquire(current_z,presentZ):
+            # currZ=self.imgSrc.get_z()
+            # presentZ = currZ
             for z_index, zplane in enumerate(zplanes_to_visit):
                 for k,ch in enumerate(self.channel_settings.channels):
                     #print datetime.datetime.now().time()," start channel",ch, " zplane", zplane
@@ -522,9 +555,9 @@ class MosaicPanel(FigureCanvas):
                         #print time.clock(),t3-t2, 'ms to snap image'
                         self.dataQueue.put((slice_index,frame_index, z_index, prot_name,path,data,ch,x,y,z))
 
-        def hardware_acquire():
-            currZ=self.imgSrc.get_z()
-            presentZ = currZ
+        def hardware_acquire(current_z,presentZ):
+            # currZ=self.imgSrc.get_z()
+            # presentZ = currZ
             for z_index, zplane in enumerate(zplanes_to_visit):
                 z = zplane
                 if not hold_focus:
@@ -540,13 +573,13 @@ class MosaicPanel(FigureCanvas):
                         data = self.imgSrc.get_image()
                         self.dataQueue.put((slice_index,frame_index, z_index, prot_name,path,data,ch,x,y,z))
 
-        if (self.cfg['MosaicPlanner']['hardware_trigger'] == True) and (chrom_correction == False):
-            hardware_acquire()
+        if (self.cfg['MosaicPlanner']['hardware_trigger'] == True) and (chrome_correction == False):
+            hardware_acquire(current_z,presentZ)
         else:
-            software_acquire()
+            software_acquire(current_z,presentZ)
 
         if not hold_focus:
-            self.imgSrc.set_z(currZ)
+            self.imgSrc.set_z(current_z)
             if self.imgSrc.has_hardware_autofocus():
                 self.imgSrc.set_hardware_autofocus_state(True)
         #self.imgSrc.set_hardware_autofocus_state(True)
@@ -579,6 +612,25 @@ class MosaicPanel(FigureCanvas):
                 if islocked:
                     self.imgSrc.mmc.enableContinuousFocus(True)
 
+    def summarize_stage_settings(self):
+        do_stage_reset = self.cfg['StageResetSettings']['enableStageReset']
+        comp_stage = self.cfg['StageResetSettings']['compensationStage']
+        reset_stage = self.cfg['StageResetSettings']['resetStage']
+        min_threshold = self.cfg['StageResetSettings']['minThreshold']
+        max_threshold = self.cfg['StageResetSettings']['maxThreshold']
+        reset_position = self.cfg['StageResetSettings']['resetPosition']
+        invert_compensation = self.cfg['StageResetSettings']['invertCompensation']
+
+        Stage_Settings_Summary = {'Reset_enabled?' : do_stage_reset,
+                                  'Compensation Stage' : comp_stage,
+                                  'Reset Stage' : reset_stage,
+                                  'Reset Pos' : reset_position,
+                                  'Min' : min_threshold,
+                                  'Max' : max_threshold,
+                                  'Invert Comp' : invert_compensation}
+
+        return Stage_Settings_Summary
+
     def summarize_channel_settings(self):
         numchan = 0
         chrom_correction = False
@@ -588,6 +640,17 @@ class MosaicPanel(FigureCanvas):
                 if (self.channel_settings.zoffsets[ch] != 0.0):
                     chrom_correction = True
         return numchan,chrom_correction
+
+
+
+    def summarize_autofocus_settings(self):
+        auto_sleep = self.cfg['Mosaic Planner']['autofocus_sleep']
+        auto_wait = self.cfg['Mosaic Planner']['autofocus_wait']
+
+        Autofocus_settings = {'Sleep' : auto_sleep,
+                              'Wait' : auto_wait}
+
+        return Autofocus_settings
 
     def move_safe_to_start(self):
         #step the stage back to the first position, position by position
@@ -619,21 +682,23 @@ class MosaicPanel(FigureCanvas):
 
         return numFrames,numSections
 
-    def get_output_dir(self):
+    def get_output_dir(self,directory_settings):
+        assert(isinstance(directory_settings,DirectorySettings))
         #gets output directory for session
 
         cfg = self.cfg
-        outdir = self.directory_settings.create_directory(cfg,kind = 'data')
-        if outdir is not None:
-            dlg=wx.DirDialog(self,message="Pick output directory",defaultPath=outdir)
+        path = directory_settings.create_directory(cfg,kind = 'data')
+        if path is not None:
+            dlg=wx.DirDialog(self,message="Pick output directory",defaultPath=path)
             button_pressed = dlg.ShowModal()
             if button_pressed == wx.ID_CANCEL:
                 wx.MessageBox("You didn't enter a save directory... \n Aborting acquisition")
                 return None
-
+            outdir = dlg.GetPath()
             dlg.Destroy()
-
-        return outdir
+            return outdir
+        else:
+            return None
 
     def make_channel_directories(self,outdir):
         #setup output directories
@@ -651,6 +716,72 @@ class MosaicPanel(FigureCanvas):
         button_pressed = dlg.ShowModal()
         if button_pressed == wx.ID_CANCEL:
             return False
+
+    def execute_imaging(self,pos_list,numFrames,numSections,channel_settings,chrome_correction,sample_information,mosaic_settings,zstack_settings,acquisition_settings,
+                        stage_reset_settings,autofocus_settings):
+
+
+        assert(isinstance(zstack_settings, ZstackSettings))
+        assert(isinstance(channel_settings, ChannelSettings))
+        assert(isinstance(pos_list,posList))
+        assert(type(autofocus_settings == dict))
+        assert(type(acquisition_settings == dict))
+        outdir = self.outdirdict[sample_information.Ribbon_ID]
+
+        binning = acquisition_settings['Binning']
+
+        numFrames,numSections = self.setup_progress_bar()
+        hold_focus = not (zstack_settings.zstack_flag or chrome_correction)
+
+
+
+        # starting with cycling through positions
+        goahead = True
+        #loop over positions
+        for i,pos in enumerate(pos_list.slicePositions):
+            if pos.activated:
+                if not goahead:
+                    break
+                if not self.imgSrc.mmc.isContinuousFocusEnabled():
+                    print "autofocus not enabled when moving between sections.. "
+                    goahead=False
+                    break
+                (goahead, skip) = self.progress.Update(i*numFrames,'section %d of %d'%(i,numSections-1))
+                #turn on autofocus
+                self.ResetPiezo()
+                current_z = self.imgSrc.get_z()
+                if pos.frameList is None:
+                    self.multiDacq(outdir,chrome_correction,pos.x,pos.y,current_z,i,hold_focus=hold_focus)
+                else:
+                    for j,fpos in enumerate(pos.frameList.slicePositions):
+                        if not goahead:
+                            print "breaking out!"
+                            break
+                        if not self.imgSrc.mmc.isContinuousFocusEnabled():
+                            print "autofocus no longer enabled while moving between frames.. quiting"
+                            goahead = False
+                            break
+                        self.multiDacq(outdir,chrome_correction,fpos.x,fpos.y,current_z,i,j,hold_focus)
+                        self.ResetPiezo()
+                        (goahead, skip)=self.progress.Update((i*numFrames) + j+1,'section %d of %d, frame %d'%(i,numSections-1,j))
+
+                wx.Yield()
+        if not goahead:
+            print "acquisition stopped prematurely"
+            print "section %d"%(i)
+            if pos.frameList is not None:
+                print "frame %d"%(j)
+
+        self.dataQueue.put(STOP_TOKEN)
+        self.saveProcess.join()
+        print "save process ended"
+        self.progress.Destroy()
+        self.imgSrc.set_binning(2)
+        if self.cfg['MosaicPlanner']['hardware_trigger']:
+            self.imgSrc.stop_hardware_triggering()
+
+
+
 
     def on_run_acq(self,event="none"):
         print "running"
@@ -679,14 +810,19 @@ class MosaicPanel(FigureCanvas):
 
 
 
-
-        outdir = self.get_output_dir()
+        if not self.multiribbon_boolean:
+            outdir = self.outdirdict[self.directory_settings.Ribbon_ID]
+        else:
+            outdir = None
         if outdir is None:
             return None
 
-        self.make_channel_directories(outdir)
+        for key,value in self.outdirdict.iteritems():
 
-        self.write_session_metadata(outdir)
+            self.make_channel_directories(value)
+
+            self.write_session_metadata(value)
+
 
         self.move_safe_to_start()
 
@@ -706,16 +842,13 @@ class MosaicPanel(FigureCanvas):
 
         hold_focus = not (self.zstack_settings.zstack_flag or chrom_correction)
 
+
         if self.cfg['MosaicPlanner']['hardware_trigger']:
             #iterates over channels/exposure times in appropriate order
             channels = [ch for ch in self.channel_settings.channels if self.channel_settings.usechannels[ch]]
             exp_times = [self.channel_settings.exposure_times[ch] for ch in self.channel_settings.channels if self.channel_settings.usechannels[ch]]
-            for k,ch in enumerate(self.channel_settings.channels):
-                print 'Channel:', ch
-                print 'Exposure:', self.channel_settings.exposure_times[ch]
-            for k in range(len(channels)):
-                print 'Exposure in order:', exp_times[k]
-                print 'Channel in order:', channels[k]
+            print channels
+            print exp_times
             success=self.imgSrc.setup_hardware_triggering(channels,exp_times)
 
 
@@ -733,8 +866,9 @@ class MosaicPanel(FigureCanvas):
                 (goahead, skip) = self.progress.Update(i*numFrames,'section %d of %d'%(i,numSections-1))
                 #turn on autofocus
                 self.ResetPiezo()
+                current_z = self.imgSrc.get_z()
                 if pos.frameList is None:
-                    self.multiDacq(outdir,pos.x,pos.y,i,hold_focus=hold_focus)
+                    self.multiDacq(outdir,chrom_correction,pos.x,pos.y,current_z,i,hold_focus=hold_focus)
                 else:
                     for j,fpos in enumerate(pos.frameList.slicePositions):
                         if not goahead:
@@ -744,7 +878,7 @@ class MosaicPanel(FigureCanvas):
                             print "autofocus no longer enabled while moving between frames.. quiting"
                             goahead = False
                             break
-                        self.multiDacq(outdir,fpos.x,fpos.y,i,j,hold_focus)
+                        self.multiDacq(outdir,chrom_correction,fpos.x,fpos.y,current_z,i,j,hold_focus)
                         self.ResetPiezo()
                         (goahead, skip)=self.progress.Update((i*numFrames) + j+1,'section %d of %d, frame %d'%(i,numSections-1,j))
 
@@ -817,13 +951,14 @@ class MosaicPanel(FigureCanvas):
 
         dlg.Destroy()
 
-    def edit_Directory_settings(self,default_path,event="none",):
-        dlg = ChangeDirectorySettings(None,-1,title = "Enter Sample Information",settings = self.directory_settings,style = wx.OK)
+    def edit_Directory_settings(self,default_path,event="none"):
+        dlg = ChangeDirectorySettings(None,-1,title = "Enter Sample Information",style = wx.OK)
         ret = dlg.ShowModal()
         if ret == wx.ID_OK:
-            self.directory_settings = dlg.get_settings(default_path)
-            self.directory_settings.save_settings(self.cfg)
+            directory_settings = dlg.get_settings(default_path)
+            directory_settings.save_settings(self.cfg)
         dlg.Destroy()
+        return directory_settings
 
     def edit_Zstack_settings(self,event = "none"):
         dlg = ChangeZstackSettings(None, -1, title= "Edit Ztack Settings", settings = self.zstack_settings, style = wx.OK)

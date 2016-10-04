@@ -56,10 +56,8 @@ class imageSource():
             self.masterArduino = None
         self.interframe_time = interframe_time
         self.filtswitch = filtswitch
-        print 'filtswitch:', filtswitch
 
         if self.filtswitch is not None:
-            print 'hello'
             #sets filterwheel to empty slot during setup/mapping if wheel is present
             self.mmc.setConfig('Triggering','Hardware')
             self.mmc.waitForConfig('Triggering','Hardware')

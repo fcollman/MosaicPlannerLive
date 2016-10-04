@@ -63,19 +63,59 @@ class DirectorySettings():
                 os.makedirs(data_folder)
                 return data_folder
             else:
-                wx.MessageBox("Path already exists! \n Aborting acquisition")
-                return None
+                dlg = wx.MessageDialog(None,message = "Path already exists! Do you wish to continue?",caption = "Directory Warning",style = wx.YES|wx.NO)
+                button_pressed = dlg.ShowModal()
+                if button_pressed == wx.ID_YES:
+                    return data_folder
+                elif button_pressed == wx.ID_NO:
+                    box = wx.MessageDialog(None,message = 'Aborting Acquisition')
+                    box.ShowModal()
+                    box.Destroy()
+                    return None
+        elif kind == 'multi_map':
+            map_folder = os.path.join(root,self.Sample_ID,'raw','map','multi_ribbon_round',self.Map_num)
+            if not os.path.exists(map_folder):
+                os.makedirs(map_folder)
+                cfg['MosaicPlanner']['default_imagepath'] = map_folder
+            else:
+                cfg['MosaicPlanner']['default_imagepath'] = map_folder
         else:
+            dlg = wx.MessageBox(self,caption = 'Error',message = "Directory must be either \'map\' or \'data\' \n Aborting Acquisition")
             return None
+
+
+class RibbonNumberDialog(wx.Dialog):
+    def __init__(self,parent,id,style,title = "Enter Number of Ribbons"):
+        wx.Dialog.__init__(self,parent,id,title,style = wx.DEFAULT_DIALOG_STYLE, size = (200,75))
+        vbox = wx.BoxSizer(wx.VERTICAL)
+
+        self.RibbonNum_txt = wx.StaticText(self,label = "Number of Ribbons:")
+        self.RibbonNum_IntCtrl = wx.lib.intctrl.IntCtrl(self,value = 1, min = 1, max = None, allow_none = False)
+
+        ok_button = wx.Button(self,wx.ID_OK,'OK')
+        cancel_button = wx.Button(self,wx.ID_CANCEL,'Cancel')
+        hbox1 = wx.BoxSizer(wx.HORIZONTAL)
+        hbox2 = wx.BoxSizer(wx.HORIZONTAL)
+        hbox1.Add(self.RibbonNum_txt)
+        hbox1.Add(self.RibbonNum_IntCtrl)
+        hbox2.Add(ok_button)
+        hbox2.Add(cancel_button)
+        vbox.Add(hbox1)
+        vbox.Add(hbox2)
+        self.SetSizer(vbox)
+
+    def GetValue(self):
+        val = self.RibbonNum_IntCtrl.GetValue()
+        return val
 
 
 
 
 class ChangeDirectorySettings(wx.Dialog):
-    def __init__(self,parent, id,style, settings, title="Enter Sample Information"):
+    def __init__(self,parent, id,style, title="Enter Sample Information"):
         wx.Dialog.__init__(self, parent, id, title, style= wx.DEFAULT_DIALOG_STYLE, size= (420,-1))
         vbox = wx.BoxSizer(wx.VERTICAL)
-        self.settings = settings
+        # self.settings = settings
 
         self.SampleID_txt = wx.StaticText(self, label = "Sample ID:")
         self.SampleID_Ctrl = wx.TextCtrl(self)
