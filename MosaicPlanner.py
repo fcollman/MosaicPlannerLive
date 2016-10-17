@@ -50,10 +50,12 @@ from Settings import (MosaicSettings, CameraSettings,SiftSettings,ChangeCameraSe
                       ChangeZstackSettings, ZstackSettings, DirectorySettings, ChangeDirectorySettings, RibbonNumberDialog)
 
 from configobj import ConfigObj
+from validate import Validator
 
 STOP_TOKEN = 'STOP!!!'
 DEFAULT_SETTINGS_FILE = 'MosaicPlannerSettings.default.cfg'
 SETTINGS_FILE = 'MosaicPlannerSettings.cfg'
+SETTINGS_MODEL_FILE = 'MosaicPlannerSettingsModel.cfg'
 
 def file_save_process(queue,stop_token, metadata_dictionary):
     while True:
@@ -360,14 +362,13 @@ class MosaicPanel(FigureCanvas):
 
         # load directory settings
 
-        self.default_path = self.cfg['Directories']['Default_Path']
         self.outdirdict = {}
         self.multiribbon_boolean = self.askMultiribbons()
         if not self.multiribbon_boolean:
 
             self.directory_settings = DirectorySettings()
             self.directory_settings.load_settings(config)
-            self.edit_Directory_settings(self.directory_settings,self.default_path)
+            self.edit_Directory_settings(self.directory_settings)
             print 'Sample_ID:', self.directory_settings.Sample_ID
             print 'Ribbon_ID:', self.directory_settings.Ribbon_ID
             print 'Session_ID:', self.directory_settings.Session_ID
@@ -377,18 +378,12 @@ class MosaicPanel(FigureCanvas):
 
         else:
             self.Ribbon_Num = self.get_ribbon_number()
-
-
             for i in range(self.Ribbon_Num):
-                self.directory_settings = self.edit_Directory_settings(self.default_path)
+                self.directory_settings = self.edit_Directory_settings()
                 self.outdirdict[str(self.directory_settings.Ribbon_ID)] = self.get_output_dir(self.directory_settings)
             self.directory_settings.create_directory(config, kind= 'multi_map')
-
-
-
             for key,value in self.outdirdict.iteritems():
                 print key,value
-
 
         # load Zstack settings
         self.zstack_settings = ZstackSettings()
@@ -951,14 +946,14 @@ class MosaicPanel(FigureCanvas):
 
         dlg.Destroy()
 
-    def edit_Directory_settings(self,default_path,event="none"):
-        dlg = ChangeDirectorySettings(None,-1,title = "Enter Sample Information",style = wx.OK)
+    def edit_Directory_settings(self,event="none"):
+        dlg = ChangeDirectorySettings(None,-1,title = "Enter Sample Information",style = wx.OK,settings=self.directory_settings)
         ret = dlg.ShowModal()
         if ret == wx.ID_OK:
-            directory_settings = dlg.get_settings(default_path)
-            directory_settings.save_settings(self.cfg)
+            self.directory_settings = dlg.get_settings()
+            self.directory_settings.save_settings(self.cfg)
         dlg.Destroy()
-        return directory_settings
+
 
     def edit_Zstack_settings(self,event = "none"):
         dlg = ChangeZstackSettings(None, -1, title= "Edit Ztack Settings", settings = self.zstack_settings, style = wx.OK)
@@ -1387,7 +1382,9 @@ class ZVISelectFrame(wx.Frame):
         if not os.path.isfile(SETTINGS_FILE):
             from shutil import copyfile
             copyfile(DEFAULT_SETTINGS_FILE,SETTINGS_FILE)
-        self.cfg = ConfigObj(SETTINGS_FILE,unrepr=True)
+        self.cfg = ConfigObj(SETTINGS_FILE,unrepr=True,configspec=SETTINGS_MODEL_FILE)
+        vdt = Validator()
+        self.cfg.validate(vdt,copy=True)
         #setup a mosaic panel
         self.mosaicCanvas=MosaicPanel(self,config=self.cfg)
 
