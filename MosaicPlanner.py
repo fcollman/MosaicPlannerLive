@@ -360,7 +360,7 @@ class MosaicPanel(FigureCanvas):
 
         # load directory settings
 
-        self.default_path = self.cfg['Directories']['Default Path']
+        self.default_path = self.cfg['Directories']['Default_Path']
         self.outdirdict = {}
         self.multiribbon_boolean = self.askMultiribbons()
         if not self.multiribbon_boolean:
