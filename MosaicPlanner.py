@@ -510,11 +510,13 @@ class MosaicPanel(FigureCanvas):
             print score
 
         #print datetime.datetime.now().time()," starting multichannel acq"
+        current_z = self.imgSrc.get_z()
         presentZ = current_z
         #print 'flag is,',self.zstack_settings.zstack_flag
 
         if self.zstack_settings.zstack_flag:
             furthest_distance = self.zstack_settings.zstack_delta * (self.zstack_settings.zstack_number-1)/2
+            #furthest_distance =0
             zplanes_to_visit = [(current_z-furthest_distance) + i*self.zstack_settings.zstack_delta for i in range(self.zstack_settings.zstack_number)]
 
         else:
