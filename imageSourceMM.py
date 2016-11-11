@@ -470,18 +470,52 @@ class imageSource():
     def move_safe_and_focus(self,x,y): #MultiRibbons
         #lower objective, move the stage to position x,y
         focus_stage=self.mmc.getFocusDevice()
-        self.mmc.setRelativePosition(focus_stage,-3000.0)
+        #self.mmc.setRelativePosition(focus_stage,-3000.0)
+        for j in range(20): #use small z steps to lower objective slowly
+            self.mmc.setRelativePosition(-200.0)
+            self.mmc.waitForDevice(focus_stage)
+            time.sleep(0.5)
         self.mmc.waitForDevice(focus_stage)
         time.sleep(1)
-        self.set_xy(x,y)
-        self.mmc.setRelativePosition(focus_stage,2700.0)
+        self.set_xy_new(x,y)
+        time.sleep(40)
+        stg=self.mmc.getXYStageDevice()
+        self.mmc.waitForDevice(stg)
+        #self.mmc.setRelativePosition(focus_stage,2700.0)
+        for j in range(20): #use small z steps to raise objective slowly
+            self.mmc.setRelativePosition(200.0)
+            self.mmc.waitForDevice(focus_stage)
+            time.sleep(0.5)
+        self.mmc.setRelativePosition(-100.0)
         self.mmc.waitForDevice(focus_stage)
         i = 0
         while not self.mmc.isContinuousFocusLocked():
-            self.mmc.setRelativePosition(focus_stage,10.0)
+            self.mmc.setRelativePosition(focus_stage,20.0)
             self.mmc.waitForDevice(focus_stage)
             self.mmc.enableContinuousFocus(True)
             self.mmc.waitForDevice(self.mmc.getAutoFocusDevice())
+            time.sleep(1)
             i = i+1
-            if i==30:
+            if i==20:
                 break
+
+    def set_xy_new(self,x,y,use_focus_plane=False): #MultiRibbons
+        # modified version of set_xy to be called by move_safe_and_focus with removed self.mmc.waitForDevice(stg)
+        # to avoid error when waiting time exceeds 5s
+        flipx,flipy = self.get_xy_flip()
+
+        if use_focus_plane:
+            z  = self.get_focal_z(x,y)
+            self.set_z(z)
+        if self.transpose_xy:
+            xt = x
+            x = y
+            y = xt
+        #if flipx==1:
+        #    x = -x
+        #if flipy == 1:
+        #    y = -y
+
+        stg=self.mmc.getXYStageDevice()
+        self.mmc.setXYPosition(stg,x,y)
+        #self.mmc.waitForDevice(stg)
