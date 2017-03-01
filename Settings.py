@@ -18,6 +18,7 @@
 #===============================================================================
 import wx
 import os
+import json
 
 class DirectorySettings():
 
@@ -495,11 +496,15 @@ class ChangeChannelSettings(wx.Dialog):
         self.ExposureCtrls=[]
         self.MapRadCtrls=[]
         self.ZOffCtrls=[]
-        
+        with open('ChannelSettings.json') as protein_file:
+            self.ProteinSelection = json.load(protein_file)
         for ch in settings.channels:
             hbox =wx.BoxSizer(wx.HORIZONTAL)
             Txt=wx.StaticText(self,label=ch)
-            ProtText=wx.TextCtrl(self,value=settings.prot_names[ch])
+            if 'dapi' in ch.lower():
+                ProtComboBox=wx.ComboBox(self,choices=self.ProteinSelection['QuadBand0DAPI'])
+            else:
+                ProtComboBox=wx.ComboBox(self,choices=self.ProteinSelection['Proteins'])
             ChBox = wx.CheckBox(self)
             ChBox.SetValue(settings.usechannels[ch])
             IntCtrl=wx.lib.intctrl.IntCtrl( self, value=settings.exposure_times[ch],size=(50,-1))
@@ -520,13 +525,13 @@ class ChangeChannelSettings(wx.Dialog):
                 RadBut.SetValue(True)
                 
             gridSizer.Add(Txt,0,flag=wx.ALL|wx.EXPAND,border=5)
-            gridSizer.Add(ProtText,1,flag=wx.ALL|wx.EXPAND,border=5)
+            gridSizer.Add(ProtComboBox,1,flag=wx.ALL|wx.EXPAND,border=5)
             gridSizer.Add(ChBox,0,flag=wx.ALL|wx.EXPAND,border=5)
             gridSizer.Add(IntCtrl,0,border=5)
             gridSizer.Add(RadBut,0,flag=wx.ALL|wx.EXPAND,border=5)
             gridSizer.Add(FloatCtrl,0,flag=wx.ALL|wx.EXPAND,border=5)
             
-            self.ProtNameCtrls.append(ProtText)
+            self.ProtNameCtrls.append(ProtComboBox)
             self.UseCtrls.append(ChBox)
             self.ExposureCtrls.append(IntCtrl)
             self.MapRadCtrls.append(RadBut)
