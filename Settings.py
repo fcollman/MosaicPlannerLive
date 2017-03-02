@@ -560,13 +560,7 @@ class ChangeChannelSettings(wx.Dialog):
         
         for i,ch in enumerate(self.settings.channels):
             prot_names[ch]=self.ProtNameCtrls[i].GetValue()
-            if prot_names[ch] not in self.ProteinSelection:
-                if 'dapi' in prot_names[ch].lower():
-                    self.ProteinSelection['QuadBand0DAPI'].append(prot_names[ch])
-                else:
-                    self.ProteinSelection['Proteins'].append(prot_names[ch])
-                with open('ChannelSettings.json', 'w') as protein_file:
-                    json.dump(self.ProteinSelection, protein_file)
+            # print prot_names[ch]
             usechannels[ch]=self.UseCtrls[i].GetValue()
             exposure_times[ch]=self.ExposureCtrls[i].GetValue()
             if self.MapRadCtrls[i].GetValue():
