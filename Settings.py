@@ -502,9 +502,11 @@ class ChangeChannelSettings(wx.Dialog):
             hbox =wx.BoxSizer(wx.HORIZONTAL)
             Txt=wx.StaticText(self,label=ch)
             if 'dapi' in ch.lower():
-                ProtComboBox=wx.ComboBox(self,choices=self.ProteinSelection['QuadBand0DAPI'])
+                ProtComboBox=wx.ComboBox(self,choices=self.ProteinSelection['QuadBand0DAPI'], style = wx.CB_SORT)
             else:
-                ProtComboBox=wx.ComboBox(self,choices=self.ProteinSelection['Proteins'])
+                ProtComboBox=wx.ComboBox(self,choices=self.ProteinSelection['Proteins'], style = wx.CB_SORT)
+
+
             ChBox = wx.CheckBox(self)
             ChBox.SetValue(settings.usechannels[ch])
             IntCtrl=wx.lib.intctrl.IntCtrl( self, value=settings.exposure_times[ch],size=(50,-1))
@@ -558,6 +560,13 @@ class ChangeChannelSettings(wx.Dialog):
         
         for i,ch in enumerate(self.settings.channels):
             prot_names[ch]=self.ProtNameCtrls[i].GetValue()
+            if prot_names[ch] not in self.ProteinSelection:
+                if 'dapi' in prot_names[ch].lower():
+                    self.ProteinSelection['QuadBand0DAPI'].append(prot_names[ch])
+                else:
+                    self.ProteinSelection['Proteins'].append(prot_names[ch])
+                with open('ChannelSettings.json', 'w') as protein_file:
+                    json.dump(self.ProteinSelection, protein_file)
             usechannels[ch]=self.UseCtrls[i].GetValue()
             exposure_times[ch]=self.ExposureCtrls[i].GetValue()
             if self.MapRadCtrls[i].GetValue():
