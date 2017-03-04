@@ -471,10 +471,10 @@ class imageSource():
         #lower objective, move the stage to position x,y
         focus_stage=self.mmc.getFocusDevice()
         #self.mmc.setRelativePosition(focus_stage,-3000.0)
-        for j in range(20): #use small z steps to lower objective slowly
-            self.mmc.setRelativePosition(-200.0)
+        for j in range(300): #use small z steps to lower objective slowly
+            self.mmc.setRelativePosition(-10.0)
             self.mmc.waitForDevice(focus_stage)
-            time.sleep(0.5)
+            time.sleep(0.2)
         self.mmc.waitForDevice(focus_stage)
         time.sleep(1)
         self.set_xy_new(x,y)
@@ -482,10 +482,10 @@ class imageSource():
         stg=self.mmc.getXYStageDevice()
         self.mmc.waitForDevice(stg)
         #self.mmc.setRelativePosition(focus_stage,2700.0)
-        for j in range(20): #use small z steps to raise objective slowly
-            self.mmc.setRelativePosition(200.0)
+        for j in range(300): #use small z steps to raise objective slowly
+            self.mmc.setRelativePosition(10.0)
             self.mmc.waitForDevice(focus_stage)
-            time.sleep(0.5)
+            time.sleep(0.2)
         self.mmc.setRelativePosition(-100.0)
         self.mmc.waitForDevice(focus_stage)
         i = 0
