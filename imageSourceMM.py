@@ -482,11 +482,11 @@ class imageSource():
         stg=self.mmc.getXYStageDevice()
         self.mmc.waitForDevice(stg)
         #self.mmc.setRelativePosition(focus_stage,2700.0)
-        for j in range(300): #use small z steps to raise objective slowly
+        for j in range(305): #use small z steps to raise objective slowly
             self.mmc.setRelativePosition(10.0)
             self.mmc.waitForDevice(focus_stage)
             time.sleep(0.2)
-        self.mmc.setRelativePosition(-100.0)
+        self.mmc.setRelativePosition(-150.0)
         self.mmc.waitForDevice(focus_stage)
         i = 0
         while not self.mmc.isContinuousFocusLocked():
