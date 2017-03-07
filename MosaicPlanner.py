@@ -1235,7 +1235,7 @@ class MosaicPanel(FigureCanvas):
 
             self.write_session_metadata(outdir[rib])
 
-            #self.move_safe_to_start() - do not use
+            self.move_safe_to_start() #use it to move satge to the first section before lowering objective
             #lower objective, move the stage to the first section of the ribbon
             self.imgSrc.move_safe_and_focus(self.posList.slicePositions[0].x,self.posList.slicePositions[0].y)
 
