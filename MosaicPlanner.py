@@ -481,7 +481,7 @@ class MosaicPanel(FigureCanvas):
                 f.write(self.channel_settings.prot_names[ch] + "\t" + "%f\t%s\n" % (self.channel_settings.exposure_times[ch],ch))
 
 
-    def multiDacq(self,outdir,chrome_correction,x,y,current_z,slice_index,frame_index=0,hold_focus = False):
+    def multiDacq(self,success,outdir,chrome_correction,x,y,current_z,slice_index,frame_index=0,hold_focus = False):
 
         #print datetime.datetime.now().time()," starting multiDAcq, autofocus on"
         if not hold_focus:
@@ -526,7 +526,7 @@ class MosaicPanel(FigureCanvas):
         # num_chan, chrom_correction = self.summarize_channel_settings()
 
 
-        def software_acquire(current_z,presentZ):
+        def software_acquire(z=presentZ):
             # currZ=self.imgSrc.get_z()
             # presentZ = currZ
             for z_index, zplane in enumerate(zplanes_to_visit):
@@ -552,7 +552,7 @@ class MosaicPanel(FigureCanvas):
                         #print time.clock(),t3-t2, 'ms to snap image'
                         self.dataQueue.put((slice_index,frame_index, z_index, prot_name,path,data,ch,x,y,z))
 
-        def hardware_acquire(current_z,presentZ):
+        def hardware_acquire(z=presentZ):
             # currZ=self.imgSrc.get_z()
             # presentZ = currZ
             for z_index, zplane in enumerate(zplanes_to_visit):
@@ -570,10 +570,10 @@ class MosaicPanel(FigureCanvas):
                         data = self.imgSrc.get_image()
                         self.dataQueue.put((slice_index,frame_index, z_index, prot_name,path,data,ch,x,y,z))
 
-        if (self.cfg['MosaicPlanner']['hardware_trigger'] == True) and (chrome_correction == False):
-            hardware_acquire(current_z,presentZ)
+        if (self.cfg['MosaicPlanner']['hardware_trigger'] == True) and (chrome_correction == False) and (success != False):
+            hardware_acquire()
         else:
-            software_acquire(current_z,presentZ)
+            software_acquire()
 
         if not hold_focus:
             self.imgSrc.set_z(current_z)
@@ -865,7 +865,7 @@ class MosaicPanel(FigureCanvas):
                 self.ResetPiezo()
                 current_z = self.imgSrc.get_z()
                 if pos.frameList is None:
-                    self.multiDacq(outdir,chrom_correction,pos.x,pos.y,current_z,i,hold_focus=hold_focus)
+                    self.multiDacq(success,outdir,chrom_correction,pos.x,pos.y,current_z,i,hold_focus=hold_focus)
                 else:
                     for j,fpos in enumerate(pos.frameList.slicePositions):
                         if not goahead:
@@ -875,7 +875,7 @@ class MosaicPanel(FigureCanvas):
                             print "autofocus no longer enabled while moving between frames.. quiting"
                             goahead = False
                             break
-                        self.multiDacq(outdir,chrom_correction,fpos.x,fpos.y,current_z,i,j,hold_focus)
+                        self.multiDacq(success,outdir,chrom_correction,fpos.x,fpos.y,current_z,i,j,hold_focus)
                         self.ResetPiezo()
                         (goahead, skip)=self.progress.Update((i*numFrames) + j+1,'section %d of %d, frame %d'%(i,numSections-1,j))
 
