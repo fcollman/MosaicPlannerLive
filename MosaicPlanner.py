@@ -1235,7 +1235,7 @@ class MosaicPanel(FigureCanvas):
 
             self.write_session_metadata(outdir[rib])
 
-            self.move_safe_to_start() #use it to move satge to the first section before lowering objective
+            #self.move_safe_to_start() #do not use
             #lower objective, move the stage to the first section of the ribbon
             self.imgSrc.move_safe_and_focus(self.posList.slicePositions[0].x,self.posList.slicePositions[0].y)
 
@@ -1306,6 +1306,7 @@ class MosaicPanel(FigureCanvas):
             self.saveProcess.join()
             print "save process ended, ribbon %d of 3"%(rib)
             self.progress.Destroy()
+            self.move_safe_to_start() #use it to move satge to the first section before lowering objective
         self.imgSrc.set_binning(2)
         if self.cfg['MosaicPlanner']['hardware_trigger']:
             self.imgSrc.stop_hardware_triggering()
