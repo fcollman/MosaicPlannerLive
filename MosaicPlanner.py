@@ -1350,7 +1350,7 @@ class MosaicPanel(FigureCanvas):
     def on_run_multi_acq(self,event="none"): #MultiRibbons
         #pick position lists
         poslistpath=[]
-        dlg = MultiRibbonSettings(None, -1, title = "Multiribbon Settings", settings = self.channel_settings,style=wx.OK)
+        dlg = MultiRibbonSettings(None, -1,self.Ribbon_Num, title = "Multiribbon Settings", settings = self.channel_settings,style=wx.OK)
         ret=dlg.ShowModal()
         if ret == wx.ID_OK:
             poslistpath=dlg.GetSettings()
@@ -1358,7 +1358,7 @@ class MosaicPanel(FigureCanvas):
         print "poslistpath:", poslistpath
 
         #load all ribbons as one posList for display
-        for rib in range(4):
+        for rib in range(self.Ribbon_Num):
             self.posList.add_from_file_JSON(poslistpath[rib])
             self.posList.rotate_boxes_angle()
             self.posList.set_frames_visible(True)
@@ -1376,15 +1376,18 @@ class MosaicPanel(FigureCanvas):
         numchan,chrom_correction = self.summarize_channel_settings()
 
         #pick output directories
-        outdir =[]
-        for rib in range(4):
-            newoutdir = self.get_output_dir()
-            if newoutdir is None:
-                return None
-            outdir.append(newoutdir)
-        print "outdir:", outdir, type(outdir), len(outdir)
+        outdirlist =[]
+        # for rib in range(self.Ribbon_Num):
+        #     newoutdir = self.get_output_dir()
+        #     if newoutdir is None:
+        #         return None
+        #     outdir.append(newoutdir)
+        # print "outdir:", outdir, type(outdir), len(outdir)
+        for key in self.outdirdict:
+            outdirlist.append(self.outdirdict[key])
+        print 'outdirlist:', outdirlist
 
-        for rib in range(4): #loop through all ribbons
+        for rib in range(self.Ribbon_Num): #loop through all ribbons
             #clear position list
             self.posList.select_all()
             self.draw()
@@ -1398,9 +1401,9 @@ class MosaicPanel(FigureCanvas):
             self.draw()
 
             #from on_run_acq
-            self.make_channel_directories(outdir[rib])
+            self.make_channel_directories(outdirlist[rib])
 
-            self.write_session_metadata(outdir[rib])
+            self.write_session_metadata(outdirlist[rib])
 
             #self.move_safe_to_start() - do not use
             #lower objective, move the stage to the first section of the ribbon
@@ -1448,7 +1451,7 @@ class MosaicPanel(FigureCanvas):
                     #turn on autofocus
                     self.ResetPiezo()
                     if pos.frameList is None:
-                        self.multiDacq(outdir[rib],pos.x,pos.y,i,hold_focus=hold_focus)
+                        self.multiDacq(success,outdirlist[rib],pos.x,pos.y,i,hold_focus=hold_focus)
                     else:
                         for j,fpos in enumerate(pos.frameList.slicePositions):
                             if not goahead:
@@ -1458,7 +1461,7 @@ class MosaicPanel(FigureCanvas):
                                 print "autofocus no longer enabled while moving between frames.. quiting"
                                 goahead = False
                                 break
-                            self.multiDacq(outdir[rib],fpos.x,fpos.y,i,j,hold_focus)
+                            self.multiDacq(success,outdirlist[rib],fpos.x,fpos.y,i,j,hold_focus)
                             self.ResetPiezo()
                             (goahead, skip)=self.progress.Update((i*numFrames) + j,'ribbon %d of %d, section %d of %d, frame %d'%(rib,3,i,numSections-1,j))
 

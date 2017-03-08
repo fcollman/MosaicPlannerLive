@@ -749,7 +749,7 @@ class ChangeSEMSettings(wx.Dialog):
 
 class MultiRibbonSettings(wx.Dialog): #MultiRibbons
     """dialog for setting multiribbon aquisition"""
-    def __init__(self, parent, id, title, settings,style):
+    def __init__(self, parent, id,ribbon_number, title, settings,style):
         wx.Dialog.__init__(self, parent, id, title,style=wx.DEFAULT_DIALOG_STYLE, size=(1000, 300))
 
         vbox = wx.BoxSizer(wx.VERTICAL)
@@ -758,8 +758,9 @@ class MultiRibbonSettings(wx.Dialog): #MultiRibbons
         gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label="array file"),border=5)
         gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label=" "),border=5)
 
+        self.ribbon_number = ribbon_number
         self.RibbonFilePath = []
-        for i in range(4):
+        for i in range(self.ribbon_number):
             self.ribbon_label=wx.StaticText(self,id=wx.ID_ANY,label=str(i))
             self.ribbon_load_button=wx.Button(self,id=wx.ID_ANY,label=" ",name="load button")
             self.ribbon_filepicker=wx.FilePickerCtrl(self,message='Select an array file',\
@@ -784,7 +785,7 @@ class MultiRibbonSettings(wx.Dialog): #MultiRibbons
     def GetSettings(self):
         #pathway=dict([])
         pathway=[]
-        for i in range(4):
+        for i in range(self.ribbon_number):
             #pathway[i]=self.RibbonFilePath[i].GetPath()
             newpath=self.RibbonFilePath[i].GetPath()
             pathway.append(newpath)
