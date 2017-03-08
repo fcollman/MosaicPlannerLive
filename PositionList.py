@@ -584,7 +584,7 @@ class posList():
         ifile.close()
         self.updateNumbers()
 
-    def save_position_list(self,filename,trans=None):     
+    def save_position_list(self,filename,trans=None):
         """save the positionlist to a axiovision position list format, csv format
         
         keywords:
@@ -600,16 +600,16 @@ class posList():
         writer.writerow(['','','','','',''])
         writer.writerow(['','','','','',''])
         writer.writerow(["Positions",'','','','',''])
-        writer.writerow(["Comments","PositionX","PositionY","PositionZ","Color","Classification","Angle"])
+        writer.writerow(["Comments","PositionX","PositionY","PositionZ","Color","Classification"])
    
         for index,pos in enumerate(self.slicePositions):
             #"Comments","PositionX","PositionY","PositionZ","Color","Classification"
             #"1000000",-29541.755,6144.1,0.000000," blue "," blue"
             if trans == None:
-                writer.writerow(["%d"%(100000+index),pos.x,pos.y,pos.z," blue "," blue ",pos.angle])
+                writer.writerow(["%d"%(100000+index),pos.x,pos.y,pos.z," blue "," blue "])
             else:
                 (xt,yt)=trans.transform(pos.x,pos.y)
-                writer.writerow(["%d"%(100000+index),xt,yt,pos.z," blue "," blue ",pos.angle])
+                writer.writerow(["%d"%(100000+index),xt,yt,pos.z," blue "," blue "])
     
     
     def save_position_list_uM(self,filename,trans=None):
@@ -683,7 +683,7 @@ class posList():
             else:
                 (xt,yt)=trans.transform(pos.x,pos.y)
                 writer.writerow(["p%03.3d"%(index),xt,yt,newZ[index]+zoffset,'','',''])
-
+    
     def write_position_ZENczsh(self,SingleTileRegions,index,x,y,z):
 
         SingleTileRegion=ET.SubElement(SingleTileRegions,"SingleTileRegion")
@@ -1016,29 +1016,38 @@ class slicePosition():
             self.frameList=posList(self.axis,mosaic_settings=MosaicSettings(mag=self.pos_list.mosaic_settings.mag),
                                    camera_settings=self.pos_list.camera_settings,shownumbers=False,dosort=False)
             (fh,fw)=self.pos_list.calcFrameSize()
-            (h,w)=self.pos_list.calcMosaicSize()  
+            (h,w)=self.pos_list.calcMosaicSize()
+            mx = self.pos_list.mosaic_settings.mx
+            my = self.pos_list.mosaic_settings.my
+            #fill in an array with x and y coordinates
+            xx=np.zeros((my,mx),dtype=np.double)
+            yy=np.zeros((my,mx),dtype=np.double)
+
+
             #use the point class to add the offsets from the upper left necessary to make the grid
             UL= Point(self.x,self.y)-Point(w/2,h/2)
             alpha=(self.pos_list.mosaic_settings.overlap*1.0)/100
             evenodd = True
-            for x in range(self.pos_list.mosaic_settings.mx-1,-1,-1):
+            for x in range(mx):
                 delX=Point((x*fw+(fw/2)-x*alpha*fw),0)
-                if evenodd:
-                    yrange = range(self.pos_list.mosaic_settings.my)
-                    evenodd = False
-                else:
-                    yrange = range(self.pos_list.mosaic_settings.my -1, -1,-1)
-                    evenodd = True
-                print yrange
-                for y in yrange:
+                for y in range(my):
                     delY=Point(0,y*fh+(fh/2)-y*alpha*fh)
-
-
                     #calculates the position for this frame
                     thispoint=UL+delX+delY
+                    xx[y,x]=thispoint.x
+                    yy[y,x]=thispoint.y
+
                     #make the frameList boxes be cyan in color
-                    self.frameList.add_position(thispoint.x,thispoint.y,withpoint=False,edgecolor='c')
+                    #self.frameList.add_position(thispoint.x,thispoint.y,withpoint=False,edgecolor='c')
                     #evenodd *= -1
+
+            for y in range(my):
+                if y%2==0:
+                    xrange = range(mx)
+                else:
+                    xrange = range(mx-1,-1,-1)
+                for x in xrange:
+                    self.frameList.add_position(xx[y,x],yy[y,x],withpoint=False,edgecolor='c')
 
             self.frameList.set_mosaic_visible(True)  
 
@@ -1051,26 +1060,30 @@ class slicePosition():
             (fh,fw)=self.pos_list.calcFrameSize()
             (h,w)=self.pos_list.calcMosaicSize() 
             alpha=(self.pos_list.mosaic_settings.overlap*1.0)/100
-          
+            mx = self.pos_list.mosaic_settings.mx
+            my = self.pos_list.mosaic_settings.my
+            #fill in an array with x and y coordinates
+            xx=np.zeros((my,mx),dtype=np.double)
+            yy=np.zeros((my,mx),dtype=np.double)
             #cent_line_rot=UL.rotate_around(Point(self.x,self.y),self.angle)
-            if self.pos_list.mosaic_settings.my==1:
-                v=.5*(self.pos_list.mosaic_settings.mx-1)*fw*(1-alpha)
+            if my==1:
+                v=.5*(mx-1)*fw*(1-alpha)
                 frame1=Point(self.x,self.y)-Point(v*cos(self.angle),v*sin(self.angle));
             else:
                 cent_line=Point(self.x,self.y)-Point(0,h/2-(fh/2)) 
                 cent_line_shift=cent_line+Point((h/2-(fh/2))*tan(self.angle),0)
-                frame1=cent_line_shift+Point(-.5*(self.pos_list.mosaic_settings.mx-1)*fw*(1-alpha),0);
+                frame1=cent_line_shift+Point(-.5*(mx-1)*fw*(1-alpha),0);
             #frame1=UL
 			#frame1=self.__shiftdown_andslide_first(ULr,fh/2,self.angle,0)
             
             # self.frameList.add_position(frame1.x,frame1.y,withpoint=False,edgecolor='c')
-            for y in range(self.pos_list.mosaic_settings.my):
+            for y in range(my):
                 if y==0:
                     startframe=frame1
                 else:
                     startframe=self.__shiftdown_andslide(startframe, fh*(1-alpha), self.angle,0)           
-                for x in range(self.pos_list.mosaic_settings.mx):
-                    if self.pos_list.mosaic_settings.my==1:
+                for x in range(mx):
+                    if my==1:
                         v=x*fw*(1-alpha);
                         delX=Point(v*cos(self.angle),v*sin(self.angle))
                     else:
@@ -1079,12 +1092,21 @@ class slicePosition():
                     #if x==0:
                     #    x=x
                     #    #thispoint=thispoint+Point(-fw*sin(self.angle)*sin(self.angle),-fw*sin(self.angle)*cos(self.angle))
-                    self.frameList.add_position(thispoint.x,thispoint.y,withpoint=False,edgecolor='c')
+                    xx[y,x]=thispoint.x
+                    yy[y,x]=thispoint.y
+                    #self.frameList.add_position(thispoint.x,thispoint.y,withpoint=False,edgecolor='c')
                     
-                
+
+            for y in range(my):
+                if y%2==0:
+                    xrange = range(mx)
+                else:
+                    xrange = range(mx-1,-1,-1)
+                for x in xrange:
+                    self.frameList.add_position(xx[y,x],yy[y,x],withpoint=False,edgecolor='c')
             self.frameList.set_mosaic_visible(True)
-            shiftx_rot=.5*(self.pos_list.mosaic_settings.mx-1)*fw*(1-alpha);
-            
+
+            #shiftx_rot=.5*(self.pos_list.mosaic_settings.mx-1)*fw*(1-alpha);
             #self.frameList.shift_all(-shiftx_rot*cos(self.angle),-shiftx_rot*sin(self.angle))
      
     def __shiftdown_andslide_first(self,start,drop,theta,over):
