@@ -235,6 +235,13 @@ class posList():
         for index, pos in enumerate(self.slicePositions):
             pos.setAngle(theta[index])
 
+    def rotate_boxes_angle(self):
+        """use angle from loaded JSON position list and then set the angle
+        attribute of each slice position using setAngle"""
+
+        for index, pos in enumerate(self.slicePositions):
+            pos.setAngle(pos.angle)
+
     def rotate_selected(self,dtheta):
         """
 
@@ -424,7 +431,10 @@ class posList():
             self.add_from_file_OMX(file) 
         elif format=='SmartSEM':
             SEMsetting=self.add_from_file_SmartSEM(file)
-            self.SmartSEMSettings=SEMsetting  
+            self.SmartSEMSettings=SEMsetting
+        elif format=='JSON':  #MultiRibbons
+            self.add_from_file_JSON(file)
+
     def add_from_posList(self,posList):
         for pos in posList.slicePositions:
             newPosition=slicePosition(axis=self.axis,pos_list=self,x=pos.x,y=pos.y,z=pos.z,
@@ -547,7 +557,34 @@ class posList():
         self.updateNumbers()
         return SEMSetting
 
-    def save_position_list(self,filename,trans=None):     
+    def add_from_file_JSON(self,filename): #MultiRibbons
+        """add points to the position list from a JSON file
+
+        keywords:
+        filename)a string containing the path of the file to load
+
+        """
+        print "adding from file"
+        ifile  = open(filename, "rb")
+        thestring = ifile.read()
+        thedict = json.JSONDecoder().decode(thestring)
+        print thedict
+        self.xpos=np.zeros(len(thedict["POSITIONS"]))
+        self.ypos=np.zeros(len(thedict["POSITIONS"]))
+        self.selected=np.zeros(len(thedict["POSITIONS"]),dtype=bool)
+        self.p1=-1
+        self.p2=-1
+        for i in range(len(thedict["POSITIONS"])):
+            newPosition=slicePosition(axis=self.axis,pos_list=self,x=thedict["POSITIONS"][i]["X"],\
+            y=thedict["POSITIONS"][i]["Y"],z=None,angle=thedict["POSITIONS"][i]["ANGLE"],showNumber=self.shownumbers)
+            self.slicePositions.append(newPosition)
+        self.mosaic_settings.mx = thedict["MOSAIC"]["MOSAICX"]
+        self.mosaic_settings.my = thedict["MOSAIC"]["MOSAICY"]
+        self.mosaic_settings.overlap = thedict["MOSAIC"]["OVERLAP"]
+        ifile.close()
+        self.updateNumbers()
+
+    def save_position_list(self,filename,trans=None):
         """save the positionlist to a axiovision position list format, csv format
         
         keywords:
@@ -723,7 +760,30 @@ class posList():
                 (xt,yt)=trans.transform(pos.x,pos.y)
                 writer.writerow(['%03d: %f'%(index,xt),yt,Z])  
 
+    def save_position_list_JSON(self,filename,trans=None): #MultiRibbons
+        #save the positionlist to JSON format, include position x, y, angle, mosaic settings, channel settings
+        self.__sort_points()
 
+        poslist=[]
+        for index,pos in enumerate(self.slicePositions):
+
+            if trans == None:
+                posdict={"SECTION": "%d"%(100000+index),"X": pos.x,"Y": pos.y,"ANGLE": pos.angle}
+
+            else:
+                (xt,yt)=trans.transform(pos.x,pos.y)
+                posdict={"SECTION": "%d"%(100000+index),"X": xt,"Y": yt,"ANGLE": pos.angle}
+
+            poslist.append(posdict)
+
+        dict={"MOSAIC": {"MOSAICX": self.mosaic_settings.mx,"MOSAICY": self.mosaic_settings.my,"OVERLAP": self.mosaic_settings.overlap},
+        "CHANNELS": {},
+        "POSITIONS":poslist}
+
+        thestring=json.JSONEncoder().encode(dict)
+        file = open(filename,'w')
+        file.write(thestring)
+        file.close()
 
     def save_frame_list_OMX(self,filename,trans=None,Z=13235.0):
         """save the positionlist to a SmartSEM position list csv format, where each frame of the mosaic is its own position

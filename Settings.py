@@ -746,4 +746,46 @@ class ChangeSEMSettings(wx.Dialog):
                                      rot=self.rotCtrl.GetValue(),
                                      Z=self.ZCtrl.GetValue(),
                                      WD=self.WDCtrl)
-                                     
+
+class MultiRibbonSettings(wx.Dialog): #MultiRibbons
+    """dialog for setting multiribbon aquisition"""
+    def __init__(self, parent, id, title, settings,style):
+        wx.Dialog.__init__(self, parent, id, title,style=wx.DEFAULT_DIALOG_STYLE, size=(1000, 300))
+
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        gridSizer=wx.FlexGridSizer(rows=5,cols=3,vgap=5,hgap=5)
+        gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label="ribbon#"),border=5)
+        gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label="array file"),border=5)
+        gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label=" "),border=5)
+
+        self.RibbonFilePath = []
+        for i in range(4):
+            self.ribbon_label=wx.StaticText(self,id=wx.ID_ANY,label=str(i))
+            self.ribbon_load_button=wx.Button(self,id=wx.ID_ANY,label=" ",name="load button")
+            self.ribbon_filepicker=wx.FilePickerCtrl(self,message='Select an array file',\
+            path="",name='arrayFilePickerCtrl1',\
+            style=wx.FLP_USE_TEXTCTRL, size=wx.Size(800,20),wildcard='*.*')
+            gridSizer.Add(self.ribbon_label,0,wx.EXPAND,border=5)
+            gridSizer.Add(self.ribbon_filepicker,1,wx.EXPAND,border=5)
+            gridSizer.Add(self.ribbon_load_button,0,wx.EXPAND,border=5)
+            self.RibbonFilePath.append(self.ribbon_filepicker)
+
+        hbox = wx.BoxSizer(wx.HORIZONTAL)
+        ok_button = wx.Button(self,wx.ID_OK,'OK')
+        cancel_button = wx.Button(self,wx.ID_CANCEL,'Cancel')
+        hbox.Add(ok_button)
+        hbox.Add(cancel_button)
+
+        vbox.Add(gridSizer)
+        vbox.Add(hbox)
+
+        self.SetSizer(vbox)
+
+    def GetSettings(self):
+        #pathway=dict([])
+        pathway=[]
+        for i in range(4):
+            #pathway[i]=self.RibbonFilePath[i].GetPath()
+            newpath=self.RibbonFilePath[i].GetPath()
+            pathway.append(newpath)
+        return pathway

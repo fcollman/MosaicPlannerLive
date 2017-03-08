@@ -89,16 +89,18 @@ class MMArduino(object):
         else:
             return self.sendMessage([23,1])
 
-    def setupExposure(self,exposures,interframe=10,exp_pattern=[0,0,0,0,1,1,0,1]):
+    def setupExposure(self,exposures,interframe=10,exp_pattern=[0,0,0,0,0,0,0,1]):
         i =0
         for exp in exposures:
             self.setTimedPattern(i,exp_pattern,exp)
+            i+=1
+            self.setTimedPattern(i,[0,0,0,0,0,0,0,0],2)
             i+=1
             self.setTimedPattern(i,[0,0,0,0,0,0,1,0],interframe)
             i+=1
 
         self.setTimedPatternRepeats(1)
-        self.setNumberOfPatterns(2*len(exposures))
+        self.setNumberOfPatterns(3*len(exposures))
 
     def MoveFilter(self,interframe=10, move_pattern=[0,0,0,0,0,0,1,0]):
         self.setNumberOfPatterns(1)
