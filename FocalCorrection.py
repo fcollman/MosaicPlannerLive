@@ -25,14 +25,19 @@ import statsmodels.api as sm
 ### will add the UI setup later
 
 class FocalCorrectionObject2():
-    """Method for fitting approximating the focal plane of a given sample using a two
+    """Method for fitting approximate focal plane of a given sample using a two
     dimmensional bicubic spline interpolation. For N knots(sample points) on the surface
     the interpolation method fits a function z = f(x,y) of degree n, typically three.
     In order for the interpolation to work propertly one needs N = (n+1)**2 knots"""
 
     def __init__(self, Knots=None):
         self.Knots = Knots
-
+        # self.FocalDict = {'Linear Regression': self.get_z_LinearRegression(),
+        #                   'Polynomial Fit': self.polyFit(),
+        #                   'Plane Fit': self.planeFit()}
+        self.FocalDict = {'Linear Regression': 0,
+                          'Plane Fit': 1,
+                          'Polynomial Fit': 2}
 
     def add_knot(self, x, y, z):
         knot = np.array([x,y,z])
@@ -66,6 +71,7 @@ class FocalCorrectionObject2():
 
 
     def polyFit(self,points,order=2):
+        print 'poly fit'
         x = points[:,0]
         y = points[:,1]
         z = points[:,2]
@@ -73,6 +79,7 @@ class FocalCorrectionObject2():
         return m
 
     def planeFit(self,points):
+        print 'plane fit'
         from numpy.linalg import svd
         points = points.T
         assert points.shape[0] < points.shape[1]
@@ -88,7 +95,7 @@ class FocalCorrectionObject2():
         return ax,ay,b
 
     def get_z_LinearRegression(self,xo,yo):
-
+        print 'linear regression'
         dist_sigma = 1000
         xx= self.Knots[:,0]
         yy= self.Knots[:,1]
@@ -119,7 +126,7 @@ class FocalCorrectionObject2():
 
 
 
-    def get_z(self,x, y):
+    def get_z(self,x, y, method):
         xs,ys,zs = self.get_xyzs()
         #X = np.vstack((self.Knots[:,0:1],[x,y]))
 
@@ -128,9 +135,18 @@ class FocalCorrectionObject2():
 
         #m = self.polyFit(self.Knots,2)
         #focalZ = self.polyval2d(x,y,m)
+        if method == self.FocalDict.get('Linear Regression'):
+            focalZ = self.get_z_LinearRegression(x,y)
 
-        focalZ=self.get_z_LinearRegression(x,y)
-        print 'focalz',focalZ
+        if method == self.FocalDict.get('Plane Fit'):
+
+            ax,ay,b = self.planeFit(self.Knots)
+            focalZ = ax*x + ay*y + b
+        if method == self.FocalDict.get('Polynomial Fit'):
+            m = self.polyFit(self.Knots,2)
+            focalZ = self.polyval2d(x,y,m)
+
+        # print 'focalz',focalZ
 
         return focalZ
 
@@ -298,16 +314,25 @@ class FocalCorrectionInterface(QtGui.QWidget):
         self.ended = False
 
 
+        self.FocalDict = self.myfocalcorrection.FocalDict
+        self.FocalDictkeys = self.FocalDict.keys()
+        print self.FocalDict
+        self.InterpMethodComboBox.addItems(self.FocalDictkeys)
+
 
         self.cam = self.mmc.getCameraDevice()
 
         self.XY_label = self.mmc.getXYStageDevice()
+
+
         print self.XY_label
         print self.mmc.getXPosition(self.XY_label)
 
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
         self.channelsComboBox.addItems(self.mmc.getAvailableConfigs('Channels'))
+        self.objectivesComboBox.addItems(self.mmc.getAvailableConfigs('Objective'))
+        self.objectivesComboBox.currentIndexChanged[str].connect(self.changeObjective)
 
 
         # self.channels = self.mmc.getChannelGroup()
@@ -331,6 +356,10 @@ class FocalCorrectionInterface(QtGui.QWidget):
         self.loadknots()
         self.show()
 
+    def changeObjective(self,obj):
+        print obj
+        self.mmc.setConfig('Objective',str(obj))
+
     def changeChannel(self,chan):
         print 'channel is ',chan
         self.mmc.setConfig('Channels',str(chan))
@@ -338,7 +367,11 @@ class FocalCorrectionInterface(QtGui.QWidget):
     def move_with_interpolation(self,x,y):
         print "move to ", x,y
         self.mmc.setXYPosition(self.XY_label,x,y)
-        z = self.myfocalcorrection.get_z(x,y)
+        method = self.InterpMethodComboBox.currentText() #gets current text of combobox
+        # print 'method', method
+        method = self.FocalDict.get(str(method)) #returns value of entry in focal dictionary
+        # print 'method', method
+        z = self.myfocalcorrection.get_z(x,y, method) #inputs value into focal correction object to determine interpolation method
         print "z move to ", z
         print "current z",self.mmc.getPosition(self.Z_label)
         self.mmc.setPosition(self.Z_label,float(z))
@@ -451,7 +484,7 @@ if __name__ == "__main__":
     mmc = MMCorePy.CMMCore()
     # config = QtGui.QFileDialog.getOpenFileName(None, "Choose uManager config file")
     # config = str(config)
-    config = 'C:\Users\SYNBIO-ZEISS\Desktop\Focal Interpolation\XCITEconfig.cfg'
+    config = 'C:\Users\SYNBIO-ZEISS\Desktop\Focal Interpolation\MMZeiss_andor.cfg'
 
     mmc.loadSystemConfiguration(config)
     print mmc.getLoadedDevices()

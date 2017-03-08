@@ -39,6 +39,7 @@ DeviceDict = {0:'UnknownType',
                 15: 'HubDevice',
                 16: 'GalvoDevice'
 }
+
 StringProperty = 1
 FloatProperty = 2
 IntProperty = 3
