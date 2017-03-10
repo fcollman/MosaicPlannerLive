@@ -22,12 +22,13 @@ import json
 
 class DirectorySettings():
 
-    def __init__(self,Sample_ID = None, Ribbon_ID = None, Session_ID = None,Map_num= None,default_path = None ):
+    def __init__(self,Sample_ID = None, Ribbon_ID = None, Session_ID = None,Map_num= None,Slot_num = None,default_path = None ):
 
         self.default_path = default_path
         self.Sample_ID = Sample_ID
         self.Ribbon_ID = Ribbon_ID
         self.Session_ID = Session_ID
+        self.Slot_num = Slot_num
         self.Map_num = Map_num
 
 
@@ -134,6 +135,9 @@ class ChangeDirectorySettings(wx.Dialog):
         self.Map_txt = wx.StaticText(self,label = "Map Number:")
         self.MapInt_Ctrl = wx.lib.intctrl.IntCtrl(self,value = settings.Map_num, min = 0 , max = None, allow_none = False)
 
+        self.Slot_txt = wx.StaticText(self,label = "Slot Number:")
+        self.SlotInt_Ctrl = wx.lib.intctrl.IntCtrl(self, value = 0, min = 0, max = 7, allow_none = False)
+
 
         ok_button = wx.Button(self,wx.ID_OK,'OK')
         cancel_button = wx.Button(self,wx.ID_CANCEL,'Cancel')
@@ -143,6 +147,7 @@ class ChangeDirectorySettings(wx.Dialog):
         hbox3 = wx.BoxSizer(wx.HORIZONTAL)
         hbox4 = wx.BoxSizer(wx.HORIZONTAL)
         hbox5 = wx.BoxSizer(wx.HORIZONTAL)
+        hbox6 = wx.BoxSizer(wx.HORIZONTAL)
         hbox.Add(self.RootDir_txt)
         hbox.Add(self.RootDir_Ctrl)
         hbox1.Add(self.SampleID_txt)
@@ -153,14 +158,17 @@ class ChangeDirectorySettings(wx.Dialog):
         hbox3.Add(self.SessionInt_Ctrl)
         hbox4.Add(self.Map_txt)
         hbox4.Add(self.MapInt_Ctrl)
-        hbox5.Add(ok_button)
-        hbox5.Add(cancel_button)
+        hbox5.Add(self.Slot_txt)
+        hbox5.Add(self.SlotInt_Ctrl)
+        hbox6.Add(ok_button)
+        hbox6.Add(cancel_button)
         vbox.Add(hbox)
         vbox.Add(hbox1)
         vbox.Add(hbox2)
         vbox.Add(hbox3)
         vbox.Add(hbox4)
         vbox.Add(hbox5)
+        vbox.Add(hbox6)
         self.SetSizer(vbox)
 
     def get_settings(self):
@@ -169,8 +177,9 @@ class ChangeDirectorySettings(wx.Dialog):
         Session_ID = self.SessionInt_Ctrl.GetValue()
         Sample_ID = self.SampleID_Ctrl.GetValue()
         Map_num = self.MapInt_Ctrl.GetValue()
+        Slot_num = self.SlotInt_Ctrl.GetValue()
         Default_Path = self.RootDir_Ctrl.GetPath()
-        return DirectorySettings(Sample_ID,Ribbon_ID,Session_ID,Map_num,Default_Path)
+        return DirectorySettings(Sample_ID,Ribbon_ID,Session_ID,Map_num,Slot_num,Default_Path)
 
 
 
