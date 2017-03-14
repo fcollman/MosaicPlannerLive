@@ -136,7 +136,7 @@ class ChangeDirectorySettings(wx.Dialog):
         self.MapInt_Ctrl = wx.lib.intctrl.IntCtrl(self,value = settings.Map_num, min = 0 , max = None, allow_none = False)
 
         self.Slot_txt = wx.StaticText(self,label = "Slot Number:")
-        self.SlotInt_Ctrl = wx.lib.intctrl.IntCtrl(self, value = 0, min = 0, max = 7, allow_none = False)
+        self.SlotInt_Ctrl = wx.lib.intctrl.IntCtrl(self, value = settings.Slot_num, min = 0, max = 7, allow_none = False)
 
 
         ok_button = wx.Button(self,wx.ID_OK,'OK')
