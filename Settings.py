@@ -47,6 +47,7 @@ class DirectorySettings():
         self.Ribbon_ID = cfg['Directories']['Ribbon_ID']
         self.Session_ID = cfg['Directories']['Session_ID']
         self.Map_num = cfg['Directories']['Map_num']
+        self.Slot_num = cfg['Directories']['Slot_num']
 
     def create_directory(self,cfg,kind):
         root = self.default_path
