@@ -39,6 +39,7 @@ class DirectorySettings():
         cfg['Directories']['Session_ID'] = self.Session_ID
         cfg['Directories']['Map_num'] = self.Map_num
         cfg['Directories']['Default_Path'] = self.default_path
+        cfg['Directories']['Slot_num'] = self.Slot_num
         cfg.write()
 
     def load_settings(self,cfg):
@@ -759,7 +760,7 @@ class ChangeSEMSettings(wx.Dialog):
 
 class MultiRibbonSettings(wx.Dialog): #MultiRibbons
     """dialog for setting multiribbon aquisition"""
-    def __init__(self, parent, id,ribbon_number, title, settings,style):
+    def __init__(self, parent, id, ribbon_number, title, settings,style):
         wx.Dialog.__init__(self, parent, id, title,style=wx.DEFAULT_DIALOG_STYLE, size=(1000, 300))
 
         vbox = wx.BoxSizer(wx.VERTICAL)
