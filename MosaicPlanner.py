@@ -1410,6 +1410,8 @@ class MosaicPanel(FigureCanvas):
             #lower objective, move the stage to the first section of the ribbon
             self.imgSrc.move_safe_and_focus(self.posList.slicePositions[0].x,self.posList.slicePositions[0].y)
 
+            #call software autofocus
+
             self.dataQueue = mp.Queue()
             metadata_dictionary = {
             'channelname'    : self.channel_settings.prot_names,
@@ -1482,6 +1484,21 @@ class MosaicPanel(FigureCanvas):
         self.imgSrc.set_binning(2)
         if self.cfg['MosaicPlanner']['hardware_trigger']:
             self.imgSrc.stop_hardware_triggering()
+
+    def software_autofocus(self): #MultiRibbons
+        self.imgSrc.set_hardware_autofocus_state(False) #turn off autofocus
+        ch = self.channel_settings.channels[0]
+        self.imgSrc.set_exposure(self.channel_settings.exposure_times[ch])
+        self.imgSrc.set_channel(ch)
+        current_z = self.imgSrc.get_z()
+        zstack_step = 0.1 #z step between images(microns)
+        zstack_number = 5 #number of images to take
+        furthest_distance = zstack_step * (zstack_number-1)/2
+        zplanes_to_visit = [(current_z-furthest_distance) + i*zstack_step for i in range(zstack_number)]
+        for z_index, zplane in enumerate(zplanes_to_visit):
+            data=self.imgSrc.snap_image()
+        #calculate best z
+        #reset focus offset
 
 
 class ZVISelectFrame(wx.Frame):
