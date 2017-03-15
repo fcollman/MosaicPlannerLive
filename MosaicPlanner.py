@@ -1478,6 +1478,7 @@ class MosaicPanel(FigureCanvas):
             self.saveProcess.join()
             print "save process ended, ribbon %d of 3"%(rib)
             self.progress.Destroy()
+            self.move_safe_to_start()
         self.imgSrc.set_binning(2)
         if self.cfg['MosaicPlanner']['hardware_trigger']:
             self.imgSrc.stop_hardware_triggering()
