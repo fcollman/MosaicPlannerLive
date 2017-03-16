@@ -22,14 +22,16 @@ import json
 
 class DirectorySettings():
 
-    def __init__(self,Sample_ID = None, Ribbon_ID = None, Session_ID = None,Map_num= None,Slot_num = None,default_path = None ):
+    def __init__(self,Ribbon_num,Sample_ID = None, Ribbon_ID = None, Session_ID = None,Map_num= None,Slot_num = None,default_path = None ):
 
+        self.Ribbon_num = Ribbon_num
         self.default_path = default_path
         self.Sample_ID = Sample_ID
         self.Ribbon_ID = Ribbon_ID
         self.Session_ID = Session_ID
         self.Slot_num = Slot_num
         self.Map_num = Map_num
+        self.Data_Filepath_dict = {}
 
 
 
@@ -49,6 +51,19 @@ class DirectorySettings():
         self.Session_ID = cfg['Directories']['Session_ID']
         self.Map_num = cfg['Directories']['Map_num']
         self.Slot_num = cfg['Directories']['Slot_num']
+
+    def edit_Directory_settings(self,cfg,event="none"):
+        for i in range(self.Ribbon_num):
+            dlg = ChangeDirectorySettings(None,-1,title = "Enter Sample Information",style = wx.OK,settings=self)
+            ret = dlg.ShowModal()
+            if ret == wx.ID_OK:
+                self = dlg.get_settings()
+                self.Data_Filepath_dict[str(self.Sample_ID) + '_Slot' + str(self.Slot_num) + '_Ribbon' + str(self.Ribbon_ID)] \
+                    = self.create_directory(cfg,kind = 'data')
+                self.save_settings(cfg)
+            dlg.Destroy()
+
+
 
     def create_directory(self,cfg,kind):
         root = self.default_path
@@ -117,7 +132,7 @@ class RibbonNumberDialog(wx.Dialog):
 
 
 class ChangeDirectorySettings(wx.Dialog):
-    def __init__(self,parent, id,style, title="Enter Sample Information",settings = DirectorySettings()):
+    def __init__(self,parent, id,style, title="Enter Sample Information",settings = DirectorySettings(Ribbon_num=1)):
         wx.Dialog.__init__(self, parent, id, title, style= wx.DEFAULT_DIALOG_STYLE, size= (420,-1),)
         vbox = wx.BoxSizer(wx.VERTICAL)
         # self.settings = settings
@@ -181,8 +196,9 @@ class ChangeDirectorySettings(wx.Dialog):
         Map_num = self.MapInt_Ctrl.GetValue()
         Slot_num = self.SlotInt_Ctrl.GetValue()
         Default_Path = self.RootDir_Ctrl.GetPath()
+        Default_Path = self.RootDir_Ctrl.GetPath()
+        # return [Sample_ID,Slot_num,Ribbon_ID,Session_ID,Map_num,Default_Path]
         return DirectorySettings(Sample_ID,Ribbon_ID,Session_ID,Map_num,Slot_num,Default_Path)
-
 
 
 
@@ -772,7 +788,7 @@ class MultiRibbonSettings(wx.Dialog): #MultiRibbons
         self.ribbon_number = ribbon_number
         self.RibbonFilePath = []
         for i in range(self.ribbon_number):
-            self.ribbon_label=wx.StaticText(self,id=wx.ID_ANY,label=str(i))
+            self.ribbon_label=wx.StaticText(self,id=wx.ID_ANY,label='Slot' + str(i))
             self.ribbon_load_button=wx.Button(self,id=wx.ID_ANY,label=" ",name="load button")
             self.ribbon_filepicker=wx.FilePickerCtrl(self,message='Select an array file',\
             path="",name='arrayFilePickerCtrl1',\

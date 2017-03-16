@@ -367,11 +367,15 @@ class MosaicPanel(FigureCanvas):
 
         self.outdirdict = {}
         self.multiribbon_boolean = self.askMultiribbons()
+        if self.multiribbon_boolean:
+            self.Ribbon_Num = self.get_ribbon_number()
+        else:
+            self.Ribbon_Num = 1
         if not self.multiribbon_boolean:
 
-            self.directory_settings = DirectorySettings()
-            self.directory_settings.load_settings(config)
-            self.edit_Directory_settings(self.directory_settings)
+            self.directory_settings = DirectorySettings(self.Ribbon_Num)
+            # self.directory_settings.load_settings(config)
+            self.directory_settings.edit_Directory_settings(config)
             print 'Sample_ID:', self.directory_settings.Sample_ID
             print 'Ribbon_ID:', self.directory_settings.Ribbon_ID
             print 'Session_ID:', self.directory_settings.Session_ID
@@ -380,7 +384,6 @@ class MosaicPanel(FigureCanvas):
             self.outdirdict[self.directory_settings.Ribbon_ID] = self.get_output_dir(self.directory_settings)
 
         else:
-            self.Ribbon_Num = self.get_ribbon_number()
             self.directory_settings = DirectorySettings()
             self.directory_settings.load_settings(config)
             for i in range(self.Ribbon_Num):
@@ -956,13 +959,13 @@ class MosaicPanel(FigureCanvas):
 
         dlg.Destroy()
 
-    def edit_Directory_settings(self,event="none"):
-        dlg = ChangeDirectorySettings(None,-1,title = "Enter Sample Information",style = wx.OK,settings=self.directory_settings)
-        ret = dlg.ShowModal()
-        if ret == wx.ID_OK:
-            self.directory_settings = dlg.get_settings()
-            self.directory_settings.save_settings(self.cfg)
-        dlg.Destroy()
+    # def edit_Directory_settings(self,event="none"):
+    #     dlg = ChangeDirectorySettings(None,-1,title = "Enter Sample Information",style = wx.OK,settings=self.directory_settings)
+    #     ret = dlg.ShowModal()
+    #     if ret == wx.ID_OK:
+    #         self.directory_settings = dlg.get_settings()
+    #         self.directory_settings.save_settings(self.cfg)
+    #     dlg.Destroy()
 
 
     def edit_Zstack_settings(self,event = "none"):
