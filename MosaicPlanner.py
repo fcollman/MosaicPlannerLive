@@ -1505,12 +1505,12 @@ class MosaicPanel(FigureCanvas):
 
         #calculate best z
         print "calculating focus"
-        FS_stack = np.zeros((height,width,zstack_number))
+        fstack = np.zeros((height,width,zstack_number))
         for i in range(len(zplanes_to_visit)):
             sobel_image = sobel(stack[:,:,i])
             sobel_image = gaussian_filter(sobel_image,sigma=200)
-            FS_stack[:,:,i] = sobel_image
-        focal_plane = np.argmax(FS_stack,2)
+            fstack[:,:,i] = sobel_image
+        focal_plane = np.argmax(fstack,2)
         best_z = np.median(focal_plane)
 
         #reset focus offset
