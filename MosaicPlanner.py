@@ -51,6 +51,7 @@ from Settings import (MosaicSettings, CameraSettings,SiftSettings,ChangeCameraSe
 
 from configobj import ConfigObj
 from validate import Validator
+from skimage.filters import sobel,gaussian_filter #MultiRibbons
 
 STOP_TOKEN = 'STOP!!!'
 DEFAULT_SETTINGS_FILE = 'MosaicPlannerSettings.default.cfg'
@@ -1490,16 +1491,30 @@ class MosaicPanel(FigureCanvas):
         ch = self.channel_settings.channels[0]
         self.imgSrc.set_exposure(self.channel_settings.exposure_times[ch])
         self.imgSrc.set_channel(ch)
+        (height,width) = self.imgSrc.get_sensor_size()
         current_z = self.imgSrc.get_z()
         zstack_step = 0.1 #z step between images(microns)
         zstack_number = 5 #number of images to take
         furthest_distance = zstack_step * (zstack_number-1)/2
         zplanes_to_visit = [(current_z-furthest_distance) + i*zstack_step for i in range(zstack_number)]
+        stack = np.zeros((height,width,zstack_number))
         for z_index, zplane in enumerate(zplanes_to_visit):
-            data=self.imgSrc.snap_image()
-        #calculate best z
-        #reset focus offset
+            z = zplane
+            self.imgSrc.set_z(z)
+            stack[:,:,z_index]=self.imgSrc.snap_image()
 
+        #calculate best z
+        print "calculating focus"
+        FS_stack = np.zeros((height,width,zstack_number))
+        for i in range(len(zplanes_to_visit)):
+            sobel_image = sobel(stack[:,:,i])
+            sobel_image = gaussian_filter(sobel_image,sigma=200)
+            FS_stack[:,:,i] = sobel_image
+        focal_plane = np.argmax(FS_stack,2)
+        best_z = np.median(focal_plane)
+
+        #reset focus offset
+        self.imgSrc.set_z(best_z)
 
 class ZVISelectFrame(wx.Frame):
     """class extending wx.Frame for highest level handling of GUI components """
