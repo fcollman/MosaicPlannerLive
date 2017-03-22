@@ -1830,7 +1830,7 @@ class ZVISelectFrame(wx.Frame):
             else:
                 self.mosaicCanvas.posList.save_frame_list_SmartSEM(self.array_filepicker.GetPath(),SEMS=self.SmartSEMSettings,trans=None)
         elif self.array_formatBox.GetValue()=='JSON': #MultiRibbons
-            print "not yet implemented"
+            print "not yet implement"
 
     def toggle_relative_motion(self,event):
         """event handler for handling the toggling of the relative motion"""
