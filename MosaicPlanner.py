@@ -1453,7 +1453,7 @@ class MosaicPanel(FigureCanvas):
                     self.ResetPiezo()
                     current_z = self.imgSrc.get_z()
                     if pos.frameList is None:
-                        self.multiDacq(success,outdirlist[rib],pos.x,pos.y,current_z,i,hold_focus=hold_focus)
+                        self.multiDacq(success,outdirlist[rib],chrom_correction,pos.x,pos.y,current_z,i,hold_focus=hold_focus)
                     else:
                         for j,fpos in enumerate(pos.frameList.slicePositions):
                             if not goahead:
@@ -1463,7 +1463,7 @@ class MosaicPanel(FigureCanvas):
                                 print "autofocus no longer enabled while moving between frames.. quiting"
                                 goahead = False
                                 break
-                            self.multiDacq(success,outdirlist[rib],fpos.x,fpos.y,current_z,i,j,hold_focus)
+                            self.multiDacq(success,outdirlist[rib],chrom_correction,fpos.x,fpos.y,current_z,i,j,hold_focus)
                             self.ResetPiezo()
                             (goahead, skip)=self.progress.Update((i*numFrames) + j,'ribbon %d of %d, section %d of %d, frame %d'%(rib,3,i,numSections-1,j))
 
