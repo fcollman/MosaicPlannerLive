@@ -517,3 +517,7 @@ class imageSource():
         stg=self.mmc.getXYStageDevice()
         self.mmc.setXYPosition(stg,x,y)
         #self.mmc.waitForDevice(stg)
+
+    def set_autofocus_offset(self): #MultiRibbons
+        if self.has_hardware_autofocus():
+            self.mmc.setAutoFocusOffset(-1)
