@@ -1412,6 +1412,7 @@ class MosaicPanel(FigureCanvas):
             self.imgSrc.move_safe_and_focus(self.posList.slicePositions[0].x,self.posList.slicePositions[0].y)
 
             #call software autofocus
+            #self.software_autofocus()  #Need to uncomment it when it is ready!!!!!!!!!!!
 
             self.dataQueue = mp.Queue()
             metadata_dictionary = {
@@ -1487,6 +1488,7 @@ class MosaicPanel(FigureCanvas):
             self.imgSrc.stop_hardware_triggering()
 
     def software_autofocus(self): #MultiRibbons
+        print "software autofocus"
         self.imgSrc.set_hardware_autofocus_state(False) #turn off autofocus
         ch = self.channel_settings.channels[0]
         self.imgSrc.set_exposure(self.channel_settings.exposure_times[ch])
@@ -1499,8 +1501,7 @@ class MosaicPanel(FigureCanvas):
         zplanes_to_visit = [(current_z-furthest_distance) + i*zstack_step for i in range(zstack_number)]
         stack = np.zeros((height,width,zstack_number))
         for z_index, zplane in enumerate(zplanes_to_visit):
-            z = zplane
-            self.imgSrc.set_z(z)
+            self.imgSrc.set_z(zplane)
             stack[:,:,z_index]=self.imgSrc.snap_image()
 
         #calculate best z
@@ -1513,8 +1514,10 @@ class MosaicPanel(FigureCanvas):
         focal_plane = np.argmax(fstack,2)
         best_z = np.median(focal_plane)
 
-        #reset focus offset
+        #set best z and reset autofocus offset
         self.imgSrc.set_z(best_z)
+        self.imgSrc.set_autofocus_offset()
+        self.imgSrc.set_hardware_autofocus_state(True) #turn on autofocus
 
 class ZVISelectFrame(wx.Frame):
     """class extending wx.Frame for highest level handling of GUI components """
