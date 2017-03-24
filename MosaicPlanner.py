@@ -51,6 +51,7 @@ from Settings import (MosaicSettings, CameraSettings,SiftSettings,ChangeCameraSe
 
 from configobj import ConfigObj
 from validate import Validator
+from skimage.filters import sobel,gaussian_filter #MultiRibbons
 
 STOP_TOKEN = 'STOP!!!'
 DEFAULT_SETTINGS_FILE = 'MosaicPlannerSettings.default.cfg'
@@ -1410,6 +1411,9 @@ class MosaicPanel(FigureCanvas):
             #lower objective, move the stage to the first section of the ribbon
             self.imgSrc.move_safe_and_focus(self.posList.slicePositions[0].x,self.posList.slicePositions[0].y)
 
+            #call software autofocus
+            self.software_autofocus()
+
             self.dataQueue = mp.Queue()
             metadata_dictionary = {
             'channelname'    : self.channel_settings.prot_names,
@@ -1482,6 +1486,40 @@ class MosaicPanel(FigureCanvas):
         self.imgSrc.set_binning(2)
         if self.cfg['MosaicPlanner']['hardware_trigger']:
             self.imgSrc.stop_hardware_triggering()
+
+    def software_autofocus(self): #MultiRibbons
+        print "software autofocus"
+        self.imgSrc.set_hardware_autofocus_state(False) #turn off autofocus
+        ch = self.channel_settings.channels[0]
+        self.imgSrc.set_exposure(self.channel_settings.exposure_times[ch])
+        self.imgSrc.set_channel(ch)
+        (height,width) = self.imgSrc.get_sensor_size()
+        current_z = self.imgSrc.get_z()
+        print "current_z: %d"%(current_z)
+        zstack_step = 0.1 #z step between images(microns)
+        zstack_number = 5 #number of images to take
+        furthest_distance = zstack_step * (zstack_number-1)/2
+        zplanes_to_visit = [(current_z-furthest_distance) + i*zstack_step for i in range(zstack_number)]
+        print "z_planes:", zplanes_to_visit
+        stack = np.zeros((height,width,zstack_number))
+        for z_index, zplane in enumerate(zplanes_to_visit):
+            self.imgSrc.set_z(zplane)
+            stack[:,:,z_index]=self.imgSrc.snap_image()
+
+        #calculate best z
+        print "calculating focus"
+        fstack = np.zeros((height,width,zstack_number))
+        for i in range(len(zplanes_to_visit)):
+            sobel_image = sobel(stack[:,:,i])
+            sobel_image = gaussian_filter(sobel_image,sigma=200)
+            fstack[:,:,i] = sobel_image
+        focal_plane = np.argmax(fstack,2)
+        best_z = zplanes_to_visit[np.median(focal_plane)]
+        print "best_z: %d"%(best_z)
+        #set best z and reset autofocus offset
+        self.imgSrc.set_z(best_z)
+        self.imgSrc.set_autofocus_offset()
+        self.imgSrc.set_hardware_autofocus_state(True) #turn on autofocus
 
 
 class ZVISelectFrame(wx.Frame):
