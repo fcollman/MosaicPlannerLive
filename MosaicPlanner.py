@@ -1494,32 +1494,50 @@ class MosaicPanel(FigureCanvas):
         self.imgSrc.set_exposure(self.channel_settings.exposure_times[ch])
         self.imgSrc.set_channel(ch)
         (height,width) = self.imgSrc.get_sensor_size()
-        current_z = self.imgSrc.get_z()
-        print "current_z: %d"%(current_z)
-        zstack_step = 0.1 #z step between images(microns)
+        zstack_step = 0.5 #z step between images(microns)
         zstack_number = 5 #number of images to take
+        stack = np.zeros((height,width,zstack_number))
+        offsets = []
+        current_z = self.imgSrc.get_z()
+        print "current_z: ", current_z
+        print "autofocus offset: ", self.imgSrc.get_autofocus_offset()
         furthest_distance = zstack_step * (zstack_number-1)/2
         zplanes_to_visit = [(current_z-furthest_distance) + i*zstack_step for i in range(zstack_number)]
         print "z_planes:", zplanes_to_visit
-        stack = np.zeros((height,width,zstack_number))
+
         for z_index, zplane in enumerate(zplanes_to_visit):
             self.imgSrc.set_z(zplane)
             stack[:,:,z_index]=self.imgSrc.snap_image()
+            print "actual z: ", self.imgSrc.get_z()
+            print "autofocus offset: ", self.imgSrc.get_autofocus_offset()
+            self.imgSrc.set_autofocus_offset(-1)
+            time.sleep(2*self.cfg['MosaicPlanner']['autofocus_wait'])
+            offsets.append(self.imgSrc.get_autofocus_offset())
+            print "autofocus offset: ", self.imgSrc.get_autofocus_offset()
 
         #calculate best z
         print "calculating focus"
+        print "offsets: ", offsets
         fstack = np.zeros((height,width,zstack_number))
         for i in range(len(zplanes_to_visit)):
             sobel_image = sobel(stack[:,:,i])
             sobel_image = gaussian_filter(sobel_image,sigma=200)
             fstack[:,:,i] = sobel_image
         focal_plane = np.argmax(fstack,2)
-        best_z = zplanes_to_visit[np.median(focal_plane)]
-        print "best_z: %d"%(best_z)
+        best_z = zplanes_to_visit[int(round(np.median(focal_plane)))]
+        print "best z plane #:", int(round(np.median(focal_plane)))
+        print "best_z: ", best_z
         #set best z and reset autofocus offset
         self.imgSrc.set_z(best_z)
-        self.imgSrc.set_autofocus_offset()
+        print "actual z: ", self.imgSrc.get_z()
+        print "autofocus offset: ", self.imgSrc.get_autofocus_offset()
+        #self.imgSrc.set_autofocus_offset(-1)
+        best_offset = offsets[int(round(np.median(focal_plane)))]
+        print "best_offset: ", best_offset
+        self.imgSrc.set_autofocus_offset(best_offset)
+        time.sleep(2*self.cfg['MosaicPlanner']['autofocus_wait'])
         self.imgSrc.set_hardware_autofocus_state(True) #turn on autofocus
+        print "autofocus offset: ", self.imgSrc.get_autofocus_offset()
 
 
 class ZVISelectFrame(wx.Frame):
