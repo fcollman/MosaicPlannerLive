@@ -1469,7 +1469,7 @@ class MosaicPanel(FigureCanvas):
                                 break
                             self.multiDacq(success,outdirlist[rib],chrom_correction,fpos.x,fpos.y,current_z,i,j,hold_focus)
                             self.ResetPiezo()
-                            (goahead, skip)=self.progress.Update((i*numFrames) + j,'ribbon %d of %d, section %d of %d, frame %d'%(rib,self.Ribbon_Num,i,numSections-1,j))
+                            (goahead, skip)=self.progress.Update((i*numFrames) + j,'ribbon %d of %d, section %d of %d, frame %d'%(rib,self.Ribbon_Num-1,i,numSections-1,j))
 
                     wx.Yield()
             if not goahead:
