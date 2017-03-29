@@ -1,1 +1,1 @@
-{"QuadBand0DAPI": ["DAPI_0", "DAPI_1", "DAPI_2", "DAPI_3", "DAPI_4"], "Proteins": ["B-Tubulin", "GABA", "GAD2", "Gephyrin", "GFP", "GluN1", "MBP", "PSD95", "Synapsin1", "Synaptophysin", "TdTomato", "VDAC1", "VGlut1", "GAD2", "MBP", "GluN1", ""]}
+{"QuadBand0DAPI": ["DAPI_0", "DAPI_1", "DAPI_2", "DAPI_3", "DAPI_4", "DAPI_5"], "Proteins": ["B-Tubulin", "GABA", "GAD2", "Gephyrin", "GFP", "GluN1", "MBP", "PSD95", "Synapsin1", "Synaptophysin", "TdTomato", "VDAC1", "VGlut1", "", "GFP-Quad"]}
