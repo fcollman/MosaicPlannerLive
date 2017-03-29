@@ -1494,8 +1494,8 @@ class MosaicPanel(FigureCanvas):
         self.imgSrc.set_exposure(self.channel_settings.exposure_times[ch])
         self.imgSrc.set_channel(ch)
         (height,width) = self.imgSrc.get_sensor_size()
-        zstack_step = 0.5 #z step between images(microns)
-        zstack_number = 11 #number of images to take
+        zstack_step = 0.3 #z step between images(microns)
+        zstack_number = 15 #number of images to take
         stack = np.zeros((height,width,zstack_number))
         offsets = []
         current_z = self.imgSrc.get_z()
