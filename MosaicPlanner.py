@@ -1483,9 +1483,10 @@ class MosaicPanel(FigureCanvas):
             print "save process ended, ribbon %d of 3"%(rib)
             self.progress.Destroy()
             self.move_safe_to_start()
+            if self.cfg['MosaicPlanner']['hardware_trigger']:
+                self.imgSrc.stop_hardware_triggering()
         self.imgSrc.set_binning(2)
-        if self.cfg['MosaicPlanner']['hardware_trigger']:
-            self.imgSrc.stop_hardware_triggering()
+
 
     def software_autofocus(self): #MultiRibbons
         print "software autofocus"
