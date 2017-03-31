@@ -1408,11 +1408,13 @@ class MosaicPanel(FigureCanvas):
             self.write_session_metadata(outdirlist[rib])
 
             #self.move_safe_to_start() - do not use
-            #lower objective, move the stage to the first section of the ribbon
-            self.imgSrc.move_safe_and_focus(self.posList.slicePositions[0].x,self.posList.slicePositions[0].y)
+            #lower objective, move the stage to section 1 of the ribbon
+            self.imgSrc.move_safe_and_focus(self.posList.slicePositions[1].x,self.posList.slicePositions[1].y)
 
             #call software autofocus
             self.software_autofocus()
+
+            self.move_safe_to_start() #move to section 0
 
             self.dataQueue = mp.Queue()
             metadata_dictionary = {
@@ -1483,9 +1485,10 @@ class MosaicPanel(FigureCanvas):
             print "save process ended, ribbon %d of 3"%(rib)
             self.progress.Destroy()
             self.move_safe_to_start()
+            if self.cfg['MosaicPlanner']['hardware_trigger']:
+                self.imgSrc.stop_hardware_triggering()
         self.imgSrc.set_binning(2)
-        if self.cfg['MosaicPlanner']['hardware_trigger']:
-            self.imgSrc.stop_hardware_triggering()
+
 
     def software_autofocus(self): #MultiRibbons
         print "software autofocus"
