@@ -52,6 +52,8 @@ from Settings import (MosaicSettings, CameraSettings,SiftSettings,ChangeCameraSe
 from configobj import ConfigObj
 from validate import Validator
 from skimage.filters import sobel,gaussian_filter #MultiRibbons
+import cv2 #MultiRibbons
+from skimage.measure import block_reduce #MultiRibbons
 
 STOP_TOKEN = 'STOP!!!'
 DEFAULT_SETTINGS_FILE = 'MosaicPlannerSettings.default.cfg'
@@ -1408,11 +1410,13 @@ class MosaicPanel(FigureCanvas):
             self.write_session_metadata(outdirlist[rib])
 
             #self.move_safe_to_start() - do not use
-            #lower objective, move the stage to the first section of the ribbon
-            self.imgSrc.move_safe_and_focus(self.posList.slicePositions[0].x,self.posList.slicePositions[0].y)
+            #lower objective, move the stage to section 1 of the ribbon
+            self.imgSrc.move_safe_and_focus(self.posList.slicePositions[1].x,self.posList.slicePositions[1].y)
 
             #call software autofocus
             self.software_autofocus()
+
+            self.move_safe_to_start() #move to section 0
 
             self.dataQueue = mp.Queue()
             metadata_dictionary = {
@@ -1509,41 +1513,42 @@ class MosaicPanel(FigureCanvas):
         for z_index, zplane in enumerate(zplanes_to_visit):
             self.imgSrc.set_z(zplane)
             stack[:,:,z_index]=self.imgSrc.snap_image()
-            #print "actual z: ", self.imgSrc.get_z()
-            #print "autofocus offset: ", self.imgSrc.get_autofocus_offset()
             self.imgSrc.set_autofocus_offset(-1)
             time.sleep(2*self.cfg['MosaicPlanner']['autofocus_wait'])
             offsets.append(self.imgSrc.get_autofocus_offset())
-            #print "autofocus offset: ", self.imgSrc.get_autofocus_offset()
 
         #calculate best z
         print "calculating focus"
         print "offsets: ", offsets
-        #dh = int(height/3)
-        #dw = int(width/3)
-        #fstack = np.zeros((dh,dw,zstack_number)) #use central part of image
-        fstack = np.zeros((height,width,zstack_number))
+        #using Sobel filter
+        #fstack = np.zeros((height,width,zstack_number))
+        #for i in range(len(zplanes_to_visit)):
+        #    sobel_image = sobel(stack[:,:,i])
+        #    sobel_image = gaussian_filter(sobel_image,sigma=200)
+        #    fstack[:,:,i] = sobel_image
+        #focal_plane = np.argmax(fstack,2)
+        #print "max: ", np.max(focal_plane), "min: ", np.min(focal_plane)
+        #print "best z plane #:", int(round(np.median(focal_plane)))
+        #using Laplacian
+        fstack = None
+        sigma = 50
         for i in range(len(zplanes_to_visit)):
-            #sobel_image = sobel(stack[dh:dh*2,dw:dw*2,i]) #use central part of image
-            sobel_image = sobel(stack[:,:,i])
-            sobel_image = gaussian_filter(sobel_image,sigma=200)
-            fstack[:,:,i] = sobel_image
-        focal_plane = np.argmax(fstack,2)
+            score = cv2.Laplacian(stack[:,:,i],cv2.CV_16U, ksize = 5)
+            score = block_reduce(score,(sigma,sigma),np.sum,cval=np.mean(score))
+            if fstack is None:
+                fstack = np.zeros((score.shape[0],score.shape[1],stack.shape[2]))
+            fstack[:,:,i]=score
+        var = np.std(fstack)
+        zscore = (fstack-np.median(fstack))/var
+        focal_plane = np.argmax(zscore,2)
+
         print "max: ", np.max(focal_plane), "min: ", np.min(focal_plane)
-        best_z = zplanes_to_visit[int(round(np.median(focal_plane)))]
         print "best z plane #:", int(round(np.median(focal_plane)))
-        print "best_z: ", best_z
-        #set best z and reset autofocus offset
-        self.imgSrc.set_z(best_z)
-        #print "actual z: ", self.imgSrc.get_z()
-        #print "autofocus offset: ", self.imgSrc.get_autofocus_offset()
-        #self.imgSrc.set_autofocus_offset(-1)
         best_offset = offsets[int(round(np.median(focal_plane)))]
         print "best_offset: ", best_offset
-        self.imgSrc.set_autofocus_offset(best_offset)
+        self.imgSrc.set_autofocus_offset(best_offset) #reset autofocus offset
         time.sleep(2*self.cfg['MosaicPlanner']['autofocus_wait'])
         self.imgSrc.set_hardware_autofocus_state(True) #turn on autofocus
-        print "autofocus offset: ", self.imgSrc.get_autofocus_offset()
 
 
 class ZVISelectFrame(wx.Frame):
