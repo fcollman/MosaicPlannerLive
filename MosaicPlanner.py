@@ -243,7 +243,7 @@ class MosaicToolbar(NavBarImproved):
         #bind event handles for the various tools
         #this one i think is inherited... the zoom_tool function (- batman, resolution to thinking?)
         self.Bind(wx.EVT_TOOL, self.on_toggle_pan_zoom, self.zoom_tool)
-        self.Bind(wx.EVT_CHECKBOX,self.toggle_mosaic_visible,self.showmagCheck)
+        self.Bind(wx.EVT_CHECKBOX,self.toggle_mosaic_visible,self.showMosaicCheck)
         self.Bind( wx.lib.agw.floatspin.EVT_FLOATSPIN,self.update_mosaic_settings, self.magChoiceCtrl)
         self.Bind(wx.lib.intctrl.EVT_INT,self.update_mosaic_settings, self.mosaicXCtrl)
         self.Bind(wx.lib.intctrl.EVT_INT,self.update_mosaic_settings, self.mosaicYCtrl)
@@ -1614,7 +1614,7 @@ class ZVISelectFrame(wx.Frame):
         #default_image=""
 
         #recursively call old init function
-        wx.Frame.__init__(self, parent, title=title, size=(1550,885),pos=(5,5))
+        wx.Frame.__init__(self, parent, title=title, size=(1750,885),pos=(5,5))
         #self.cfg = wx.Config('settings')
         if not os.path.isfile(SETTINGS_FILE):
             from shutil import copyfile
