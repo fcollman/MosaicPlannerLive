@@ -200,7 +200,7 @@ class MosaicToolbar(NavBarImproved):
         self.onCropTool   = self.AddSimpleTool(self.ON_CROP,cropBmp,'Crop field of view','cropTool')
 
         #add the toggleable tools
-        self.gridTool=self.AddCheckTool(self.ON_GRID,gridBmp,wx.NullBitmap,'toggle rotate boxes')
+        self.gridTool=self.AddCheckTool(self.ON_GRID,gridBmp,wx.NullBitmap,'toggle show frames')
         self.rotateTool=self.AddCheckTool(self.ON_ROTATE,rotateBmp,wx.NullBitmap,'toggle rotate boxes')
         self.runAcqTool=self.AddSimpleTool(self.ON_RUN,batmanBmp,'Acquire AT Data','run_tool')
         self.runMultiAcqTool=self.AddSimpleTool(self.ON_RUN_MULTI,checkBmp,'MultiRibbons','run_multi_tool') #MultiRibbons
