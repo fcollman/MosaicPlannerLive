@@ -206,8 +206,8 @@ class MosaicToolbar(NavBarImproved):
         self.runMultiAcqTool=self.AddSimpleTool(self.ON_RUN_MULTI,checkBmp,'MultiRibbons','run_multi_tool') #MultiRibbons
 
         #setup the controls for the mosaic
-        self.showmagCheck = wx.CheckBox(self)
-        self.showmagCheck.SetValue(False)
+        self.showMosaicCheck = wx.CheckBox(self)
+        self.showMosaicCheck.SetValue(True)
         self.magChoiceCtrl = wx.lib.agw.floatspin.FloatSpin(self,
                                                             size=(65, -1 ),
                                                             value=self.canvas.posList.mosaic_settings.mag,
@@ -217,7 +217,7 @@ class MosaicToolbar(NavBarImproved):
                                                             name='magnification')
         self.mosaicXCtrl = wx.lib.intctrl.IntCtrl(self, value=1, size=(20, -1))
         self.mosaicYCtrl = wx.lib.intctrl.IntCtrl(self, value=1, size=(20, -1))
-        self.overlapCtrl = wx.lib.intctrl.IntCtrl(self, value=10, size=(25, -1))
+        self.overlapCtrl = wx.lib.intctrl.IntCtrl(self, value=20, size=(25, -1))
 
         #setup the controls for the min/max slider
         minstart=0
@@ -227,7 +227,7 @@ class MosaicToolbar(NavBarImproved):
 
         #add the control for the mosaic
         self.AddControl(wx.StaticText(self,label="Show Mosaic"))
-        self.AddControl(self.showmagCheck)
+        self.AddControl(self.showMosaicCheck)
         self.AddControl(wx.StaticText(self,label="Mag"))
         self.AddControl( self.magChoiceCtrl)
         self.AddControl(wx.StaticText(self,label="MosaicX"))
