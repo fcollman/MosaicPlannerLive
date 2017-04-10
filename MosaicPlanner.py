@@ -280,13 +280,13 @@ class MosaicToolbar(NavBarImproved):
 
     def toggle_mosaic_visible(self, evt=""):
         """call the set_mosaic_visible function of self.canvas.posList to initiate what is necessary to hide the mosaic box"""
-        self.canvas.posList.set_mosaic_visible(self.showmagCheck.IsChecked())
+        self.canvas.posList.set_mosaic_visible(self.showMosaicCheck.IsChecked())
         self.canvas.draw()
 
     def get_mosaic_parameters(self):
         """extract out an instance of MosaicSettings from the current controls with the proper values"""
         return MosaicSettings(mag=self.magChoiceCtrl.GetValue(),
-                              show_box=self.showmagCheck.IsChecked(),
+                              show_box=self.showMosaicCheck.IsChecked(),
                               mx=self.mosaicXCtrl.GetValue(),
                               my=self.mosaicYCtrl.GetValue(),
                               overlap=self.overlapCtrl.GetValue())
