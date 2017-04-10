@@ -371,31 +371,53 @@ class MosaicPanel(FigureCanvas):
         self.outdirdict = {}
         self.multiribbon_boolean = self.askMultiribbons()
         if not self.multiribbon_boolean:
-
             self.directory_settings = DirectorySettings()
             self.directory_settings.load_settings(config)
-            self.edit_Directory_settings(self.directory_settings)
+            self.edit_Directory_settings()
+            dictvalue = self.get_output_dir(self.directory_settings)
+            if dictvalue == None:
+                print "line 382"
+                goahead = False
+                while goahead == False:
+                    self.edit_Directory_settings()
+                    print "line 385"
+                    dictvalue = self.get_output_dir(self.directory_settings)
+                    if dictvalue != None:
+                        goahead = True
+
             print 'Sample_ID:', self.directory_settings.Sample_ID
             print 'Ribbon_ID:', self.directory_settings.Ribbon_ID
             print 'Session_ID:', self.directory_settings.Session_ID
             print 'Map Number:', self.directory_settings.Map_num
+            self.directory_settings.save_settings(config)
+            self.outdirdict['Slot' + str(self.directory_settings.Slot_num) + "_" + str(self.directory_settings.Sample_ID) + '_Ribbon'\
+                + str(self.directory_settings.Ribbon_ID)] = dictvalue
             self.directory_settings.create_directory(config,kind='map')
-            self.outdirdict[self.directory_settings.Ribbon_ID] = self.get_output_dir(self.directory_settings)
 
         else:
             self.Ribbon_Num = self.get_ribbon_number()
             self.directory_settings = DirectorySettings()
             self.directory_settings.load_settings(config)
             for i in range(self.Ribbon_Num):
-                self.edit_Directory_settings(self.directory_settings)
-                self.outdirdict[str(self.directory_settings.Sample_ID) + '_Slot' + str(self.directory_settings.Slot_num) + '_Ribbon' + str(self.directory_settings.Ribbon_ID)] \
-                    = self.get_output_dir(self.directory_settings)
+                self.edit_Directory_settings()
+                dictvalue = self.get_output_dir(self.directory_settings)
+                if dictvalue == None:
+                    print "line 405"
+                    goahead = False
+                    while goahead == False:
+                        self.edit_Directory_settings()
+                        print "line 409"
+                        dictvalue = self.get_output_dir(self.directory_settings)
+                        if dictvalue != None:
+                            goahead = True
+                self.outdirdict['Slot' + str(self.directory_settings.Slot_num) + "_" + str(self.directory_settings.Sample_ID) + '_Ribbon'\
+                                + str(self.directory_settings.Ribbon_ID)] = dictvalue
                 self.directory_settings.save_settings(config)
             self.directory_settings.create_directory(config, kind= 'map')
-            for key,value in self.outdirdict.iteritems():
-                print "Output directory:",key,value
-            # print self.directory_settings
 
+        for key,value in self.outdirdict.iteritems():
+            print "Output directory:",key,value
+            # print self.directory_settings
         # load Zstack settings
         self.zstack_settings = ZstackSettings()
         self.zstack_settings.load_settings(config)
@@ -965,6 +987,8 @@ class MosaicPanel(FigureCanvas):
         if ret == wx.ID_OK:
             self.directory_settings = dlg.get_settings()
             self.directory_settings.save_settings(self.cfg)
+        if ret == wx.ID_CANCEL:
+            self.edit_Directory_settings()
         dlg.Destroy()
 
 
