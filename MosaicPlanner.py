@@ -33,6 +33,7 @@ from tifffile import imsave
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 from matplotlib.figure import Figure
 from PIL import Image
+from zro import RemoteObject
 
 import LiveMode
 from PositionList import posList
@@ -86,6 +87,41 @@ def write_slice_metadata(filename, ch, xpos, ypos, zpos, meta_dict):
     (channelname, width, height, 1, 1, ScaleFactorX, ScaleFactorY, exp_time))
     f.write("XPositions\tYPositions\tFocusPositions\n")
     f.write("%s\t%s\t%s\n" %(xpos, ypos, zpos))
+
+
+
+class RemoteInterface(RemoteObject):
+    def __init__(self, rep_port, parent):
+        super(RemoteInterface, self).__init__(rep_port=rep_port)
+        print "Opening Remote Interface on port:{}".format(rep_port)
+        self.parent = parent
+        self.pause = False
+
+    def toggle_pause(self):
+        if self.pause is True:
+            self.pause = False
+        else:
+            self.pause = True
+        #import pdb; pdb.set_trace()
+
+    def _check_rep(self):
+        #import pdb; pdb.set_trace()
+        super(RemoteInterface, self)._check_rep()
+
+    def getStagePosition(self):
+        print "Getting stage position..."
+        #import pdb; pdb.set_trace()
+        stagePosition = self.parent.getStagePosition()
+        print "StagePosition:{}".format(stagePosition)
+        return stagePosition
+
+    def setStagePosition(self, incomingStagePosition):
+        print "setting new stage position to x:{}, y:{}".format(incomingStagePosition[0], incomingStagePosition[1])
+        self.parent.setStagePosition(incomingStagePosition[0], incomingStagePosition[1])
+
+
+
+
 
 
 class MosaicToolbar(NavBarImproved):
@@ -1574,6 +1610,12 @@ class MosaicPanel(FigureCanvas):
         time.sleep(2*self.cfg['MosaicPlanner']['autofocus_wait'])
         self.imgSrc.set_hardware_autofocus_state(True) #turn on autofocus
 
+    def getStagePosition(self):
+        stagePosition = self.imgSrc.get_xy()
+        return stagePosition
+    
+    def setStagePosition(self, newXPos, newYPos):
+        self.imgSrc.move_stage(newXPos, newYPos)
 
 class ZVISelectFrame(wx.Frame):
     """class extending wx.Frame for highest level handling of GUI components """
