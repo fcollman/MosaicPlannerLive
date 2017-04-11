@@ -17,6 +17,8 @@
 #
 #===============================================================================
 import os
+import re
+import paramiko
 import sys
 import traceback
 import time
@@ -67,14 +69,14 @@ def file_save_process(queue,stop_token, metadata_dictionary):
         if token == stop_token:
             return
         else:
-            (slice_index,frame_index, z_index, prot_name, path, data, ch, x, y, z) = token
+            (slice_index,frame_index, z_index, prot_name, path, data, ch, x, y, z,triggerflag) = token
             tif_filepath = os.path.join(path, prot_name + "_S%04d_F%04d_Z%02d.tif" % (slice_index, frame_index, z_index))
             metadata_filepath = os.path.join(path, prot_name + "_S%04d_F%04d_Z%02d_metadata.txt"%(slice_index, frame_index, z_index))
             imsave(tif_filepath,data)
-            write_slice_metadata(metadata_filepath, ch, x, y, z, metadata_dictionary)
+            write_slice_metadata(metadata_filepath, ch, x, y, z, slice_index, triggerflag, metadata_dictionary)
 
 
-def write_slice_metadata(filename, ch, xpos, ypos, zpos, meta_dict):
+def write_slice_metadata(filename, ch, xpos, ypos, zpos, slice_index,triggerflag, meta_dict):
     channelname    = meta_dict['channelname'][ch]
     (height,width) = meta_dict['(height,width)']
     ScaleFactorX   = meta_dict['ScaleFactorX']
@@ -87,6 +89,29 @@ def write_slice_metadata(filename, ch, xpos, ypos, zpos, meta_dict):
     (channelname, width, height, 1, 1, ScaleFactorX, ScaleFactorY, exp_time))
     f.write("XPositions\tYPositions\tFocusPositions\n")
     f.write("%s\t%s\t%s\n" %(xpos, ypos, zpos))
+    if triggerflag == True:
+        fname = "/nas3/job-scheduling/acq_cron"
+        sessiondir, frametitle = os.path.split(filename)
+        sessiondir, chname = os.path.split(sessiondir)
+        print "Session Directory", sessiondir
+        sessiondir = '/'.join(sessiondir.split('\\'))
+        junk, sessiondir = sessiondir.split(':')
+        sessiondir = '/nas4/' + sessiondir
+
+        print sessiondir
+        outputstring = "%s,%s"%(sessiondir,slice_index)
+
+        #linux command to dump outputstring to filename
+        cmd = "echo %s > %s"%(outputstring,fname)
+
+
+        #run the command via ssh to machine ibs-sharmi-ux1
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect('ibs-sharmi-ux1.corp.alleninstitute.org', username='sharmishtaas', password='spaceneedle123')
+        ssh.exec_command(cmd)
+
+
 
 
 
@@ -562,7 +587,7 @@ class MosaicPanel(FigureCanvas):
                 f.write(self.channel_settings.prot_names[ch] + "\t" + "%f\t%s\n" % (self.channel_settings.exposure_times[ch],ch))
 
 
-    def multiDacq(self,success,outdir,chrome_correction,x,y,current_z,slice_index,frame_index=0,hold_focus = False):
+    def multiDacq(self,success,outdir,chrome_correction,triggerflag,x,y,current_z,slice_index,frame_index=0,hold_focus = False):
 
         #print datetime.datetime.now().time()," starting multiDAcq, autofocus on"
         if not hold_focus:
@@ -631,7 +656,7 @@ class MosaicPanel(FigureCanvas):
                         data=self.imgSrc.snap_image()
                         #t3 = time.clock()*1000
                         #print time.clock(),t3-t2, 'ms to snap image'
-                        self.dataQueue.put((slice_index,frame_index, z_index, prot_name,path,data,ch,x,y,z))
+                        self.dataQueue.put((slice_index,frame_index, z_index, prot_name,path,data,ch,x,y,z,triggerflag))
 
         def hardware_acquire(z=presentZ):
             # currZ=self.imgSrc.get_z()
@@ -649,7 +674,7 @@ class MosaicPanel(FigureCanvas):
                     path=os.path.join(outdir,prot_name)
                     if self.channel_settings.usechannels[ch]:
                         data = self.imgSrc.get_image()
-                        self.dataQueue.put((slice_index,frame_index, z_index, prot_name,path,data,ch,x,y,z))
+                        self.dataQueue.put((slice_index,frame_index, z_index, prot_name,path,data,ch,x,y,z,triggerflag))
 
         if (self.cfg['MosaicPlanner']['hardware_trigger'] == True) and (chrome_correction == False) and (success != False):
             hardware_acquire()
@@ -889,7 +914,8 @@ class MosaicPanel(FigureCanvas):
 
 
         if not self.multiribbon_boolean:
-            outdir = self.outdirdict[self.directory_settings.Ribbon_ID]
+            for key,value in self.outdirdict.iteritems():
+                outdir = self.outdirdict[key]
         else:
             outdir = None
         if outdir is None:
@@ -948,7 +974,11 @@ class MosaicPanel(FigureCanvas):
                 if pos.frameList is None:
                     self.multiDacq(success,outdir,chrom_correction,pos.x,pos.y,current_z,i,hold_focus=hold_focus)
                 else:
+                    triggerflag = False
                     for j,fpos in enumerate(pos.frameList.slicePositions):
+                        if j == (len(pos.frameList.slicePositions) - 1):
+                            triggerflag = True
+
                         if not goahead:
                             print "breaking out!"
                             break
@@ -956,7 +986,7 @@ class MosaicPanel(FigureCanvas):
                             print "autofocus no longer enabled while moving between frames.. quiting"
                             goahead = False
                             break
-                        self.multiDacq(success,outdir,chrom_correction,fpos.x,fpos.y,current_z,i,j,hold_focus)
+                        self.multiDacq(success,outdir,chrom_correction,triggerflag,fpos.x,fpos.y,current_z,i,j,hold_focus)
                         self.ResetPiezo()
                         (goahead, skip)=self.progress.Update((i*numFrames) + j+1,'section %d of %d, frame %d'%(i,numSections-1,j))
                         #======================================================
