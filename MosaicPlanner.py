@@ -1586,7 +1586,14 @@ class MosaicPanel(FigureCanvas):
                             self.multiDacq(success,outdirlist[rib],chrom_correction,triggerflag,fpos.x,fpos.y,current_z,i,j,hold_focus)
                             self.ResetPiezo()
                             (goahead, skip)=self.progress.Update((i*numFrames) + j,'ribbon %d of %d, section %d of %d, frame %d'%(rib,self.Ribbon_Num-1,i,numSections-1,j))
-
+                        #======================================================
+                        if self.interface.pause == True:
+                            while self.interface.pause == True:
+                                self._check_sock(True)
+                                (goahead, skip)=self.progress.Update((i*numFrames) + j+1,'REMOTELY PAUSED -- section %d of %d, frame %d'%(i,numSections-1,j))
+                                #time.sleep(0.1)
+                                wx.Yield()
+                        #======================================================
                     wx.Yield()
             if not goahead:
                 print "acquisition stopped prematurely"
