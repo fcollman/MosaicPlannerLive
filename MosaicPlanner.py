@@ -350,6 +350,15 @@ class MosaicPanel(FigureCanvas):
         FigureCanvas.__init__(self, parent, -1, self.figure, **kwargs)
         self.canvas = self.figure.canvas
 
+
+
+        # set up the remote interface
+        self.interface = RemoteInterface(rep_port=7777, parent=self)
+        self.timer = wx.Timer(self)
+        self.Bind(wx.EVT_TIMER, self._check_sock, self.timer)
+        self.timer.Start(200)
+
+
         #format the appearance
         self.figure.set_facecolor((1, 1, 1))
         self.figure.set_edgecolor((1, 1, 1))
@@ -489,6 +498,9 @@ class MosaicPanel(FigureCanvas):
         self.canvas.mpl_connect('button_press_event', self.on_press)
         self.canvas.mpl_connect('button_release_event', self.on_release)
         self.canvas.mpl_connect('key_press_event', self.on_key)
+
+    def _check_sock(self, event):
+        self.interface._check_rep()
 
     def askMultiribbons(self):
         dlg = wx.MessageDialog(self,message = "Are you imaging multiple ribbons?",style = wx.YES|wx.NO)
@@ -947,7 +959,14 @@ class MosaicPanel(FigureCanvas):
                         self.multiDacq(success,outdir,chrom_correction,fpos.x,fpos.y,current_z,i,j,hold_focus)
                         self.ResetPiezo()
                         (goahead, skip)=self.progress.Update((i*numFrames) + j+1,'section %d of %d, frame %d'%(i,numSections-1,j))
-
+                        #======================================================
+                        if self.interface.pause == True:
+                            while self.interface.pause == True:
+                                self._check_sock(True)
+                                (goahead, skip)=self.progress.Update((i*numFrames) + j+1,'REMOTELY PAUSED -- section %d of %d, frame %d'%(i,numSections-1,j))
+                                #time.sleep(0.1)
+                                wx.Yield()
+                        #======================================================
                 wx.Yield()
         if not goahead:
             print "acquisition stopped prematurely"
@@ -1613,7 +1632,7 @@ class MosaicPanel(FigureCanvas):
     def getStagePosition(self):
         stagePosition = self.imgSrc.get_xy()
         return stagePosition
-    
+
     def setStagePosition(self, newXPos, newYPos):
         self.imgSrc.move_stage(newXPos, newYPos)
 
