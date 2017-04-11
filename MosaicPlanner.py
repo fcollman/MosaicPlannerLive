@@ -1573,9 +1573,9 @@ class MosaicPanel(FigureCanvas):
                         self.multiDacq(success,outdirlist[rib],chrom_correction,pos.x,pos.y,current_z,i,hold_focus=hold_focus)
                     else:
                         triggerflag = False
-                        if j == (len(pos.frameList.slicePositions) - 1):
-                            triggerflag = True
                         for j,fpos in enumerate(pos.frameList.slicePositions):
+                            if j == (len(pos.frameList.slicePositions) - 1):
+                                triggerflag = True
                             if not goahead:
                                 print "breaking out!"
                                 break
