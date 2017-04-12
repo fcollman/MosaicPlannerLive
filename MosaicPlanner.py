@@ -63,6 +63,11 @@ DEFAULT_SETTINGS_FILE = 'MosaicPlannerSettings.default.cfg'
 SETTINGS_FILE = 'MosaicPlannerSettings.cfg'
 SETTINGS_MODEL_FILE = 'MosaicPlannerSettingsModel.cfg'
 
+DIRECTORY_DICTIONARY = {'W' : 'nas1',
+                        'X' : 'nas2',
+                        'Y' : 'nas3',
+                        'Z' : 'nas4'} #all machines using this software at allen will be mapped like this in the future
+
 def file_save_process(queue,stop_token, metadata_dictionary):
     while True:
         token = queue.get()
@@ -96,7 +101,7 @@ def write_slice_metadata(filename, ch, xpos, ypos, zpos, slice_index,triggerflag
         print "Session Directory", sessiondir
         sessiondir = '/'.join(sessiondir.split('\\'))
         junk, sessiondir = sessiondir.split(':')
-        sessiondir = '/nas4/' + sessiondir
+        sessiondir = DIRECTORY_DICTIONARY[junk] + sessiondir
 
         print sessiondir
         outputstring = "%s,%s"%(sessiondir,slice_index)
