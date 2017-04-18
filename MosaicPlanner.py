@@ -207,6 +207,8 @@ class MosaicToolbar(NavBarImproved):
     ON_SNAP = wx.NewId()
     ON_CROP = wx.NewId()
     ON_RUN_MULTI = wx.NewId() #MultiRibbons
+    ON_SOFTWARE_AF = wx.NewId()
+
 
     def __init__(self, plotCanvas):
         """
@@ -230,6 +232,7 @@ class MosaicToolbar(NavBarImproved):
         ffBmp         = wx.Image('icons/ff-icon.png',      wx.BITMAP_TYPE_PNG).ConvertToBitmap()
         rotateBmp     = wx.Image('icons/rotate-icon.png',  wx.BITMAP_TYPE_PNG).ConvertToBitmap()
         gridBmp       = wx.Image('icons/grid-icon.png',    wx.BITMAP_TYPE_PNG).ConvertToBitmap()
+        softwareAFbmp = wx.Image('icons/new/1446777567_Ironman.png', wx.BITMAP_TYPE_PNG).ConvertToBitmap()
         cameraBmp     = wx.Image('icons/camera-icon.png',  wx.BITMAP_TYPE_PNG).ConvertToBitmap()
         mosaicBmp     = wx.Image('icons/mosaic-icon.png',  wx.BITMAP_TYPE_PNG).ConvertToBitmap()
         carBmp        = wx.Image('icons/car-icon.png',     wx.BITMAP_TYPE_PNG).ConvertToBitmap()
@@ -254,11 +257,13 @@ class MosaicToolbar(NavBarImproved):
         self.oneTool         = self.add_user_tool('selectone', 12, oneBmp, True, 'Choose pointLine2D 1')
         self.twoTool         = self.add_user_tool('selecttwo', 13, twoBmp, True, 'Choose pointLine2D 2')
 
+
         self.AddSeparator()
         self.AddSeparator() # batman - why called twice, why called at all!, maybe add comment?
 
         #add the simple button click tools
         self.liveModeTool = self.AddSimpleTool(self.ON_LIVE_MODE,liveBmp,'Enter Live Mode','liveMode')
+        self.softwareAFTool  = self.AddSimpleTool(self.ON_SOFTWARE_AF, softwareAFbmp, 'Execute Software AutoFocus','softwareAF')
         self.deleteTool   = self.AddSimpleTool(self.ON_DELETE_SELECTED,trashBmp,'Delete selected points','delete points')
         self.corrTool     = self.AddSimpleTool(self.ON_CORR,corrBmp,'Ajdust pointLine2D 2 with correlation','corrTool')
         self.stepTool     = self.AddSimpleTool(self.ON_STEP,stepBmp,'Take one step using points 1+2','stepTool')
@@ -331,6 +336,7 @@ class MosaicToolbar(NavBarImproved):
         wx.EVT_TOOL(self, self.ON_SNAP, self.canvas.on_snap_tool)
         wx.EVT_TOOL(self, self.ON_CROP, self.canvas.on_crop_tool)
         wx.EVT_TOOL(self, self.ON_RUN_MULTI, self.canvas.on_run_multi_acq)
+        wx.EVT_TOOL(self, self.ON_SOFTWARE_AF, self.canvas.on_software_af_tool)
 
         self.Realize()
 
@@ -1279,6 +1285,10 @@ class MosaicPanel(FigureCanvas):
     def on_crop_tool(self,evt=""):
         self.mosaicImage.crop_to_images(evt)
         self.draw()
+
+    def on_software_af_tool(self,evt=""):
+        self.software_autofocus()
+        print "Great Job!"
 
     def on_fine_tune_tool(self,evt=""):
         print "fine tune tool not yet implemented, should do something to make fine adjustments to current position list"
