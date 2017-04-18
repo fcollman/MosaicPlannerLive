@@ -1862,7 +1862,7 @@ class ZVISelectFrame(wx.Frame):
         self.array_filepicker.SetPath(self.cfg['MosaicPlanner']['default_arraypath'])
 
         self.array_load_button=wx.Button(self,id=wx.ID_ANY,label="Load",name="load button")
-        self.array_formatBox=wx.ComboBox(self,id=wx.ID_ANY,value='AxioVision',\
+        self.array_formatBox=wx.ComboBox(self,id=wx.ID_ANY,value='JSON',\
         size=wx.DefaultSize,choices=['uManager','AxioVision','SmartSEM','OMX','ZEN','JSON'], name='File Format For Position List')
         self.array_formatBox.SetEditable(False)
         self.array_save_button=wx.Button(self,id=wx.ID_ANY,label="Save",name="save button")
