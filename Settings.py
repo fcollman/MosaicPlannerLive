@@ -769,7 +769,7 @@ class MultiRibbonSettings(wx.Dialog): #MultiRibbons
 
         vbox = wx.BoxSizer(wx.VERTICAL)
         gridSizer=wx.FlexGridSizer(rows=9,cols=3,vgap=5,hgap=5)
-        gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label="ribbon#"),border=5)
+        gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label="slot#"),border=5)
         gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label="array file"),border=5)
         gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label=" "),border=5)
 

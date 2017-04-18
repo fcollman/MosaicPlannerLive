@@ -57,6 +57,7 @@ from validate import Validator
 from skimage.filters import sobel,gaussian_filter #MultiRibbons
 import cv2 #MultiRibbons
 from skimage.measure import block_reduce #MultiRibbons
+from Snap import SnapView
 
 STOP_TOKEN = 'STOP!!!'
 DEFAULT_SETTINGS_FILE = 'MosaicPlannerSettings.default.cfg'
@@ -468,7 +469,7 @@ class MosaicPanel(FigureCanvas):
             self.outdirdict['Slot' + str(self.directory_settings.Slot_num) + "_" + str(self.directory_settings.Sample_ID) + '_Ribbon'\
                 + str(self.directory_settings.Ribbon_ID)] = dictvalue
             self.directory_settings.create_directory(config,kind='map')
-
+            self.snapView = None
         else:
             self.Ribbon_Num = self.get_ribbon_number()
             self.directory_settings = DirectorySettings()
@@ -1102,12 +1103,12 @@ class MosaicPanel(FigureCanvas):
         win.show()
 
     def launch_snap(self, event=None):
-        global win
-        from Snap import SnapView
-        dlg = SnapView(self.imgSrc,exposure_times=self.channel_settings.exposure_times)
-        dlg.setModal(True)
-        dlg.show()
-        self.channel_settings.exposure_times = dlg.getExposureTimes()
+        if self.snapView is None:
+            self.snapView = SnapView(self.imgSrc,exposure_times=self.channel_settings.exposure_times)
+            self.snapView.changedExposureTimes.connect(self.getSnapExposures)
+        self.snapView.show()
+    def getSnapExposures(self, event=None):
+        self.channel_settings.exposure_times = self.snapView.getExposureTimes()
 
     def launch_ASI(self, event=None):
          global win
