@@ -290,6 +290,28 @@ class posList():
         dist=np.sqrt(dx*dx+dy*dy)
         min_index=dist.argmin()
         return self.slicePositions[min_index]
+
+
+
+    def get_nearest_position_index(self,x,y):
+        """return the slicePosition index nearest an x,y point
+
+        keywords:
+        x)the x coordinate in microns to get the nearest point
+        y)the y coordinate in microns to get the nearest point
+
+        returns index
+        the slicePosition index from the list which is closest to the input point
+
+        """
+        (xpos,ypos,select)=self.__getXYS()
+        dx=(xpos-x)
+        dy=(ypos-y)
+        dist=np.sqrt(dx*dx+dy*dy)
+        min_index=dist.argmin()
+        return min_index
+
+
         
     def calcAngles(self):
         """calculate the angle tangent to each point on the position list
@@ -1105,6 +1127,7 @@ class slicePosition():
                     xrange = range(mx-1,-1,-1)
                 for x in xrange:
                     self.frameList.add_position(xx[y,x],yy[y,x],withpoint=False,edgecolor='c')
+
             self.frameList.set_mosaic_visible(True)
 
             #shiftx_rot=.5*(self.pos_list.mosaic_settings.mx-1)*fw*(1-alpha);
@@ -1304,9 +1327,10 @@ class slicePosition():
         self.__updateMosaicSize()
         self.__updateFramesLayout()
 
-    def set_activated(self,activated):
+    def set_activated(self,activated,type = 'slice'):
+
         self.activated=activated
-        self.__updatePointActivated()
+        self.__updatePointActivated(type)
 
     def set_selected(self,selected):
         """set this point to be selected or not
@@ -1334,13 +1358,26 @@ class slicePosition():
         if not isselect==self.selected:
             self.selected=isselect
             self.__updatePointSelect()
-    def __updatePointActivated(self):
+    def __updatePointActivated(self,type = 'slice'):
         if not self.axis: return None
-        if self.activated:
-            marker = 'o'
-        else:
-            marker = 'x'
-        self.pointLine2D.set_marker(marker)
+        if type == 'slice':
+            if self.activated:
+                marker = 'o'
+                color = 'b'
+            else:
+                marker = 'x'
+                color = 'm'
+            self.pointLine2D.set_marker(marker)
+            # self.pointLine2D.set_markercolor(color)
+            self.pointLine2D.set_markeredgecolor(color)
+        if type == 'frame':
+            # print 'made it to update point activated'
+            if self.activated:
+                color = 'c'
+            else:
+                color = 'r'
+            self.box.set_edgecolor(color)
+
 
     def __updatePointSelect(self):
         """private function for updating the color of the point,depending on its selected state"""

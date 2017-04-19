@@ -420,8 +420,7 @@ class MosaicPanel(FigureCanvas):
             print 'Session_ID:', self.directory_settings.Session_ID
             print 'Map Number:', self.directory_settings.Map_num
             self.directory_settings.save_settings(config)
-            self.outdirdict['Slot' + str(self.directory_settings.Slot_num) + "_" + str(self.directory_settings.Sample_ID) + '_Ribbon'\
-                + str(self.directory_settings.Ribbon_ID)] = dictvalue
+            self.outdirdict['Slot' + str(self.directory_settings.Slot_num)] = dictvalue
             self.directory_settings.create_directory(config,kind='map')
             self.snapView = None
         else:
@@ -440,8 +439,7 @@ class MosaicPanel(FigureCanvas):
                         dictvalue = self.get_output_dir(self.directory_settings)
                         if dictvalue != None:
                             goahead = True
-                self.outdirdict['Slot' + str(self.directory_settings.Slot_num) + "_" + str(self.directory_settings.Sample_ID) + '_Ribbon'\
-                                + str(self.directory_settings.Ribbon_ID)] = dictvalue
+                self.outdirdict['Slot' + str(self.directory_settings.Slot_num)] = dictvalue
                 self.directory_settings.save_settings(config)
             self.directory_settings.create_directory(config, kind= 'map')
 
@@ -982,7 +980,12 @@ class MosaicPanel(FigureCanvas):
                             print "autofocus no longer enabled while moving between frames.. quiting"
                             goahead = False
                             break
-                        self.multiDacq(success,outdir,chrom_correction,triggerflag,fpos.x,fpos.y,current_z,i,j,hold_focus)
+                        if pos.frameList.slicePositions[j].activated:
+                            print 'imaging'
+                            self.multiDacq(success,outdir,chrom_correction,triggerflag,fpos.x,fpos.y,current_z,i,j,hold_focus)
+                        else:
+                            print 'moving on'
+                            pass
                         self.ResetPiezo()
                         if i==(len(self.posList.slicePositions)-1):
                             if j == (len(pos.frameList.slicePositions) - 1):
@@ -1173,12 +1176,36 @@ class MosaicPanel(FigureCanvas):
                             self.mosaicImage.paintPointsOneTwo(self.posList.pos1.getPosition(),self.posList.pos2.getPosition())
                     if (mode == 'selectnear'):
                         pos=self.posList.get_position_nearest(evt.xdata,evt.ydata)
+
                         if not evt.key=='shift':
                             self.posList.set_select_all(False)
                         pos.set_selected(True)
                     if (mode == 'toggleactivate'):
                         pos=self.posList.get_position_nearest(evt.xdata,evt.ydata)
-                        pos.set_activated((not pos.activated))
+
+                        if evt.key is None:
+                            pos.set_activated((not pos.activated))
+                        elif evt.key=='shift':
+
+                            framepos = pos.frameList.get_position_nearest(evt.xdata,evt.ydata)
+
+                            framepos.set_activated((not framepos.activated),'frame')
+
+                        elif evt.key == 'r':
+
+                            frameindex = pos.frameList.get_nearest_position_index(evt.xdata,evt.ydata)
+                            for position in self.posList.slicePositions:
+                                framepos = position.frameList.slicePositions[frameindex]
+                                framepos.set_activated((not framepos.activated), 'frame')
+
+                        elif evt.key == 't':
+                            for position in self.posList.slicePositions:
+                                for i in range(len(position.frameList.slicePositions)):
+                                    framepos = position.frameList.slicePositions[i]
+                                    framepos.set_activated((not framepos.activated),'frame')
+
+
+
                     elif (mode == 'add'):
                         print ('add point at',evt.xdata,evt.ydata)
                         self.posList.add_position(evt.xdata,evt.ydata)
@@ -1458,6 +1485,18 @@ class MosaicPanel(FigureCanvas):
         self.posList.rotate_selected(dtheta)
         self.draw()
 
+    def toggle_sliceframe(self,event):
+        keycode = event.GetKeyCode()
+        return keycode
+
+        #
+        #
+        #
+        # else:
+        #     pass #will just toggle that single frame index within that particular slice to turn off
+
+
+
 
     def on_key_press(self,event="none"):
         """function for handling key press events"""
@@ -1465,13 +1504,21 @@ class MosaicPanel(FigureCanvas):
         if event.AltDown():
             if keycode in [wx.WXK_LEFT,wx.WXK_RIGHT]:
                 self.do_angle_shift(event)
+        # elif event.ContolDown():
+        #     self.toggle_sliceframe(event)
         else:
             self.do_shift(event)
 
     def on_run_multi_acq(self,event="none"): #MultiRibbons
         #pick position lists
+        outdirlist =[]
+        keys = sorted(self.outdirdict)
+        for key in keys:
+            outdirlist.append(self.outdirdict[key])
+        print 'outdirlist:', outdirlist
+        print 'keys', keys
         poslistpath=[]
-        dlg = MultiRibbonSettings(None, -1,self.Ribbon_Num, title = "Multiribbon Settings", settings = self.channel_settings,style=wx.OK)
+        dlg = MultiRibbonSettings(None, -1,self.Ribbon_Num, keys, title = "Multiribbon Settings", settings = self.channel_settings,style=wx.OK)
         ret=dlg.ShowModal()
         if ret == wx.ID_OK:
             poslistpath=dlg.GetSettings()
@@ -1497,17 +1544,14 @@ class MosaicPanel(FigureCanvas):
         numchan,chrom_correction = self.summarize_channel_settings()
 
         #pick output directories
-        outdirlist =[]
+
         # for rib in range(self.Ribbon_Num):
         #     newoutdir = self.get_output_dir()
         #     if newoutdir is None:
         #         return None
         #     outdir.append(newoutdir)
         # print "outdir:", outdir, type(outdir), len(outdir)
-        keys = sorted(self.outdirdict)
-        for key in keys:
-            outdirlist.append(self.outdirdict[key])
-        print 'outdirlist:', outdirlist
+
 
         for rib in range(self.Ribbon_Num): #loop through all ribbons
             #clear position list
@@ -1592,7 +1636,11 @@ class MosaicPanel(FigureCanvas):
                                 print "autofocus no longer enabled while moving between frames.. quiting"
                                 goahead = False
                                 break
-                            self.multiDacq(success,outdirlist[rib],chrom_correction,triggerflag,fpos.x,fpos.y,current_z,i,j,hold_focus)
+                            if pos.frameList.slicePositions[j].activated:
+                                print 'imaging'
+                                self.multiDacq(success,outdirlist[rib],chrom_correction,triggerflag,fpos.x,fpos.y,current_z,i,j,hold_focus)
+                            else:
+                                pass
                             self.ResetPiezo()
                             (goahead, skip)=self.progress.Update((i*numFrames) + j,'ribbon %d of %d, section %d of %d, frame %d'%(rib,self.Ribbon_Num-1,i,numSections-1,j))
                         #======================================================
