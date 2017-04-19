@@ -31,11 +31,9 @@ from Settings import SiftSettings,CorrSettings
 from Rectangle import Rectangle
 import cv2 
 import ransac
-from scipy.signal import correlate2d
 from skimage.measure import block_reduce
 import norm_xcorr
 from skimage.feature import register_translation
-from scipy.signal import correlate
 from skimage.feature.register_translation import _upsampled_dft
 #implicity this relies upon matplotlib.axis matplotlib.AxisImage matplotlib.bar
 
