@@ -959,7 +959,7 @@ class slicePosition():
         else:
             self.numTxt = None
  
-
+        self.setAngle(angle)
     
         
     def __paintPoint(self):

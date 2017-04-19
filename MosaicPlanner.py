@@ -120,11 +120,6 @@ def write_slice_metadata(filename, ch, xpos, ypos, zpos, slice_index,triggerflag
                 print "failed to trigger SSH to %s@%s"%(ssh_opts['host'],ssh_opts['username'])
 
 
-
-
-
-
-
 class RemoteInterface(RemoteObject):
     def __init__(self, rep_port, parent):
         super(RemoteInterface, self).__init__(rep_port=rep_port)
