@@ -1304,9 +1304,10 @@ class slicePosition():
         self.__updateMosaicSize()
         self.__updateFramesLayout()
 
-    def set_activated(self,activated):
+    def set_activated(self,activated,type = 'slice'):
+
         self.activated=activated
-        self.__updatePointActivated()
+        self.__updatePointActivated(type)
 
     def set_selected(self,selected):
         """set this point to be selected or not
@@ -1334,13 +1335,16 @@ class slicePosition():
         if not isselect==self.selected:
             self.selected=isselect
             self.__updatePointSelect()
-    def __updatePointActivated(self):
+    def __updatePointActivated(self,type = 'slice'):
         if not self.axis: return None
-        if self.activated:
-            marker = 'o'
-        else:
-            marker = 'x'
-        self.pointLine2D.set_marker(marker)
+        if type == 'slice':
+            if self.activated:
+                marker = 'o'
+            else:
+                marker = 'x'
+            self.pointLine2D.set_marker(marker)
+        if type == 'frame':
+            print 'made it to update point activated'
 
     def __updatePointSelect(self):
         """private function for updating the color of the point,depending on its selected state"""

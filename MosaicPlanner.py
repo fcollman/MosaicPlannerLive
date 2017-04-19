@@ -1173,12 +1173,24 @@ class MosaicPanel(FigureCanvas):
                             self.mosaicImage.paintPointsOneTwo(self.posList.pos1.getPosition(),self.posList.pos2.getPosition())
                     if (mode == 'selectnear'):
                         pos=self.posList.get_position_nearest(evt.xdata,evt.ydata)
+
                         if not evt.key=='shift':
                             self.posList.set_select_all(False)
                         pos.set_selected(True)
                     if (mode == 'toggleactivate'):
                         pos=self.posList.get_position_nearest(evt.xdata,evt.ydata)
-                        pos.set_activated((not pos.activated))
+                        print 'pos is :',pos
+                        if evt.key is None:
+                            pos.set_activated((not pos.activated))
+                        elif evt.key=='shift':
+                            print 'got this far!'
+                            framepos = pos.frameList.get_position_nearest(evt.xdata,evt.ydata)
+                            print 'got past framepos'
+                            print 'framepos is',framepos
+                            framepos.set_activated((not framepos.activated),'frame')
+                            print 'not activated'
+
+
                     elif (mode == 'add'):
                         print ('add point at',evt.xdata,evt.ydata)
                         self.posList.add_position(evt.xdata,evt.ydata)
@@ -1458,6 +1470,18 @@ class MosaicPanel(FigureCanvas):
         self.posList.rotate_selected(dtheta)
         self.draw()
 
+    def toggle_sliceframe(self,event):
+        keycode = event.GetKeyCode()
+        return keycode
+
+        #
+        #
+        #
+        # else:
+        #     pass #will just toggle that single frame index within that particular slice to turn off
+
+
+
 
     def on_key_press(self,event="none"):
         """function for handling key press events"""
@@ -1465,6 +1489,8 @@ class MosaicPanel(FigureCanvas):
         if event.AltDown():
             if keycode in [wx.WXK_LEFT,wx.WXK_RIGHT]:
                 self.do_angle_shift(event)
+        # elif event.ContolDown():
+        #     self.toggle_sliceframe(event)
         else:
             self.do_shift(event)
 
