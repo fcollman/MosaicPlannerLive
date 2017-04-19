@@ -1332,7 +1332,7 @@ class MosaicPanel(FigureCanvas):
         self.draw()
 
     def on_software_af_tool(self,evt=""):
-        self.software_autofocus()
+        self.software_autofocus(buttonpress=True)
         print "Great Job!"
 
     def on_fine_tune_tool(self,evt=""):
@@ -1673,7 +1673,9 @@ class MosaicPanel(FigureCanvas):
         self.imgSrc.set_binning(2)
 
 
-    def software_autofocus(self): #MultiRibbons
+    def software_autofocus(self, buttonpress = False): #MultiRibbons
+        if buttonpress:
+            self.imgSrc.set_binning(1)
         print "software autofocus"
         self.imgSrc.set_hardware_autofocus_state(False) #turn off autofocus
         ch = self.channel_settings.map_chan
@@ -1681,7 +1683,7 @@ class MosaicPanel(FigureCanvas):
         self.imgSrc.set_channel(ch)
         (height,width) = self.imgSrc.get_sensor_size()
         zstack_step = 0.3 #z step between images(microns)
-        zstack_number = 15 #number of images to take
+        zstack_number = 35 #number of images to take
         stack = np.zeros((height,width,zstack_number))
         offsets = []
         current_z = self.imgSrc.get_z()
@@ -1730,6 +1732,8 @@ class MosaicPanel(FigureCanvas):
         self.imgSrc.set_autofocus_offset(best_offset) #reset autofocus offset
         time.sleep(2*self.cfg['MosaicPlanner']['autofocus_wait'])
         self.imgSrc.set_hardware_autofocus_state(True) #turn on autofocus
+        if buttonpress:
+            self.imgSrc.set_binning(2)
 
     def getStagePosition(self):
         stagePosition = self.imgSrc.get_xy()
