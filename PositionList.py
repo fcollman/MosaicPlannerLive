@@ -289,7 +289,6 @@ class posList():
         dy=(ypos-y)
         dist=np.sqrt(dx*dx+dy*dy)
         min_index=dist.argmin()
-        print 'index for get position nearest is:', min_index
         return self.slicePositions[min_index]
 
 
@@ -1372,7 +1371,7 @@ class slicePosition():
             # self.pointLine2D.set_markercolor(color)
             self.pointLine2D.set_markeredgecolor(color)
         if type == 'frame':
-            print 'made it to update point activated'
+            # print 'made it to update point activated'
             if self.activated:
                 color = 'c'
             else:

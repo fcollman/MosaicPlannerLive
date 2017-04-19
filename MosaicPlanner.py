@@ -1184,23 +1184,27 @@ class MosaicPanel(FigureCanvas):
                         pos.set_selected(True)
                     if (mode == 'toggleactivate'):
                         pos=self.posList.get_position_nearest(evt.xdata,evt.ydata)
-                        print 'pos is :',pos
+
                         if evt.key is None:
                             pos.set_activated((not pos.activated))
                         elif evt.key=='shift':
-                            # print 'got this far!'
+
                             framepos = pos.frameList.get_position_nearest(evt.xdata,evt.ydata)
-                            # print 'got past framepos'aa
-                            # print 'framepos is',framepos
+
                             framepos.set_activated((not framepos.activated),'frame')
-                            print 'not activated'
+
                         elif evt.key == 'r':
-                            print 'got this far'
+
                             frameindex = pos.frameList.get_nearest_position_index(evt.xdata,evt.ydata)
                             for position in self.posList.slicePositions:
                                 framepos = position.frameList.slicePositions[frameindex]
                                 framepos.set_activated((not framepos.activated), 'frame')
-                            print 'BAM'
+
+                        elif evt.key == 't':
+                            for position in self.posList.slicePositions:
+                                for i in range(len(position.frameList.slicePositions)):
+                                    framepos = position.frameList.slicePositions[i]
+                                    framepos.set_activated((not framepos.activated),'frame')
 
 
 
