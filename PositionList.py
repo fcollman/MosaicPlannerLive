@@ -29,7 +29,7 @@ from matplotlib.lines import Line2D
 from matplotlib.quiver import Quiver
 #from matplotlib.nxutils import points_inside_poly
 from CenterRectangle import CenterRectangle
-from Transform import Transform
+
 from scipy.interpolate import griddata
 import lxml.etree as ET
 import json
