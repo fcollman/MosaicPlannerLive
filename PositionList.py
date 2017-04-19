@@ -1105,6 +1105,7 @@ class slicePosition():
                     xrange = range(mx-1,-1,-1)
                 for x in xrange:
                     self.frameList.add_position(xx[y,x],yy[y,x],withpoint=False,edgecolor='c')
+
             self.frameList.set_mosaic_visible(True)
 
             #shiftx_rot=.5*(self.pos_list.mosaic_settings.mx-1)*fw*(1-alpha);
@@ -1340,11 +1341,20 @@ class slicePosition():
         if type == 'slice':
             if self.activated:
                 marker = 'o'
+                color = 'b'
             else:
                 marker = 'x'
+                color = 'm'
             self.pointLine2D.set_marker(marker)
+            self.pointLine2D.set_color(color)
         if type == 'frame':
             print 'made it to update point activated'
+            if self.activated:
+                color = 'c'
+            else:
+                color = 'r'
+            self.box.set_edgecolor(color)
+
 
     def __updatePointSelect(self):
         """private function for updating the color of the point,depending on its selected state"""
