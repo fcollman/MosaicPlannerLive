@@ -114,8 +114,13 @@ def write_slice_metadata(filename, ch, xpos, ypos, zpos, slice_index,triggerflag
             #run the command via ssh to machine ibs-sharmi-ux1
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            ssh.connect(ssh_opts['host'], username=ssh_opts['username'], password=ssh_opts['password'])
-            ssh.exec_command(cmd)
+            try:
+                ssh.connect(ssh_opts['host'], username=ssh_opts['username'], password=ssh_opts['password'], timeout = ssh_opts['timeout'])
+                ssh.exec_command(cmd)
+            except paramiko.ssh_exception.SSHException:
+                print "failed to trigger SSH to %s@%s"%(ssh_opts['host'],ssh_opts['username'])
+
+
 
 
 
