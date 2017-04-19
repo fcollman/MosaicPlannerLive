@@ -1194,7 +1194,7 @@ class MosaicPanel(FigureCanvas):
                             # print 'framepos is',framepos
                             framepos.set_activated((not framepos.activated),'frame')
                             print 'not activated'
-                        elif evt.key == 'a':
+                        elif evt.key == 'r':
                             print 'got this far'
                             frameindex = pos.frameList.get_nearest_position_index(evt.xdata,evt.ydata)
                             for position in self.posList.slicePositions:
