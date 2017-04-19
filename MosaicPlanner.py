@@ -420,8 +420,7 @@ class MosaicPanel(FigureCanvas):
             print 'Session_ID:', self.directory_settings.Session_ID
             print 'Map Number:', self.directory_settings.Map_num
             self.directory_settings.save_settings(config)
-            self.outdirdict['Slot' + str(self.directory_settings.Slot_num) + "_" + str(self.directory_settings.Sample_ID) + '_Ribbon'\
-                + str(self.directory_settings.Ribbon_ID)] = dictvalue
+            self.outdirdict['Slot' + str(self.directory_settings.Slot_num)] = dictvalue
             self.directory_settings.create_directory(config,kind='map')
             self.snapView = None
         else:
@@ -440,8 +439,7 @@ class MosaicPanel(FigureCanvas):
                         dictvalue = self.get_output_dir(self.directory_settings)
                         if dictvalue != None:
                             goahead = True
-                self.outdirdict['Slot' + str(self.directory_settings.Slot_num) + "_" + str(self.directory_settings.Sample_ID) + '_Ribbon'\
-                                + str(self.directory_settings.Ribbon_ID)] = dictvalue
+                self.outdirdict['Slot' + str(self.directory_settings.Slot_num)] = dictvalue
                 self.directory_settings.save_settings(config)
             self.directory_settings.create_directory(config, kind= 'map')
 
@@ -1513,8 +1511,14 @@ class MosaicPanel(FigureCanvas):
 
     def on_run_multi_acq(self,event="none"): #MultiRibbons
         #pick position lists
+        outdirlist =[]
+        keys = sorted(self.outdirdict)
+        for key in keys:
+            outdirlist.append(self.outdirdict[key])
+        print 'outdirlist:', outdirlist
+        print 'keys', keys
         poslistpath=[]
-        dlg = MultiRibbonSettings(None, -1,self.Ribbon_Num, title = "Multiribbon Settings", settings = self.channel_settings,style=wx.OK)
+        dlg = MultiRibbonSettings(None, -1,self.Ribbon_Num, keys, title = "Multiribbon Settings", settings = self.channel_settings,style=wx.OK)
         ret=dlg.ShowModal()
         if ret == wx.ID_OK:
             poslistpath=dlg.GetSettings()
@@ -1540,17 +1544,14 @@ class MosaicPanel(FigureCanvas):
         numchan,chrom_correction = self.summarize_channel_settings()
 
         #pick output directories
-        outdirlist =[]
+
         # for rib in range(self.Ribbon_Num):
         #     newoutdir = self.get_output_dir()
         #     if newoutdir is None:
         #         return None
         #     outdir.append(newoutdir)
         # print "outdir:", outdir, type(outdir), len(outdir)
-        keys = sorted(self.outdirdict)
-        for key in keys:
-            outdirlist.append(self.outdirdict[key])
-        print 'outdirlist:', outdirlist
+
 
         for rib in range(self.Ribbon_Num): #loop through all ribbons
             #clear position list
@@ -1635,7 +1636,11 @@ class MosaicPanel(FigureCanvas):
                                 print "autofocus no longer enabled while moving between frames.. quiting"
                                 goahead = False
                                 break
-                            self.multiDacq(success,outdirlist[rib],chrom_correction,triggerflag,fpos.x,fpos.y,current_z,i,j,hold_focus)
+                            if pos.frameList.slicePositions[j].activated:
+                                print 'imaging'
+                                self.multiDacq(success,outdirlist[rib],chrom_correction,triggerflag,fpos.x,fpos.y,current_z,i,j,hold_focus)
+                            else:
+                                pass
                             self.ResetPiezo()
                             (goahead, skip)=self.progress.Update((i*numFrames) + j,'ribbon %d of %d, section %d of %d, frame %d'%(rib,self.Ribbon_Num-1,i,numSections-1,j))
                         #======================================================
