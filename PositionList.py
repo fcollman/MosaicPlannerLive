@@ -581,6 +581,7 @@ class posList():
         self.mosaic_settings.mx = thedict["MOSAIC"]["MOSAICX"]
         self.mosaic_settings.my = thedict["MOSAIC"]["MOSAICY"]
         self.mosaic_settings.overlap = thedict["MOSAIC"]["OVERLAP"]
+        self.set_mosaic_settings(self.mosaic_settings)
         ifile.close()
         self.updateNumbers()
 

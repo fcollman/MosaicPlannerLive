@@ -25,7 +25,7 @@ import time
 import datetime
 import multiprocessing as mp
 import pickle
-
+import json
 import wx
 import numpy as np
 import wx.lib.intctrl
@@ -58,18 +58,16 @@ from skimage.filters import sobel,gaussian_filter #MultiRibbons
 import cv2 #MultiRibbons
 from skimage.measure import block_reduce #MultiRibbons
 from Snap import SnapView
+from slacker import Slacker
 
 STOP_TOKEN = 'STOP!!!'
 DEFAULT_SETTINGS_FILE = 'MosaicPlannerSettings.default.cfg'
 SETTINGS_FILE = 'MosaicPlannerSettings.cfg'
 SETTINGS_MODEL_FILE = 'MosaicPlannerSettingsModel.cfg'
 
-DIRECTORY_DICTIONARY = {'W' : 'nas1',
-                        'X' : 'nas2',
-                        'Y' : 'nas3',
-                        'Z' : 'nas4'} #all machines using this software at allen will be mapped like this in the future
 
-def file_save_process(queue,stop_token, metadata_dictionary):
+def file_save_process(queue,stop_token, metadata_dictionary,ssh_opts):
+
     while True:
         token = queue.get()
         if token == stop_token:
@@ -79,10 +77,10 @@ def file_save_process(queue,stop_token, metadata_dictionary):
             tif_filepath = os.path.join(path, prot_name + "_S%04d_F%04d_Z%02d.tif" % (slice_index, frame_index, z_index))
             metadata_filepath = os.path.join(path, prot_name + "_S%04d_F%04d_Z%02d_metadata.txt"%(slice_index, frame_index, z_index))
             imsave(tif_filepath,data)
-            write_slice_metadata(metadata_filepath, ch, x, y, z, slice_index, triggerflag, metadata_dictionary)
+            write_slice_metadata(metadata_filepath, ch, x, y, z, slice_index, triggerflag, metadata_dictionary,ssh_opts)
 
 
-def write_slice_metadata(filename, ch, xpos, ypos, zpos, slice_index,triggerflag, meta_dict):
+def write_slice_metadata(filename, ch, xpos, ypos, zpos, slice_index,triggerflag, meta_dict,ssh_opts):
     channelname    = meta_dict['channelname'][ch]
     (height,width) = meta_dict['(height,width)']
     ScaleFactorX   = meta_dict['ScaleFactorX']
@@ -96,26 +94,28 @@ def write_slice_metadata(filename, ch, xpos, ypos, zpos, slice_index,triggerflag
     f.write("XPositions\tYPositions\tFocusPositions\n")
     f.write("%s\t%s\t%s\n" %(xpos, ypos, zpos))
     if triggerflag == True:
-        fname = "/nas3/job-scheduling/acq_cron"
-        sessiondir, frametitle = os.path.split(filename)
-        sessiondir, chname = os.path.split(sessiondir)
-        print "Session Directory", sessiondir
-        sessiondir = '/'.join(sessiondir.split('\\'))
-        junk, sessiondir = sessiondir.split(':')
-        sessiondir = DIRECTORY_DICTIONARY[junk] + sessiondir
-
-        print sessiondir
-        outputstring = "%s,%s"%(sessiondir,slice_index)
-
-        #linux command to dump outputstring to filename
-        cmd = "echo %s > %s"%(outputstring,fname)
 
 
-        #run the command via ssh to machine ibs-sharmi-ux1
-        ssh = paramiko.SSHClient()
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect('ibs-sharmi-ux1.corp.alleninstitute.org', username='sharmishtaas', password='spaceneedle123')
-        ssh.exec_command(cmd)
+        if ssh_opts['do_ssh_trigger']:
+            fname =ssh_opts['cron_dir']
+            sessiondir, frametitle = os.path.split(filename)
+            sessiondir, chname = os.path.split(sessiondir)
+            print "Session Directory", sessiondir
+            sessiondir = '/'.join(sessiondir.split('\\'))
+            junk, sessiondir = sessiondir.split(':')
+            sessiondir = os.path.join(ssh_opts['mount_point'], sessiondir)
+
+            print sessiondir
+            outputstring = "%s,%s"%(sessiondir,slice_index)
+
+            #linux command to dump outputstring to filename
+            cmd = "echo %s > %s"%(outputstring,fname)
+
+            #run the command via ssh to machine ibs-sharmi-ux1
+            ssh = paramiko.SSHClient()
+            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            ssh.connect(ssh_opts['host'], username=ssh_opts['username'], password=ssh_opts['password'])
+            ssh.exec_command(cmd)
 
 
 
@@ -363,6 +363,14 @@ class MosaicToolbar(NavBarImproved):
                               mx=self.mosaicXCtrl.GetValue(),
                               my=self.mosaicYCtrl.GetValue(),
                               overlap=self.overlapCtrl.GetValue())
+
+    def set_mosaic_parameters(self,mosaic_settings):
+        self.magChoiceCtrl.SetValue(mosaic_settings.mag)
+        self.mosaicXCtrl.SetValue(mosaic_settings.mx)
+        self.mosaicYCtrl.SetValue(mosaic_settings.my)
+        self.overlapCtrl.SetValue(mosaic_settings.overlap)
+        self.showMosaicCheck.SetValue(mosaic_settings.show_box)
+
     #unused # batman - should we kill it if unused?
     def cross_cursor(self, event):
         self.canvas.SetCursor(wx.StockCursor(wx.CURSOR_ARROW))
@@ -535,6 +543,10 @@ class MosaicPanel(FigureCanvas):
         self.canvas.mpl_connect('button_press_event', self.on_press)
         self.canvas.mpl_connect('button_release_event', self.on_release)
         self.canvas.mpl_connect('key_press_event', self.on_key)
+
+        self.slacker = None
+        if self.cfg['Slack']['slack_token'] is not None:
+            self.slacker = Slacker(self.cfg['Slack']['slack_token'])
 
     def _check_sock(self, event):
         self.interface._check_rep()
@@ -898,6 +910,25 @@ class MosaicPanel(FigureCanvas):
 
 
 
+    def slack_notify(self,message,notify=False):
+        if self.slacker is not None:
+            microscope = self.cfg['MosaicPlanner']['microscope_name']
+            if 'Jarvis'in microscope:
+                message="Ironman be aware: "+message
+            if 'Rosie' in microscope:
+                message="George!: "+message
+            if 'Igor' in microscope:
+                message="mmm Dr. Frankenstein...: "+message
+            if notify:
+                message=self.cfg['Slack']['notify_list']
+            self.slacker.chat.post_message(self.cfg['Slack']['slack_room'],'{} says: {}'.format(microscope,message))
+
+    def lookup_mountpoint(self,outdir):
+        drive,tail = os.path.splitdrive(outdir)
+        mountfile = os.path.join(drive,'mountpoint','mountpoint.json')
+        with open(mountfile,'r') as fp:
+            d=json.load(fp)
+        return d['mountpoint']
 
     def on_run_acq(self,event="none"):
         print "running"
@@ -916,6 +947,7 @@ class MosaicPanel(FigureCanvas):
         binning=self.imgSrc.get_binning()
         numchan,chrom_correction = self.summarize_channel_settings()
 
+        self.slack_notify("about to image %d sections"%len(self.posList.slicePositions))
 
         Caption = "about to capture %d sections, binning is %dx%d, numchannel is %d"%(len(self.posList.slicePositions),binning,binning,numchan)
         dlg = wx.MessageDialog(self,message=Caption, style = wx.OK|wx.CANCEL)
@@ -951,7 +983,9 @@ class MosaicPanel(FigureCanvas):
         'ScaleFactorY'   : self.imgSrc.get_pixel_size(),
         'exp_time'       : self.channel_settings.exposure_times,
         }
-        self.saveProcess =  mp.Process(target=file_save_process,args=(self.dataQueue,STOP_TOKEN, metadata_dictionary))
+        ssh_opts = dict(self.cfg['SSH'])
+        ssh_opts['mount_point']=self.lookup_mountpoint(outdir)
+        self.saveProcess =  mp.Process(target=file_save_process,args=(self.dataQueue, STOP_TOKEN, metadata_dictionary, ssh_opts))
         self.saveProcess.start()
 
 
@@ -973,11 +1007,13 @@ class MosaicPanel(FigureCanvas):
         goahead = True
         #loop over positions
         for i,pos in enumerate(self.posList.slicePositions):
+            if i==(len(self.posList.slicePositions)-1):
+                    self.slack_notify('last section imaging beginning')
             if pos.activated:
                 if not goahead:
                     break
                 if not self.imgSrc.mmc.isContinuousFocusEnabled():
-                    print "autofocus not enabled when moving between sections.. "
+                    self.slack_notify('HELP! lost autofocus between sections',notify=True)
                     goahead=False
                     break
                 (goahead, skip) = self.progress.Update(i*numFrames,'section %d of %d'%(i,numSections-1))
@@ -985,7 +1021,7 @@ class MosaicPanel(FigureCanvas):
                 self.ResetPiezo()
                 current_z = self.imgSrc.get_z()
                 if pos.frameList is None:
-                    self.multiDacq(success,outdir,chrom_correction,pos.x,pos.y,current_z,i,hold_focus=hold_focus)
+                    self.multiDacq(success,outdir,chrom_correction,triggerflag,pos.x,pos.y,current_z,i,hold_focus=hold_focus)
                 else:
                     triggerflag = False
                     for j,fpos in enumerate(pos.frameList.slicePositions):
@@ -996,11 +1032,15 @@ class MosaicPanel(FigureCanvas):
                             print "breaking out!"
                             break
                         if not self.imgSrc.mmc.isContinuousFocusEnabled():
+                            self.slack_notify('HELP! lost autofocus between frames',notify=True)
                             print "autofocus no longer enabled while moving between frames.. quiting"
                             goahead = False
                             break
                         self.multiDacq(success,outdir,chrom_correction,triggerflag,fpos.x,fpos.y,current_z,i,j,hold_focus)
                         self.ResetPiezo()
+                        if i==(len(self.posList.slicePositions)-1):
+                            if j == (len(pos.frameList.slicePositions) - 1):
+                                self.slack_notify('Done Imaging!')
                         (goahead, skip)=self.progress.Update((i*numFrames) + j+1,'section %d of %d, frame %d'%(i,numSections-1,j))
                         #======================================================
                         if self.interface.pause == True:
@@ -1010,8 +1050,14 @@ class MosaicPanel(FigureCanvas):
                                 #time.sleep(0.1)
                                 wx.Yield()
                         #======================================================
+
                 wx.Yield()
         if not goahead:
+            self.slack_notify('Imaging stopped prematurely')
+            self.slack_notify('on section %d'%i)
+            if pos.frameList is not None:
+                self.slack_notify("frame %d"%(j))
+
             print "acquisition stopped prematurely"
             print "section %d"%(i)
             if pos.frameList is not None:
@@ -1019,7 +1065,7 @@ class MosaicPanel(FigureCanvas):
 
         self.dataQueue.put(STOP_TOKEN)
         self.saveProcess.join()
-        print "save process ended"
+
         self.progress.Destroy()
         self.imgSrc.set_binning(2)
         if self.cfg['MosaicPlanner']['hardware_trigger']:
@@ -1918,6 +1964,8 @@ class ZVISelectFrame(wx.Frame):
 
         self.SmartSEMSettings=SmartSEMSettings()
         self.app = QtGui.QApplication([])
+
+
         #self.app.exec_()
 
         #self.OnImageLoad()
@@ -1982,7 +2030,7 @@ class ZVISelectFrame(wx.Frame):
             self.mosaicCanvas.posList.add_from_file_ZEN(self.array_filepicker.GetPath())
         elif self.array_formatBox.GetValue()=='JSON': #MultiRibbons
             self.mosaicCanvas.posList.add_from_file_JSON(self.array_filepicker.GetPath())
-
+        self.mosaicCanvas.navtoolbar.set_mosaic_parameters(self.mosaicCanvas.posList.mosaic_settings)
         self.mosaicCanvas.draw()
 
     def on_array_save(self,event):

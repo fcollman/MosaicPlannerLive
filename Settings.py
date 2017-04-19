@@ -591,7 +591,7 @@ class ChangeChannelSettings(wx.Dialog):
         
  
 class MosaicSettings:
-    def __init__(self,mag=65.486,mx=1,my=1,overlap=10,show_box=False,show_frames=False):
+    def __init__(self,mag=65.486,mx=1,my=1,overlap=20,show_box=False,show_frames=False):
         """a simple struct class for encoding settings about mosaics
         
         keywords)
