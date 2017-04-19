@@ -289,7 +289,30 @@ class posList():
         dy=(ypos-y)
         dist=np.sqrt(dx*dx+dy*dy)
         min_index=dist.argmin()
+        print 'index for get position nearest is:', min_index
         return self.slicePositions[min_index]
+
+
+
+    def get_nearest_position_index(self,x,y):
+        """return the slicePosition index nearest an x,y point
+
+        keywords:
+        x)the x coordinate in microns to get the nearest point
+        y)the y coordinate in microns to get the nearest point
+
+        returns index
+        the slicePosition index from the list which is closest to the input point
+
+        """
+        (xpos,ypos,select)=self.__getXYS()
+        dx=(xpos-x)
+        dy=(ypos-y)
+        dist=np.sqrt(dx*dx+dy*dy)
+        min_index=dist.argmin()
+        return min_index
+
+
         
     def calcAngles(self):
         """calculate the angle tangent to each point on the position list
@@ -1346,7 +1369,8 @@ class slicePosition():
                 marker = 'x'
                 color = 'm'
             self.pointLine2D.set_marker(marker)
-            self.pointLine2D.set_color(color)
+            # self.pointLine2D.set_markercolor(color)
+            self.pointLine2D.set_markeredgecolor(color)
         if type == 'frame':
             print 'made it to update point activated'
             if self.activated:
