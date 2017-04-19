@@ -13,7 +13,9 @@ from imageSourceMM import imageSource
 #         self.plot.rotate(-90)
 #         self.gradient.setOrientation('bottom')
 
-class SnapView(QtGui.QDialog):
+class SnapView(QtGui.QWidget):
+    changedExposureTimes = QtCore.Signal()
+
     def __init__(self,imgSrc,exposure_times=dict([]),channelGroup="Channels"):
         super(SnapView,self).__init__()
 
@@ -47,7 +49,7 @@ class SnapView(QtGui.QDialog):
     def initUI(self):
 
         currpath=os.path.split(os.path.realpath(__file__))[0]
-        filename = os.path.join(currpath,'Snap2.ui')
+        filename = os.path.join(currpath,'Snap.ui')
         uic.loadUi(filename,self)
 
 
@@ -102,6 +104,8 @@ class SnapView(QtGui.QDialog):
             self.gridlay.addWidget(spnBox,i,1)
         
         Nch=len(self.channels)
+        self.exitButton.clicked.connect(self.exitClicked)
+
         #auto_exposure button
         # snapExpBtn = QtGui.QPushButton('Snap exposures',self)
         # snapExpBtn.clicked.connect(self.snapExposure)
@@ -125,6 +129,9 @@ class SnapView(QtGui.QDialog):
         #     self.isLockedBtn.setDown(False)
         # self.gridlay.addWidget(self.isLockedBtn,Nch+2,0)
 
+    def exitClicked(self,evt):
+        self.hide()
+        self.changedExposureTimes.emit()
 
     def getExposureTimes(self):
         exposure_times=dict([])
@@ -262,13 +269,7 @@ class SnapView(QtGui.QDialog):
         return channelButtonClicked
         
     def closeEvent(self,evt):
-        self.mmc.stopSequenceAcquisition()
-        print "stopped acquisition"
-        #if self.timer is not None:
-        #    print "cancelling timer if it exists"
-        #    self.timer.cancel()
-        self.ended = True
-        #self.destroy()
+        self.changedExposureTimes.emit()
         return QtGui.QWidget.closeEvent(self,evt)
         #evt.accept()
 

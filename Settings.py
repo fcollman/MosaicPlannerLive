@@ -512,14 +512,18 @@ class ChangeChannelSettings(wx.Dialog):
         for ch in settings.channels:
             hbox =wx.BoxSizer(wx.HORIZONTAL)
             Txt=wx.StaticText(self,label=ch)
+            ChBox = wx.CheckBox(self)
+            ChBox.SetValue(settings.usechannels[ch])
+            print settings.prot_names[ch]
             if 'dapi' in ch.lower():
                 ProtComboBox=wx.ComboBox(self,choices=self.ProteinSelection['QuadBand0DAPI'], style = wx.CB_SORT)
             else:
                 ProtComboBox=wx.ComboBox(self,choices=self.ProteinSelection['Proteins'], style = wx.CB_SORT)
+            if ChBox.GetValue():
+                ProtComboBox.SetValue(settings.prot_names[ch])
 
 
-            ChBox = wx.CheckBox(self)
-            ChBox.SetValue(settings.usechannels[ch])
+
             IntCtrl=wx.lib.intctrl.IntCtrl( self, value=settings.exposure_times[ch],size=(50,-1))
             FloatCtrl=wx.lib.agw.floatspin.FloatSpin(self, 
                                        value=settings.zoffsets[ch],
@@ -587,7 +591,7 @@ class ChangeChannelSettings(wx.Dialog):
         
  
 class MosaicSettings:
-    def __init__(self,mag=65.486,mx=1,my=1,overlap=10,show_box=False,show_frames=False):
+    def __init__(self,mag=65.486,mx=1,my=1,overlap=20,show_box=False,show_frames=False):
         """a simple struct class for encoding settings about mosaics
         
         keywords)
@@ -765,7 +769,7 @@ class MultiRibbonSettings(wx.Dialog): #MultiRibbons
 
         vbox = wx.BoxSizer(wx.VERTICAL)
         gridSizer=wx.FlexGridSizer(rows=9,cols=3,vgap=5,hgap=5)
-        gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label="ribbon#"),border=5)
+        gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label="slot#"),border=5)
         gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label="array file"),border=5)
         gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label=" "),border=5)
 

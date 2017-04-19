@@ -1,37 +1,15 @@
 import numpy as np
-import scipy as sp
 from scipy.ndimage import convolve
 
 # Try and use the faster Fourier transform functions from the anfft module if
 # available
 try:
-	import anfft as _anfft
-	# measure == True for self-optimisation of repeat Fourier transforms of 
-	# similarly-shaped arrays
-	def fftn(A,shape=None):
-		if shape != None:
-			A = _checkffttype(A)
-			A = procrustes(A,target=shape,side='after',padval=0)
-		return _anfft.fftn(A,measure=True)
-	def ifftn(B,shape=None):
-		if shape != None:
-			B = _checkffttype(B)
-			B = procrustes(B,target=shape,side='after',padval=0)
-		return _anfft.ifftn(B,measure=True)
-	def _checkffttype(C):
-		# make sure input arrays are typed correctly for FFTW
-		if C.dtype == 'complex256':
-			# the only incompatible complex type --> complex64
-			C = np.complex128(C)
-		elif C.dtype not in ['float32','float64','complex64','complex128']:
-			# any other incompatible type --> float64
-			C = np.float64(C)
-		return C
+	from pyfftw.interfaces.scipy_fftpack import fftn, ifftn
 # Otherwise use the normal scipy fftpack ones instead (~2-3x slower!)
 except ImportError:
 	print \
-	"Module 'anfft' (FFTW Python bindings) could not be imported.\n"\
-	"To install it, try running 'easy_install anfft' from the terminal.\n"\
+	"Module 'pyfftw' (FFTW Python bindings) could not be imported.\n"\
+	"To install it, try running 'pip install pyfftw' from the terminal.\n"\
 	"Falling back on the slower 'fftpack' module for ND Fourier transforms."
 	from scipy.fftpack import fftn, ifftn
 

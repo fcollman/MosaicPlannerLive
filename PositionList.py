@@ -29,7 +29,7 @@ from matplotlib.lines import Line2D
 from matplotlib.quiver import Quiver
 #from matplotlib.nxutils import points_inside_poly
 from CenterRectangle import CenterRectangle
-from Transform import Transform
+
 from scipy.interpolate import griddata
 import lxml.etree as ET
 import json
@@ -581,6 +581,7 @@ class posList():
         self.mosaic_settings.mx = thedict["MOSAIC"]["MOSAICX"]
         self.mosaic_settings.my = thedict["MOSAIC"]["MOSAICY"]
         self.mosaic_settings.overlap = thedict["MOSAIC"]["OVERLAP"]
+        self.set_mosaic_settings(self.mosaic_settings)
         ifile.close()
         self.updateNumbers()
 
@@ -958,7 +959,7 @@ class slicePosition():
         else:
             self.numTxt = None
  
-
+        self.setAngle(angle)
     
         
     def __paintPoint(self):
