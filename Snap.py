@@ -85,6 +85,9 @@ class SnapView(QtGui.QWidget):
         keys = self.exposure_times.keys()
         
         #gridlay=QtGui.QGridLayout(margin=0,spacing=-1)
+        camera = self.mmc.getCameraDevice()
+        self.mmc.setProperty(camera,'Binning','1x1')
+        print 'Binning is:', self.mmc.getProperty(camera,'Binning')
         for i,ch in enumerate(self.channels):
             btn=QtGui.QPushButton(ch,self)
             self.chnButtons.append(btn)
@@ -269,6 +272,9 @@ class SnapView(QtGui.QWidget):
         return channelButtonClicked
         
     def closeEvent(self,evt):
+        camera = self.mmc.getCameraDevice()
+        self.mmc.setProperty(camera,'Binning','2x2')
+        print 'Binning is:', self.mmc.getProperty(camera,'Binning')
         self.changedExposureTimes.emit()
         return QtGui.QWidget.closeEvent(self,evt)
         #evt.accept()
