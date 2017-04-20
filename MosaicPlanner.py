@@ -1590,7 +1590,7 @@ class MosaicPanel(FigureCanvas):
             }
             ssh_opts = dict(self.cfg['SSH'])
             ssh_opts['mount_point']=self.lookup_mountpoint(outdirlist[rib])
-            self.saveProcess =  mp.Process(target=file_save_process,args=(self.dataQueue,STOP_TOKEN, metadata_dictionary))
+            self.saveProcess =  mp.Process(target=file_save_process,args=(self.dataQueue, STOP_TOKEN, metadata_dictionary, ssh_opts))
             self.saveProcess.start()
 
             numFrames,numSections = self.setup_progress_bar()
