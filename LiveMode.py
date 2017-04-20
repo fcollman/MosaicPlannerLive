@@ -49,6 +49,9 @@ class VideoView(QtGui.QWidget):
             if 'dapi' in ch.lower():
                 self.mmc.setConfig(self.channelGroup,ch)
                 self.mmc.waitForConfig(self.channelGroup,ch)
+        camera = self.mmc.getCameraDevice()
+        self.mmc.setProperty(camera,'Binning','1x1')
+        print 'Binning is:', self.mmc.getProperty(camera,'Binning')
         self.mmc.startContinuousSequenceAcquisition(1)
     
     def initUI(self):
@@ -242,6 +245,9 @@ class VideoView(QtGui.QWidget):
         
     def closeEvent(self,evt):
         self.mmc.stopSequenceAcquisition()
+        camera = self.mmc.getCameraDevice()
+        self.mmc.setProperty(camera,'Binning','2x2')
+        print 'Binning is:', self.mmc.getProperty(camera,'Binning')
         print "stopped acquisition"
         #if self.timer is not None:
         #    print "cancelling timer if it exists"
