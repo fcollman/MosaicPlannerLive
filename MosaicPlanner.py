@@ -1588,6 +1588,8 @@ class MosaicPanel(FigureCanvas):
             'ScaleFactorY'   : self.imgSrc.get_pixel_size(),
             'exp_time'       : self.channel_settings.exposure_times,
             }
+            ssh_opts = dict(self.cfg['SSH'])
+            ssh_opts['mount_point']=self.lookup_mountpoint(outdirlist[rib])
             self.saveProcess =  mp.Process(target=file_save_process,args=(self.dataQueue,STOP_TOKEN, metadata_dictionary))
             self.saveProcess.start()
 
