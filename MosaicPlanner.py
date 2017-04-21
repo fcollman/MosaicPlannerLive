@@ -1646,7 +1646,7 @@ class MosaicPanel(FigureCanvas):
                                     goahead = False
                                     break
                                 if pos.frameList.slicePositions[j].activated:
-                                    print 'imaging'
+                                    # print 'imaging'
                                     self.multiDacq(success,outdirlist[rib],chrom_correction,triggerflag,fpos.x,fpos.y,current_z,i,j,hold_focus)
                                 else:
                                     pass
