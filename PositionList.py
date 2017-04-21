@@ -1029,6 +1029,13 @@ class slicePosition():
             self.__paintFramesTilted()
         else:
             self.__paintFramesGrid()
+
+    # def __paintframeactivation(self):
+    #     for i in range(len(self.frameList.slicePositions)):
+    #         frame = self.frameList.slicePositions[i]
+    #         if frame.activated:
+    #
+
             
     def __paintFramesGrid(self):
         if not self.axis: return None
@@ -1072,7 +1079,11 @@ class slicePosition():
                 for x in xrange:
                     self.frameList.add_position(xx[y,x],yy[y,x],withpoint=False,edgecolor='c')
 
-            self.frameList.set_mosaic_visible(True)  
+
+            self.set_activated(self.activated)
+
+            self.frameList.set_mosaic_visible(True)
+
 
     def __paintFramesTilted(self):
         if not self.axis: return None
@@ -1127,6 +1138,8 @@ class slicePosition():
                     xrange = range(mx-1,-1,-1)
                 for x in xrange:
                     self.frameList.add_position(xx[y,x],yy[y,x],withpoint=False,edgecolor='c')
+
+
 
             self.frameList.set_mosaic_visible(True)
 

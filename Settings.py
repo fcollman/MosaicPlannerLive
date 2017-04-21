@@ -769,6 +769,7 @@ class MultiRibbonSettings(wx.Dialog): #MultiRibbons
 
         vbox = wx.BoxSizer(wx.VERTICAL)
         gridSizer=wx.FlexGridSizer(rows=9,cols=3,vgap=5,hgap=5)
+        # gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY, label= 'Image?'),border = 5)
         gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label="slot#"),border=5)
         gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label="array file"),border=5)
         gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label=" "),border=5)
@@ -776,6 +777,7 @@ class MultiRibbonSettings(wx.Dialog): #MultiRibbons
         self.ribbon_number = ribbon_number
         self.slot_labels = slot_labels
         self.RibbonFilePath = []
+        self.ToImageList = []
         for i in range(self.ribbon_number):
             self.ribbon_label=wx.StaticText(self,id=wx.ID_ANY,label=slot_labels[i])
             self.ribbon_load_button=wx.Button(self,id=wx.ID_ANY,label=" ",name="load button")
@@ -786,6 +788,7 @@ class MultiRibbonSettings(wx.Dialog): #MultiRibbons
             gridSizer.Add(self.ribbon_filepicker,1,wx.EXPAND,border=5)
             gridSizer.Add(self.ribbon_load_button,0,wx.EXPAND,border=5)
             self.RibbonFilePath.append(self.ribbon_filepicker)
+
 
         hbox = wx.BoxSizer(wx.HORIZONTAL)
         ok_button = wx.Button(self,wx.ID_OK,'OK')
@@ -798,6 +801,8 @@ class MultiRibbonSettings(wx.Dialog): #MultiRibbons
 
         self.SetSizer(vbox)
 
+
+
     def GetSettings(self):
         #pathway=dict([])
         pathway=[]
@@ -805,4 +810,10 @@ class MultiRibbonSettings(wx.Dialog): #MultiRibbons
             #pathway[i]=self.RibbonFilePath[i].GetPath()
             newpath=self.RibbonFilePath[i].GetPath()
             pathway.append(newpath)
-        return pathway
+            print 'new path length:', len(newpath)
+            if len(newpath) == 0:
+                self.ToImageList.append(False)
+            else:
+                self.ToImageList.append(True)
+
+        return pathway, self.ToImageList
