@@ -776,6 +776,7 @@ class MultiRibbonSettings(wx.Dialog): #MultiRibbons
         self.ribbon_number = ribbon_number
         self.slot_labels = slot_labels
         self.RibbonFilePath = []
+        self.ToImageList = []
         for i in range(self.ribbon_number):
             self.ribbon_label=wx.StaticText(self,id=wx.ID_ANY,label=slot_labels[i])
             self.ribbon_load_button=wx.Button(self,id=wx.ID_ANY,label=" ",name="load button")
@@ -805,4 +806,10 @@ class MultiRibbonSettings(wx.Dialog): #MultiRibbons
             #pathway[i]=self.RibbonFilePath[i].GetPath()
             newpath=self.RibbonFilePath[i].GetPath()
             pathway.append(newpath)
-        return pathway
+            print 'new path length:', len(newpath)
+            if len(newpath) == 0:
+                self.ToImageList.append(False)
+            else:
+                self.ToImageList.append(True)
+
+        return pathway, self.ToImageList
