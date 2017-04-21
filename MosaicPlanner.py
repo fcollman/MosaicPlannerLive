@@ -1555,9 +1555,14 @@ class MosaicPanel(FigureCanvas):
         #         return None
         #     outdir.append(newoutdir)
         # print "outdir:", outdir, type(outdir), len(outdir)
-
+        progress_ribbons = wx.ProgressDialog("A ribbon progress box", "Ribbons remaining", self.Ribbon_Num,
+        style=wx.PD_CAN_ABORT | wx.PD_ELAPSED_TIME | wx.PD_REMAINING_TIME)
 
         for rib in range(self.Ribbon_Num): #loop through all ribbons
+            (keep_going, skip1) = progress_ribbons.Update(rib, 'ribbon %d of %d'%(rib,self.Ribbon_Num-1))
+            print 'keep going', keep_going
+            if not keep_going:
+                break
             #clear position list
             print 'Imaging:', ToImageList[rib]
             if ToImageList[rib]:
@@ -1646,7 +1651,7 @@ class MosaicPanel(FigureCanvas):
                                     goahead = False
                                     break
                                 if pos.frameList.slicePositions[j].activated:
-                                    print 'imaging'
+
                                     self.multiDacq(success,outdirlist[rib],chrom_correction,triggerflag,fpos.x,fpos.y,current_z,i,j,hold_focus)
                                 else:
                                     pass
@@ -1679,6 +1684,7 @@ class MosaicPanel(FigureCanvas):
             else:
                 print 'Moving on'
                 pass
+        progress_ribbons.Destroy()
         self.imgSrc.set_binning(2)
 
 
