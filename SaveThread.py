@@ -43,7 +43,8 @@ def write_slice_metadata(filename, ch, xpos, ypos, zpos, slice_index,triggerflag
             sessiondir = os.path.join(ssh_opts['mount_point'], sessiondir)
 
             print sessiondir
-            outputstring = "%s,%s"%(sessiondir,slice_index)
+            meta_experiment_name = ssh_opts['meta_experiment_name']
+            outputstring = "%s,%s,%s"%(sessiondir,slice_index,meta_experiment_name)
 
             #linux command to dump outputstring to filename
             cmd = "echo %s > %s"%(outputstring,fname)
