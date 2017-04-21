@@ -1637,7 +1637,7 @@ class MosaicPanel(FigureCanvas):
                         self.ResetPiezo()
                         current_z = self.imgSrc.get_z()
                         if pos.frameList is None:
-                            self.multiDacq(success,outdirlist[rib],chrom_correction,pos.x,pos.y,current_z,i,hold_focus=hold_focus)
+                            self.multiDacq(success,outdirlist[rib],chrom_correction,triggerflag,pos.x,pos.y,current_z,i,hold_focus=hold_focus)
                         else:
                             triggerflag = False
                             for j,fpos in enumerate(pos.frameList.slicePositions):

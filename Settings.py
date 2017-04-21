@@ -22,7 +22,7 @@ import json
 
 class DirectorySettings():
 
-    def __init__(self,Sample_ID = None, Ribbon_ID = None, Session_ID = None,Map_num= None,Slot_num = None,default_path = None ):
+    def __init__(self,Sample_ID = None, Ribbon_ID = None, Session_ID = None,Map_num= None,Slot_num = None,default_path = None,meta_experiment_name = None ):
 
         self.default_path = default_path
         self.Sample_ID = Sample_ID
@@ -30,6 +30,7 @@ class DirectorySettings():
         self.Session_ID = Session_ID
         self.Slot_num = Slot_num
         self.Map_num = Map_num
+        self.meta_experiemnt_name = meta_experiment_name
 
 
 
@@ -40,6 +41,7 @@ class DirectorySettings():
         cfg['Directories']['Map_num'] = self.Map_num
         cfg['Directories']['Default_Path'] = self.default_path
         cfg['Directories']['Slot_num'] = self.Slot_num
+        cfg['SSH']['meta_experiment_name'] = self.meta_experiemnt_name
         cfg.write()
 
     def load_settings(self,cfg):
@@ -49,6 +51,7 @@ class DirectorySettings():
         self.Session_ID = cfg['Directories']['Session_ID']
         self.Map_num = cfg['Directories']['Map_num']
         self.Slot_num = cfg['Directories']['Slot_num']
+        self.meta_experiemnt_name = cfg['SSH']['meta_experiment_name']
 
     def create_directory(self,cfg,kind):
         root = self.default_path
@@ -118,11 +121,14 @@ class RibbonNumberDialog(wx.Dialog):
 
 class ChangeDirectorySettings(wx.Dialog):
     def __init__(self,parent, id,style, title="Enter Sample Information",settings = DirectorySettings()):
-        wx.Dialog.__init__(self, parent, id, title, style= wx.DEFAULT_DIALOG_STYLE, size= (420,-1),)
+        wx.Dialog.__init__(self, parent, id, title, style= wx.DEFAULT_DIALOG_STYLE, size= (440,-1),)
         vbox = wx.BoxSizer(wx.VERTICAL)
         # self.settings = settings
 
-        self.RootDir_txt = wx.StaticText(self,label = 'Data Directory')
+        self.MetaExp_txt = wx.StaticText(self,label = 'Meta Experiment Name:')
+        self.MetaExp_Ctrl = wx.TextCtrl(self,value = settings.meta_experiemnt_name)
+
+        self.RootDir_txt = wx.StaticText(self,label = 'Data Directory:')
         self.RootDir_Ctrl = wx.DirPickerCtrl(self,path=settings.default_path)
 
         self.SampleID_txt = wx.StaticText(self, label = "Sample ID:")
@@ -150,20 +156,23 @@ class ChangeDirectorySettings(wx.Dialog):
         hbox4 = wx.BoxSizer(wx.HORIZONTAL)
         hbox5 = wx.BoxSizer(wx.HORIZONTAL)
         hbox6 = wx.BoxSizer(wx.HORIZONTAL)
-        hbox.Add(self.RootDir_txt)
-        hbox.Add(self.RootDir_Ctrl)
-        hbox1.Add(self.SampleID_txt)
-        hbox1.Add(self.SampleID_Ctrl)
-        hbox2.Add(self.Ribbon_txt)
-        hbox2.Add(self.RibbonInt_Ctrl)
-        hbox3.Add(self.Session_txt)
-        hbox3.Add(self.SessionInt_Ctrl)
-        hbox4.Add(self.Map_txt)
-        hbox4.Add(self.MapInt_Ctrl)
-        hbox5.Add(self.Slot_txt)
-        hbox5.Add(self.SlotInt_Ctrl)
-        hbox6.Add(ok_button)
-        hbox6.Add(cancel_button)
+        hbox7 = wx.BoxSizer(wx.HORIZONTAL)
+        hbox.Add(self.MetaExp_txt)
+        hbox.Add(self.MetaExp_Ctrl)
+        hbox1.Add(self.RootDir_txt)
+        hbox1.Add(self.RootDir_Ctrl)
+        hbox2.Add(self.SampleID_txt)
+        hbox2.Add(self.SampleID_Ctrl)
+        hbox3.Add(self.Ribbon_txt)
+        hbox3.Add(self.RibbonInt_Ctrl)
+        hbox4.Add(self.Session_txt)
+        hbox4.Add(self.SessionInt_Ctrl)
+        hbox5.Add(self.Map_txt)
+        hbox5.Add(self.MapInt_Ctrl)
+        hbox6.Add(self.Slot_txt)
+        hbox6.Add(self.SlotInt_Ctrl)
+        hbox7.Add(ok_button)
+        hbox7.Add(cancel_button)
         vbox.Add(hbox)
         vbox.Add(hbox1)
         vbox.Add(hbox2)
@@ -171,6 +180,7 @@ class ChangeDirectorySettings(wx.Dialog):
         vbox.Add(hbox4)
         vbox.Add(hbox5)
         vbox.Add(hbox6)
+        vbox.Add(hbox7)
         self.SetSizer(vbox)
 
     def get_settings(self):
@@ -181,7 +191,8 @@ class ChangeDirectorySettings(wx.Dialog):
         Map_num = self.MapInt_Ctrl.GetValue()
         Slot_num = self.SlotInt_Ctrl.GetValue()
         Default_Path = self.RootDir_Ctrl.GetPath()
-        return DirectorySettings(Sample_ID,Ribbon_ID,Session_ID,Map_num,Slot_num,Default_Path)
+        meta_experiment_name = self.MetaExp_Ctrl.GetValue()
+        return DirectorySettings(Sample_ID,Ribbon_ID,Session_ID,Map_num,Slot_num,Default_Path,meta_experiment_name)
 
 
 
