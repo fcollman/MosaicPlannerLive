@@ -191,7 +191,8 @@ class ChangeDirectorySettings(wx.Dialog):
         Map_num = self.MapInt_Ctrl.GetValue()
         Slot_num = self.SlotInt_Ctrl.GetValue()
         Default_Path = self.RootDir_Ctrl.GetPath()
-        return DirectorySettings(Sample_ID,Ribbon_ID,Session_ID,Map_num,Slot_num,Default_Path)
+        meta_experiment_name = self.MetaExp_Ctrl.GetValue()
+        return DirectorySettings(Sample_ID,Ribbon_ID,Session_ID,Map_num,Slot_num,Default_Path,meta_experiment_name)
 
 
 
