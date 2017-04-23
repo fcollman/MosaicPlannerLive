@@ -37,12 +37,13 @@ def write_slice_metadata(filename, ch, xpos, ypos, zpos, slice_index,triggerflag
             fname =ssh_opts['cron_dir']
             sessiondir, frametitle = os.path.split(filename)
             sessiondir, chname = os.path.split(sessiondir)
-            print "Session Directory", sessiondir
+            # print "Session Directory", sessiondir
             sessiondir = '/'.join(sessiondir.split('\\'))
             junk, sessiondir = sessiondir.split(':')
-            sessiondir = os.path.join(ssh_opts['mount_point'], sessiondir)
-
-            print sessiondir
+            # print 'mount point is', ssh_opts['mount_point']
+            #sessiondir = os.path.join(ssh_opts['mount_point'], sessiondir)
+            sessiondir = ssh_opts['mount_point']+'/'+sessiondir
+            # print sessiondir
             meta_experiment_name = ssh_opts['meta_experiment_name']
             outputstring = "%s,%s,%s"%(sessiondir,slice_index,meta_experiment_name)
 
