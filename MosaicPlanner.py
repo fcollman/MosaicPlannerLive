@@ -984,7 +984,7 @@ class MosaicPanel(FigureCanvas):
 
                             self.multiDacq(success,outdir,chrom_correction,triggerflag,fpos.x,fpos.y,current_z,i,j,hold_focus)
                         else:
-                            print 'moving on'
+                            # print 'moving on'
                             pass
                         self.ResetPiezo()
                         if i==(len(self.posList.slicePositions)-1):
@@ -1546,6 +1546,7 @@ class MosaicPanel(FigureCanvas):
         self.imgSrc.set_binning(1)
         binning=self.imgSrc.get_binning()
         numchan,chrom_correction = self.summarize_channel_settings()
+        self.slack_notify("about to image %d Ribbons"%len(self.Ribbon_Num))
 
         #pick output directories
 
@@ -1579,6 +1580,7 @@ class MosaicPanel(FigureCanvas):
                 self.draw()
 
                 #from on_run_acq
+                self.slack_notify("Acquiring data from ribbon %s of %s with %s sections"%(rib,self.Ribbon_Num,len(self.posList.slicePositions)))
                 self.make_channel_directories(outdirlist[rib])
 
                 self.write_session_metadata(outdirlist[rib])
@@ -1629,6 +1631,7 @@ class MosaicPanel(FigureCanvas):
                         if not goahead:
                             break
                         if not self.imgSrc.mmc.isContinuousFocusEnabled():
+                            self.slack_notify('HELP! lost autofocus between frames',notify=True)
                             print "autofocus not enabled when moving between sections.. "
                             goahead=False
                             break
@@ -1647,6 +1650,7 @@ class MosaicPanel(FigureCanvas):
                                     print "breaking out!"
                                     break
                                 if not self.imgSrc.mmc.isContinuousFocusEnabled():
+                                    self.slack_notify('HELP! lost autofocus between frames',notify=True)
                                     print "autofocus no longer enabled while moving between frames.. quiting"
                                     goahead = False
                                     break
@@ -1656,6 +1660,9 @@ class MosaicPanel(FigureCanvas):
                                 else:
                                     pass
                                 self.ResetPiezo()
+                                if i==(len(self.posList.slicePositions)-1):
+                                    if j == (len(pos.frameList.slicePositions) - 1):
+                                        self.slack_notify('Done Imaging!')
                                 (goahead, skip)=self.progress.Update((i*numFrames) + j,'ribbon %d of %d, section %d of %d, frame %d'%(rib,self.Ribbon_Num-1,i,numSections-1,j))
                             #======================================================
                             if self.interface.pause == True:
@@ -1667,6 +1674,10 @@ class MosaicPanel(FigureCanvas):
                             #======================================================
                         wx.Yield()
                         if not goahead:
+                            self.slack_notify('Imaging stopped prematurely')
+                            self.slack_notify('on section %d'%i)
+                            if pos.frameList is not None:
+                                self.slack_notify("frame %d"%(j))
                             print "acquisition stopped prematurely"
                             print "section %d"%(i)
                             if pos.frameList is not None:
