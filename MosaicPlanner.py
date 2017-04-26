@@ -966,6 +966,7 @@ class MosaicPanel(FigureCanvas):
                 self.ResetPiezo()
                 current_z = self.imgSrc.get_z()
                 if pos.frameList is None:
+                    triggerflag = False
                     self.multiDacq(success,outdir,chrom_correction,triggerflag,pos.x,pos.y,current_z,i,hold_focus=hold_focus)
                 else:
                     triggerflag = False
