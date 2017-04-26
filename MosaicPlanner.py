@@ -423,7 +423,7 @@ class MosaicPanel(FigureCanvas):
             self.directory_settings.save_settings(config)
             self.outdirdict['Slot' + str(self.directory_settings.Slot_num)] = dictvalue
             self.directory_settings.create_directory(config,kind='map')
-            self.snapView = None
+
         else:
             self.Ribbon_Num = self.get_ribbon_number()
             self.directory_settings = DirectorySettings()
@@ -449,6 +449,7 @@ class MosaicPanel(FigureCanvas):
         # load Zstack settings
         self.zstack_settings = ZstackSettings()
         self.zstack_settings.load_settings(config)
+        self.snapView = None
 
         #setup a blank position list
         self.posList=posList(self.subplot,mosaic_settings,self.camera_settings)
