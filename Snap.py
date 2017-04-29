@@ -22,11 +22,12 @@ class SnapView(QtGui.QWidget):
         self.channelGroup=channelGroup
         self.exposure_times=exposure_times
         #self.setContentsMargins(0,0,0,0)
-        self.mmc = imgSrc.mmc
         self.imgSrc = imgSrc
+        self.mmc = imgSrc.mmc
+
         self.camera = self.mmc.getCameraDevice()
-        self.mmc.setProperty(self.camera,'Binning','1x1')
-        self.mmc.waitForDevice(self.camera)
+        # self.mmc.setProperty(self.camera,'Binning','1x1')
+        # self.mmc.waitForDevice(self.camera)
         self.channels=self.mmc.getAvailableConfigs(self.channelGroup)
         #self.init_mmc()
         self.initUI()
@@ -89,7 +90,7 @@ class SnapView(QtGui.QWidget):
         
         #gridlay=QtGui.QGridLayout(margin=0,spacing=-1)
 
-        print 'Binning is:', self.mmc.getProperty(self.camera,'Binning')
+        # print 'Binning is:', self.mmc.getProperty(self.camera,'Binning')
         for i,ch in enumerate(self.channels):
             btn=QtGui.QPushButton(ch,self)
             self.chnButtons.append(btn)
@@ -135,6 +136,8 @@ class SnapView(QtGui.QWidget):
         # self.gridlay.addWidget(self.isLockedBtn,Nch+2,0)
 
     def exitClicked(self,evt):
+        self.imgSrc.set_binning(2)
+        print 'Binning is', self.imgSrc.get_binning()
         self.hide()
         self.changedExposureTimes.emit()
 
@@ -283,7 +286,7 @@ class SnapView(QtGui.QWidget):
 
 def launchSnap(imgSrc,exposure_times):
     import sys  
-    imgSrc.set_binning(1)
+    # imgSrc.set_binning(1)
     dlg = SnapView(imgSrc,exposure_times)
     dlg.setWindowTitle('snap view')
     #vidview.setGeometry(250,50,1100,1000)
@@ -294,7 +297,7 @@ def launchSnap(imgSrc,exposure_times):
     
     if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
         QtGui.QApplication.instance().exec_()
-    imgSrc.set_binning(2)
+    # imgSrc.set_binning(2)
     exp= dlg.getExposureTimes()
     print(exp)
     return exp
