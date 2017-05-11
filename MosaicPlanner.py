@@ -55,6 +55,7 @@ from skimage.measure import block_reduce #MultiRibbons
 from Snap import SnapView
 from slacker import Slacker
 from SaveThread import file_save_process
+import scipy.optimize as opt #softwarea-autofocus
 
 STOP_TOKEN = 'STOP!!!'
 DEFAULT_SETTINGS_FILE = 'MosaicPlannerSettings.default.cfg'
@@ -1733,15 +1734,6 @@ class MosaicPanel(FigureCanvas):
         #calculate best z
         print "calculating focus"
         print "offsets: ", offsets
-        #using Sobel filter
-        #fstack = np.zeros((height,width,zstack_number))
-        #for i in range(len(zplanes_to_visit)):
-        #    sobel_image = sobel(stack[:,:,i])
-        #    sobel_image = gaussian_filter(sobel_image,sigma=200)
-        #    fstack[:,:,i] = sobel_image
-        #focal_plane = np.argmax(fstack,2)
-        #print "max: ", np.max(focal_plane), "min: ", np.min(focal_plane)
-        #print "best z plane #:", int(round(np.median(focal_plane)))
         #using Laplacian
         fstack = None
         sigma = 50
@@ -1753,11 +1745,23 @@ class MosaicPanel(FigureCanvas):
             fstack[:,:,i]=score
         var = np.std(fstack)
         zscore = (fstack-np.median(fstack))/var
-        focal_plane = np.argmax(zscore,2)
-
-        print "max: ", np.max(focal_plane), "min: ", np.min(focal_plane)
-        print "best z plane #:", int(round(np.median(focal_plane)))
-        best_offset = offsets[int(round(np.median(focal_plane)))]
+        zscore1 = np.median(np.median(zscore,0),0)#added for testing
+        select = np.ones(len(offsets))
+        for i in range(len(offsets)-1):
+            if offsets[i]>=offsets[i+1] or offsets[i]==0:
+                select[i] = 0
+        idx = np.nonzero(select)
+        zscore1 = zscore1[idx]
+        offsets1 = np.array(offsets)
+        offsets1 = offsets1[idx]
+        par_init = np.max(zscore1), np.min(zscore1), offsets1[np.argmax(zscore1)],\
+                   offsets1[np.argmax(zscore1)+1]-offsets1[np.argmax(zscore1)-1]
+        def gauss_1d(x, amp, offset, x0, sigma_x):
+            z = offset + amp*np.exp(-((x-x0)/sigma_x)**2)
+            return z
+        popt, pcov = opt.curve_fit(gauss_1d, offsets1, zscore1, p0=par_init)
+        best_offset = popt[2]
+        print "zscore1", zscore1 #added for testing
         print "best_offset: ", best_offset
         self.imgSrc.set_autofocus_offset(best_offset) #reset autofocus offset
         time.sleep(2*self.cfg['MosaicPlanner']['autofocus_wait'])
