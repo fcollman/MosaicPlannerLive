@@ -55,6 +55,7 @@ from skimage.measure import block_reduce #MultiRibbons
 from Snap import SnapView
 from slacker import Slacker
 from SaveThread import file_save_process
+import scipy.optimize as opt #softwarea-autofocus
 
 STOP_TOKEN = 'STOP!!!'
 DEFAULT_SETTINGS_FILE = 'MosaicPlannerSettings.default.cfg'
@@ -423,7 +424,7 @@ class MosaicPanel(FigureCanvas):
             self.directory_settings.save_settings(config)
             self.outdirdict['Slot' + str(self.directory_settings.Slot_num)] = dictvalue
             self.directory_settings.create_directory(config,kind='map')
-            self.snapView = None
+
         else:
             self.Ribbon_Num = self.get_ribbon_number()
             self.directory_settings = DirectorySettings()
@@ -449,6 +450,7 @@ class MosaicPanel(FigureCanvas):
         # load Zstack settings
         self.zstack_settings = ZstackSettings()
         self.zstack_settings.load_settings(config)
+        self.snapView = None
 
         #setup a blank position list
         self.posList=posList(self.subplot,mosaic_settings,self.camera_settings)
@@ -965,6 +967,7 @@ class MosaicPanel(FigureCanvas):
                 self.ResetPiezo()
                 current_z = self.imgSrc.get_z()
                 if pos.frameList is None:
+                    triggerflag = False
                     self.multiDacq(success,outdir,chrom_correction,triggerflag,pos.x,pos.y,current_z,i,hold_focus=hold_focus)
                 else:
                     triggerflag = False
@@ -984,7 +987,7 @@ class MosaicPanel(FigureCanvas):
 
                             self.multiDacq(success,outdir,chrom_correction,triggerflag,fpos.x,fpos.y,current_z,i,j,hold_focus)
                         else:
-                            print 'moving on'
+                            # print 'moving on'
                             pass
                         self.ResetPiezo()
                         if i==(len(self.posList.slicePositions)-1):
@@ -1105,6 +1108,8 @@ class MosaicPanel(FigureCanvas):
 
     def launch_snap(self, event=None):
         if self.snapView is None:
+            self.imgSrc.set_binning(1)
+            print 'Binning is', self.imgSrc.get_binning()
             self.snapView = SnapView(self.imgSrc,exposure_times=self.channel_settings.exposure_times)
             self.snapView.changedExposureTimes.connect(self.getSnapExposures)
         self.snapView.show()
@@ -1546,6 +1551,7 @@ class MosaicPanel(FigureCanvas):
         self.imgSrc.set_binning(1)
         binning=self.imgSrc.get_binning()
         numchan,chrom_correction = self.summarize_channel_settings()
+        self.slack_notify("about to image %d Ribbons"%len(self.Ribbon_Num))
 
         #pick output directories
 
@@ -1579,6 +1585,7 @@ class MosaicPanel(FigureCanvas):
                 self.draw()
 
                 #from on_run_acq
+                self.slack_notify("Acquiring data from ribbon %s of %s with %s sections"%(rib,self.Ribbon_Num,len(self.posList.slicePositions)))
                 self.make_channel_directories(outdirlist[rib])
 
                 self.write_session_metadata(outdirlist[rib])
@@ -1629,6 +1636,7 @@ class MosaicPanel(FigureCanvas):
                         if not goahead:
                             break
                         if not self.imgSrc.mmc.isContinuousFocusEnabled():
+                            self.slack_notify('HELP! lost autofocus between frames',notify=True)
                             print "autofocus not enabled when moving between sections.. "
                             goahead=False
                             break
@@ -1647,6 +1655,7 @@ class MosaicPanel(FigureCanvas):
                                     print "breaking out!"
                                     break
                                 if not self.imgSrc.mmc.isContinuousFocusEnabled():
+                                    self.slack_notify('HELP! lost autofocus between frames',notify=True)
                                     print "autofocus no longer enabled while moving between frames.. quiting"
                                     goahead = False
                                     break
@@ -1656,6 +1665,9 @@ class MosaicPanel(FigureCanvas):
                                 else:
                                     pass
                                 self.ResetPiezo()
+                                if i==(len(self.posList.slicePositions)-1):
+                                    if j == (len(pos.frameList.slicePositions) - 1):
+                                        self.slack_notify('Done Imaging!')
                                 (goahead, skip)=self.progress.Update((i*numFrames) + j,'ribbon %d of %d, section %d of %d, frame %d'%(rib,self.Ribbon_Num-1,i,numSections-1,j))
                             #======================================================
                             if self.interface.pause == True:
@@ -1667,6 +1679,10 @@ class MosaicPanel(FigureCanvas):
                             #======================================================
                         wx.Yield()
                         if not goahead:
+                            self.slack_notify('Imaging stopped prematurely')
+                            self.slack_notify('on section %d'%i)
+                            if pos.frameList is not None:
+                                self.slack_notify("frame %d"%(j))
                             print "acquisition stopped prematurely"
                             print "section %d"%(i)
                             if pos.frameList is not None:
@@ -1718,15 +1734,6 @@ class MosaicPanel(FigureCanvas):
         #calculate best z
         print "calculating focus"
         print "offsets: ", offsets
-        #using Sobel filter
-        #fstack = np.zeros((height,width,zstack_number))
-        #for i in range(len(zplanes_to_visit)):
-        #    sobel_image = sobel(stack[:,:,i])
-        #    sobel_image = gaussian_filter(sobel_image,sigma=200)
-        #    fstack[:,:,i] = sobel_image
-        #focal_plane = np.argmax(fstack,2)
-        #print "max: ", np.max(focal_plane), "min: ", np.min(focal_plane)
-        #print "best z plane #:", int(round(np.median(focal_plane)))
         #using Laplacian
         fstack = None
         sigma = 50
@@ -1738,11 +1745,23 @@ class MosaicPanel(FigureCanvas):
             fstack[:,:,i]=score
         var = np.std(fstack)
         zscore = (fstack-np.median(fstack))/var
-        focal_plane = np.argmax(zscore,2)
-
-        print "max: ", np.max(focal_plane), "min: ", np.min(focal_plane)
-        print "best z plane #:", int(round(np.median(focal_plane)))
-        best_offset = offsets[int(round(np.median(focal_plane)))]
+        zscore1 = np.median(np.median(zscore,0),0)#added for testing
+        select = np.ones(len(offsets))
+        for i in range(len(offsets)-1):
+            if offsets[i]>=offsets[i+1] or offsets[i]==0:
+                select[i] = 0
+        idx = np.nonzero(select)
+        zscore1 = zscore1[idx]
+        offsets1 = np.array(offsets)
+        offsets1 = offsets1[idx]
+        par_init = np.max(zscore1), np.min(zscore1), offsets1[np.argmax(zscore1)],\
+                   offsets1[np.argmax(zscore1)+1]-offsets1[np.argmax(zscore1)-1]
+        def gauss_1d(x, amp, offset, x0, sigma_x):
+            z = offset + amp*np.exp(-((x-x0)/sigma_x)**2)
+            return z
+        popt, pcov = opt.curve_fit(gauss_1d, offsets1, zscore1, p0=par_init)
+        best_offset = popt[2]
+        print "zscore1", zscore1 #added for testing
         print "best_offset: ", best_offset
         self.imgSrc.set_autofocus_offset(best_offset) #reset autofocus offset
         time.sleep(2*self.cfg['MosaicPlanner']['autofocus_wait'])
