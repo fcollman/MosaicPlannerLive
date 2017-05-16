@@ -2,6 +2,9 @@
 import paramiko
 import os
 from tifffile import imsave
+import pandas as pd
+import cv2
+import numpy as np
 
 def file_save_process(queue,stop_token, metadata_dictionary,ssh_opts):
 
@@ -15,7 +18,34 @@ def file_save_process(queue,stop_token, metadata_dictionary,ssh_opts):
             metadata_filepath = os.path.join(path, prot_name + "_S%04d_F%04d_Z%02d_metadata.txt"%(slice_index, frame_index, z_index))
             imsave(tif_filepath,data)
             write_slice_metadata(metadata_filepath, ch, x, y, z, slice_index, triggerflag, metadata_dictionary,ssh_opts)
+            focus_filepath = os.path.join(path, prot_name + "_S%04d_F%04d_Z%02d_focus.csv"%(slice_index, frame_index, z_index))
+            write_focus_score(focus_filepath, data,ch,x,y,slice_index,frame_index,prot_name)
 
+
+def write_focus_score(filename, data, ch,xpos,ypos,slide_index,frame_index,prot_name):
+    df = pd.dataFrame(columns = ['score1_mean','score1_median','score1_std',
+                                 'ch','xpos','ypos','slide_index','frame_index','prot_name'])
+    score1_mean,score1_median,score1_std = get_score(data)
+    d = {
+            'score1_mean':score1_mean,
+            'score1_median':score1_median,
+            'score1_std':score1_std,
+            'ch':ch,
+            'xpos':xpos,
+            'ypos':ypos,
+            'slide_index':slide_index,
+            'frame_index':frame_index,
+            'prot_name':prot_name
+        }
+    df = df.append(d,ignore_index=True)
+    df.to_csv(filename)
+
+def get_score(img):
+    score1 = cv2.Laplacian(img,cv2.CV_16U, ksize = 5)
+    score1_median = np.median(score1)
+    score1_std = np.std(score1)
+    score1_mean = np.mean(score1)
+    return (score1_mean, score1_median, score1_std)
 
 def write_slice_metadata(filename, ch, xpos, ypos, zpos, slice_index,triggerflag, meta_dict,ssh_opts):
     channelname    = meta_dict['channelname'][ch]
