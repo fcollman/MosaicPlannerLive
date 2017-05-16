@@ -253,13 +253,15 @@ class CameraSettings():
 
 class ChannelSettings():
     """simple struct for containing the parameters for the microscope"""
-    def __init__(self,channels,exposure_times=dict([]),zoffsets=dict([]),usechannels=dict([]),prot_names=dict([]),map_chan=None,def_exposure=100,def_offset=0.0,):
+    def __init__(self,channels,exposure_times=dict([]),zoffsets=dict([]),
+                 usechannels=dict([]),prot_names=dict([]),map_chan=None,
+                 def_exposure=100,def_offset=0.0,):
         #def_exposure is default exposure time in msec
        
         
         self.channels= channels
         self.def_exposure=def_exposure
-        self.def_offset=0.0
+        self.def_offset=def_offset
         
         self.exposure_times=exposure_times
         self.zoffsets=zoffsets

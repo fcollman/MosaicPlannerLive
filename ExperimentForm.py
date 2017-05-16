@@ -3,7 +3,7 @@ from PyQt4 import Qt,QtGui,uic
 import os
 import sys
 import SQLModels
-from SQLModels import Volume,Ribbon
+from SQLModels import Volume,Ribbon,Block
 from alchemical_model import AlchemicalTableModel
 
 
@@ -87,6 +87,22 @@ class ExperimentForm(SelectModelFromQueryForm):
                                            )
         super(ExperimentForm,self).__init__(session,self.query_model,Volume,EditExperimentDialog,layoutfile)
 
+class BlockForm(SelectModelFromQueryForm):
+
+    def __init__(self,session,layoutfile = 'ExperimentForm.ui'):
+        #QtGui.QWidget.__init__(self)
+
+        self.session = session
+        block_query = self.session.query(Block)
+        self.block_model = AlchemicalTableModel(self.session,block_query,
+                                           [('id',Block.id,'id',{'editable':False}),
+                                            ('label',Block.label,'label',{'editable':False}),
+                                            ('modified',Block.modified,'modified',{'editable':False,'dateformat':'%c'}),
+                                            ('created',Block.created,'created',{'editable':False,'dateformat':'%c'}),
+                                            ('ribbons',Block.ribbons,'ribbons',{'editable':False,'show_count':True})]
+                                           )
+        super(ExperimentForm,self).__init__(session,self.block_model,Block,EditExperimentDialog,layoutfile)
+
 
 
 class EditModelDialog(QtGui.QDialog):
@@ -149,6 +165,19 @@ class EditExperimentDialog(EditModelDialog):
         self.model.name = name
         self.model.notes = notes
 
+class EditBlockDialog(EditModelDialog):
+    def __init__(self, block, layoutfile='BlockModelForm.ui'):
+        EditModelDialog.__init__(self, experiment, layoutfile)
+        if block.name is not None:
+            self.name_textEdit.setPlainText(experiment.name)
+        if block.notes is not None:
+            self.notes_textEdit.setPlainText(experiment.notes)
+
+    def editModel(self, evt):
+        label = self.label_textEdit.toPlainText()
+        #notes = self.notes_textEdit.toPlainText()
+        self.model.label = label
+        #self.model.notes = notes
 
 if __name__ == "__main__":
 
@@ -168,6 +197,7 @@ if __name__ == "__main__":
 
     mysess = Session()
 
+    block = Block(label ="test",status=0)
     vol1 = Volume(name="testme",status=0)
     mysess.add(vol1)
     vol1 = Volume(name="testme2",status=0)
@@ -204,9 +234,9 @@ if __name__ == "__main__":
     dlg.exec_()
     ribbon = dlg.getModel()
     dlg.destroy()
-
-    print experiment
-    print ribbon
+    #
+    # print experiment
+    # print ribbon
 
     mysess.close()
     app.exec_()
