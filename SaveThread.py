@@ -5,21 +5,24 @@ from tifffile import imsave
 import pandas as pd
 import cv2
 import numpy as np
-
-def file_save_process(queue,stop_token, metadata_dictionary,ssh_opts):
+import sys
+def file_save_process(queue,message_queue,stop_token, metadata_dictionary,ssh_opts):
 
     while True:
         token = queue.get()
         if token == stop_token:
             return
         else:
-            (slice_index,frame_index, z_index, prot_name, path, data, ch, x, y, z,triggerflag) = token
-            tif_filepath = os.path.join(path, prot_name + "_S%04d_F%04d_Z%02d.tif" % (slice_index, frame_index, z_index))
-            metadata_filepath = os.path.join(path, prot_name + "_S%04d_F%04d_Z%02d_metadata.txt"%(slice_index, frame_index, z_index))
-            imsave(tif_filepath,data)
-            write_slice_metadata(metadata_filepath, ch, x, y, z, slice_index, triggerflag, metadata_dictionary,ssh_opts)
-            focus_filepath = os.path.join(path, prot_name + "_S%04d_F%04d_Z%02d_focus.csv"%(slice_index, frame_index, z_index))
-            write_focus_score(focus_filepath, data,ch,x,y,slice_index,frame_index,prot_name)
+            try:
+                (slice_index,frame_index, z_index, prot_name, path, data, ch, x, y, z,triggerflag) = token
+                tif_filepath = os.path.join(path, prot_name + "_S%04d_F%04d_Z%02d.tif" % (slice_index, frame_index, z_index))
+                metadata_filepath = os.path.join(path, prot_name + "_S%04d_F%04d_Z%02d_metadata.txt"%(slice_index, frame_index, z_index))
+                imsave(tif_filepath,data)
+                write_slice_metadata(metadata_filepath, ch, x, y, z, slice_index, triggerflag, metadata_dictionary,ssh_opts)
+                focus_filepath = os.path.join(path, prot_name + "_S%04d_F%04d_Z%02d_focus.csv"%(slice_index, frame_index, z_index))
+                write_focus_score(focus_filepath, data,ch,x,y,slice_index,frame_index,prot_name)
+            except:
+                message_queue.put((stop_token,sys.exc_info()[0]))
 
 
 def write_focus_score(filename, data, ch,xpos,ypos,slide_index,frame_index,prot_name):

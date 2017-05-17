@@ -916,6 +916,8 @@ class MosaicPanel(FigureCanvas):
         self.move_safe_to_start()
 
         self.dataQueue = mp.Queue()
+        self.messageQueue = mp.Queue()
+
         metadata_dictionary = {
         'channelname'    : self.channel_settings.prot_names,
         '(height,width)' : self.imgSrc.get_sensor_size(),
@@ -925,7 +927,7 @@ class MosaicPanel(FigureCanvas):
         }
         ssh_opts = dict(self.cfg['SSH'])
         ssh_opts['mount_point']=self.lookup_mountpoint(outdir)
-        self.saveProcess =  mp.Process(target=file_save_process,args=(self.dataQueue, STOP_TOKEN, metadata_dictionary, ssh_opts))
+        self.saveProcess =  mp.Process(target=file_save_process,args=(self.dataQueue, self.messageQueue,STOP_TOKEN, metadata_dictionary, ssh_opts))
         self.saveProcess.start()
 
 
@@ -983,8 +985,13 @@ class MosaicPanel(FigureCanvas):
                             print "autofocus no longer enabled while moving between frames.. quiting"
                             goahead = False
                             break
+                        if not messageQueue.empty():
+                            token,message = messageQueue.get()
+                            self.slack_notify('HELP! save process failed: %s'%message)
+                            if (token == STOP_TOKEN):
+                                goahead = False
+                            break
                         if pos.frameList.slicePositions[j].activated:
-
                             self.multiDacq(success,outdir,chrom_correction,triggerflag,fpos.x,fpos.y,current_z,i,j,hold_focus)
                         else:
                             # print 'moving on'
@@ -1601,6 +1608,7 @@ class MosaicPanel(FigureCanvas):
                 self.move_safe_to_start() #move to section 0
 
                 self.dataQueue = mp.Queue()
+
                 metadata_dictionary = {
                 'channelname'    : self.channel_settings.prot_names,
                 '(height,width)' : self.imgSrc.get_sensor_size(),
