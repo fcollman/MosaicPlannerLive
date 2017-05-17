@@ -34,11 +34,17 @@ from scipy.interpolate import griddata
 import lxml.etree as ET
 import json
   
+class NumberDisplaySettings(object):
+    def __init__(self,shownumbers=False,color='y',horizontalAlignment='right',verticalAlignment='top'):
+        self.shownumbers = shownumbers
+        self.color=color
+        self.horizontalAlignment = horizontalAlignment
+        self.verticalAlignment = verticalAlignment
   
 class posList():
     """class for holding, altering, and plotting the position list"""
     def __init__(self,axis,mosaic_settings=MosaicSettings(),camera_settings=CameraSettings(),
-                 shownumbers=False,numberColor='y',dosort=True):
+                 numberDisplaySettings=NumberDisplaySettings(),dosort=True):
         """initialization function
         
         keywords)
@@ -55,8 +61,8 @@ class posList():
         self.pos1=None
         self.pos2=None
         self.dosort=dosort
-        self.shownumbers=shownumbers
-        self.numberColor=numberColor
+        self.numberDisplaySettings=numberDisplaySettings
+   
 
     def get_next_pos(self,pos):
         self.__sort_points()
@@ -411,7 +417,7 @@ class posList():
         
         """
         newPosition=slicePosition(axis=self.axis,pos_list=self,x=x,y=y,z=z,edgecolor=edgecolor,withpoint=withpoint,
-                                  showNumber=self.shownumbers,numberColor=self.numberColor,selected=selected)
+                                  numberDisplaySettings = self.numberDisplaySettings,selected=selected)
         self.slicePositions.append(newPosition)  
         if self.dosort:
             self.__sort_points()
@@ -460,7 +466,7 @@ class posList():
     def add_from_posList(self,posList):
         for pos in posList.slicePositions:
             newPosition=slicePosition(axis=self.axis,pos_list=self,x=pos.x,y=pos.y,z=pos.z,
-                showNumber=pos.shownumbers,numberColor=pos.numberColor,edgecolor=pos.edgecolor,withpoint=pos.withpoint,
+                numberDisplaySettings=self.numberDisplaySettings,edgecolor=pos.edgecolor,withpoint=pos.withpoint,
                 selected=pos.selected,number=pos.number)
             self.slicePositions.append(newPosition)  
 
@@ -490,8 +496,8 @@ class posList():
                         z=None
                     else:
                         z=float(z)
-                    newPosition=slicePosition(axis=self.axis,pos_list=self,x=float(row[1]),y=float(row[2]),z=z,showNumber=self.shownumbers,
-                                              numberColor=self.numberColor)
+                    newPosition=slicePosition(axis=self.axis,pos_list=self,x=float(row[1]),y=float(row[2]),
+                                              z=z,numberDisplaySettings=self.numberDisplaySettings)
                     self.slicePositions.append(newPosition)          
             rownum += 1          
         ifile.close() 
@@ -519,7 +525,8 @@ class posList():
                 if len(row)>0:
                     (label_and_x,Y,Z)=row
                     (label,X)=label_and_x.split(': ')
-                    newPosition=slicePosition(axis=self.axis,pos_list=self,x=float(X),y=float(Y),showNumber=self.shownumbers,numberColor=self.numberColor)
+                    newPosition=slicePosition(axis=self.axis,pos_list=self,x=float(X),y=float(Y),
+                                              numberDisplaySettings=self.numberDisplaySettings)
                     self.slicePositions.append(newPosition)          
             rownum += 1          
         ifile.close() 
@@ -546,8 +553,8 @@ class posList():
         for row in reader:         
             if rownum >headerrows-1:
                 if len(row)>0:
-                    newPosition=slicePosition(axis=self.axis,pos_list=self,x=float(row[1]),y=float(row[2]),showNumber=self.shownumbers,
-                                              numberColor=self.numberColor,z=float(row[3]))
+                    newPosition=slicePosition(axis=self.axis,pos_list=self,x=float(row[1]),y=float(row[2]),
+                                              numberDisplaySettings= self.numberDisplaySettings,z=float(row[3]))
                     self.slicePositions.append(newPosition)           
             rownum += 1          
         ifile.close() 
@@ -573,7 +580,8 @@ class posList():
         for row in reader:         
             if rownum >headerrows-1:
                 (Label,X,Y,Z,T,R,M,Mag,WD)=row
-                newPosition=slicePosition(axis=self.axis,pos_list=self,x=float(X),y=float(Y),showNumber=self.shownumbers,numberColor=self.numberColor)
+                newPosition=slicePosition(axis=self.axis,pos_list=self,x=float(X),y=float(Y),
+                                          numberDisplaySettings=self.numberDisplaySettings)
                 self.slicePositions.append(newPosition)          
             rownum += 1          
         ifile.close() 
@@ -600,8 +608,7 @@ class posList():
         self.p2=-1
         for i in range(len(thedict["POSITIONS"])):
             newPosition=slicePosition(axis=self.axis,pos_list=self,x=thedict["POSITIONS"][i]["X"],\
-            y=thedict["POSITIONS"][i]["Y"],z=None,angle=thedict["POSITIONS"][i]["ANGLE"],showNumber=self.shownumbers,
-            numberColor=self.numberColor)
+            y=thedict["POSITIONS"][i]["Y"],z=None,angle=thedict["POSITIONS"][i]["ANGLE"],numberDisplaySettings=self.numberDisplaySettings)
             self.slicePositions.append(newPosition)
         self.mosaic_settings.mx = thedict["MOSAIC"]["MOSAICX"]
         self.mosaic_settings.my = thedict["MOSAIC"]["MOSAICY"]
@@ -942,7 +949,7 @@ class slicePosition():
     """class which contains information about a single position in the position list, and is responsible for keeping 
     its matplotlib representation up to date via function calls which are mostly managed by its posList"""
     def __init__(self,axis,pos_list,x,y,withpoint=True,selected=False, activated = True,
-                 edgecolor='g',number=-1,showNumber=False,numberColor='y',z=None,angle = 0,showAngle=True):
+                 edgecolor='g',number=-1,numberDisplaySettings=NumberDisplaySettings(),z=None,angle = 0,showAngle=True):
         """constructor function
         
         keywords:
@@ -965,7 +972,7 @@ class slicePosition():
         self.activated=activated
         self.withpoint=withpoint
         self.number = number
-        self.showNumber = showNumber
+        self.numberDisplaySettings = numberDisplaySettings
         self.showAngle = showAngle
         self.quiverLength = .15
         self.quiverLine = None
@@ -978,9 +985,10 @@ class slicePosition():
 
 
         if self.axis:
-            self.numTxt = self.axis.text(self.x,self.y,str(self.number)+"  ",color=numberColor,weight='bold') 
-            self.numTxt.set_visible(self.showNumber)
-            self.numTxt.set_horizontalalignment('right')
+            self.numTxt = self.axis.text(self.x,self.y,str(self.number),color=self.numberDisplaySettings.color,weight='bold') 
+            self.numTxt.set_visible(self.numberDisplaySettings.shownumbers)
+            self.numTxt.set_horizontalalignment(self.numberDisplaySettings.horizontalAlignment)
+            self.numTxt.set_verticalalignment(self.numberDisplaySettings.verticalAlignment)
         else:
             self.numTxt = None
  
@@ -1038,9 +1046,13 @@ class slicePosition():
         """paint the individual frames for this position using a standard grid algorithm according to the current mosaic_settings for the associated position list"""
         #only do this if the current list is empty
         if self.frameList==None:
+            frameNumberSettings = NumberDisplaySettings(shownumbers=self.numberDisplaySettings.shownumbers,
+                                            color='m',
+                                            horizontalAlignment='center',
+                                            verticalAlignment='center')
             #the frame list will be another posList with the same camera_settings, but the default MosaicSettings (i.e. a 1x1)
             self.frameList=posList(self.axis,mosaic_settings=MosaicSettings(mag=self.pos_list.mosaic_settings.mag),
-                                   camera_settings=self.pos_list.camera_settings,shownumbers=True,dosort=False,numberColor='m')
+                                   camera_settings=self.pos_list.camera_settings,dosort=False,numberDisplaySettings=frameNumberSettings)
             (fh,fw)=self.pos_list.calcFrameSize()
             (h,w)=self.pos_list.calcMosaicSize()
             mx = self.pos_list.mosaic_settings.mx
@@ -1081,8 +1093,13 @@ class slicePosition():
         if not self.axis: return None
         """paint the individual frames for this position using an algorithm which should take into account the angle of the slice's tilt"""
         if self.frameList==None:
-            self.frameList=posList(self.axis,mosaic_settings=MosaicSettings(mag=self.pos_list.mosaic_settings.mag),camera_settings=self.pos_list.camera_settings,
-                                   dosort=False,shownumbers=True,numberColor='m')
+            frameNumberSettings = NumberDisplaySettings(shownumbers=self.numberDisplaySettings.shownumbers,
+                                                        color='m',
+                                                        horizontalAlignment='center',
+                                                        verticalAlignment='center')
+            self.frameList=posList(self.axis,mosaic_settings=MosaicSettings(mag=self.pos_list.mosaic_settings.mag),
+                                   camera_settings=self.pos_list.camera_settings,
+                                   dosort=False,numberDisplaySettings=frameNumberSettings)
             (fh,fw)=self.pos_list.calcFrameSize()
             (h,w)=self.pos_list.calcMosaicSize() 
             alpha=(self.pos_list.mosaic_settings.overlap*1.0)/100
@@ -1307,6 +1324,8 @@ class slicePosition():
     def set_number_visible(self,isvisible):
         if not self.axis: return None
         self.numTxt.set_visible(isvisible)
+        if self.frameList is not None:
+            self.frameList.setNumberVisibility(isvisible)
         
     def setPosition(self,x,y):
         """set the coordinates for this position, and update its matplotlib elements accordingly
