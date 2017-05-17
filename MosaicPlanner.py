@@ -596,6 +596,9 @@ class MosaicPanel(FigureCanvas):
 
         # num_chan, chrom_correction = self.summarize_channel_settings()
 
+        for k,ch in enumerate(self.channel_settings.channels):
+            if self.channel_settings.usechannels[ch]:
+                last_channel = ch
 
         def software_acquire(z=presentZ):
             # currZ=self.imgSrc.get_z()
@@ -621,7 +624,14 @@ class MosaicPanel(FigureCanvas):
                         data=self.imgSrc.snap_image()
                         #t3 = time.clock()*1000
                         #print time.clock(),t3-t2, 'ms to snap image'
-                        self.dataQueue.put((slice_index,frame_index, z_index, prot_name,path,data,ch,stagexy[0],stagexy[1],z,triggerflag))
+                        if ch == self.cfg['ChannelSettings']['focusscore_chan']:
+                            calcFocus = True
+                        else:
+                            calcFocus = False
+                        if ch is not last_channel:
+                            self.dataQueue.put((slice_index,frame_index, z_index, prot_name,path,data,ch,stagexy[0],stagexy[1],z,False,calcFocus))
+                        else:
+                            self.dataQueue.put((slice_index,frame_index, z_index, prot_name,path,data,ch,stagexy[0],stagexy[1],z,triggerflag,calcFocus))
 
         def hardware_acquire(z=presentZ):
             # currZ=self.imgSrc.get_z()
@@ -639,7 +649,16 @@ class MosaicPanel(FigureCanvas):
                     path=os.path.join(outdir,prot_name)
                     if self.channel_settings.usechannels[ch]:
                         data = self.imgSrc.get_image()
-                        self.dataQueue.put((slice_index,frame_index, z_index, prot_name,path,data,ch,stagexy[0],stagexy[1],z,triggerflag))
+
+                        if ch == self.cfg['ChannelSettings']['focusscore_chan']:
+                            calcFocus = True
+                        else:
+                            calcFocus = False
+                        if ch is not last_channel:
+                            self.dataQueue.put((slice_index,frame_index, z_index, prot_name,path,data,ch,stagexy[0],stagexy[1],z,False,calcFocus))
+                        else:
+                            self.dataQueue.put((slice_index,frame_index, z_index, prot_name,path,data,ch,stagexy[0],stagexy[1],z,triggerflag,calcFocus))
+
 
         if (self.cfg['MosaicPlanner']['hardware_trigger'] == True) and (chrome_correction == False) and (success != False):
             hardware_acquire()
@@ -985,8 +1004,8 @@ class MosaicPanel(FigureCanvas):
                             print "autofocus no longer enabled while moving between frames.. quiting"
                             goahead = False
                             break
-                        if not messageQueue.empty():
-                            token,message = messageQueue.get()
+                        if not self.messageQueue.empty():
+                            token,message = self.messageQueue.get()
                             self.slack_notify('HELP! save process failed: %s'%message)
                             if (token == STOP_TOKEN):
                                 goahead = False
@@ -1768,9 +1787,10 @@ class MosaicPanel(FigureCanvas):
         def gauss_1d(x, amp, offset, x0, sigma_x):
             z = offset + amp*np.exp(-((x-x0)/sigma_x)**2)
             return z
+        print "zscore1", zscore1 #added for testing
         popt, pcov = opt.curve_fit(gauss_1d, offsets1, zscore1, p0=par_init)
         best_offset = popt[2]
-        print "zscore1", zscore1 #added for testing
+
         print "best_offset: ", best_offset
         self.imgSrc.set_autofocus_offset(best_offset) #reset autofocus offset
         time.sleep(2*self.cfg['MosaicPlanner']['autofocus_wait'])
