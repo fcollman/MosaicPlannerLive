@@ -35,7 +35,7 @@ import lxml.etree as ET
 import json
   
 class NumberDisplaySettings(object):
-    def __init__(self,shownumbers=False,color='y',horizontalAlignment='right',verticalAlignment='top'):
+    def __init__(self,shownumbers=False,color='darkorange',horizontalAlignment='right',verticalAlignment='top'):
         self.shownumbers = shownumbers
         self.color=color
         self.horizontalAlignment = horizontalAlignment
