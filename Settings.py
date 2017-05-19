@@ -19,6 +19,7 @@
 import wx
 import os
 import json
+import marshmallow as mm
 
 class DirectorySettings():
 
@@ -426,7 +427,12 @@ class ChangeSiftSettings(wx.Dialog):
         inlier_thresh = self.inlierThreshIntCtrl.GetValue()
         return SiftSettings(contrastThreshold,numFeatures,inlier_thresh)
         
-        
+class CameraSettingsSchema(mm.Schema):
+    sensor_height = mm.fields.Int(required=True)
+    sensor_widht = mm.fields.Int(required=True)
+    pix_width = mm.fields.Float(required=True)
+    pix_height = mm.fields.Float(required=True)
+         
 class CameraSettings():
     """simple struct for containing the parameters for the camera"""
     def __init__(self,sensor_height=1040,sensor_width=1388,pix_width=6.5,pix_height=6.5):
@@ -600,7 +606,13 @@ class ChangeChannelSettings(wx.Dialog):
             zoffsets[ch]=self.ZOffCtrls[i].GetValue()
         return ChannelSettings(self.settings.channels,exposure_times=exposure_times,zoffsets=zoffsets,usechannels=usechannels,prot_names=prot_names,map_chan=map_chan)
         
- 
+class MosaicSettingsSchema(mm.Schema):
+    mx = mm.fields.Int(required=True)
+    my = mm.fields.Int(required=True)
+    overlap = mm.fields.Int(required=True)
+    show_box = mm.fields.Bool(required=True)
+    mag = mm.fields.Float(required=True)
+
 class MosaicSettings:
     def __init__(self,mag=65.486,mx=1,my=1,overlap=20,show_box=False,show_frames=False):
         """a simple struct class for encoding settings about mosaics
