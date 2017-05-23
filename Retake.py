@@ -7,6 +7,8 @@ import pyqtgraph as pg
 import os.path
 from imageSourceMM import imageSource
 import pandas as pd
+import tifffile
+
 # class myHistographLUTItem(pg.HistogramLUTItem):
 #     def __init__(self,*kargs,**kwargs):
 #         super(myHistographLUTItem, self).__init__(*kargs,**kwargs)
@@ -19,19 +21,20 @@ class RetakeView(QtGui.QWidget):
         super(RetakeView,self).__init__()
 
         self.mp = mp
+        self.initial_offset = self.mp.imgSrc.get_autofocus_offset()
         self.initUI()
         #setup dummy variables of blanks for live and review data
-        self.live_data = np.zeros(5,5)
-        self.review_data = np.zeros(5,5)
+        self.live_data = np.zeros((5,5))
+        self.review_data = np.zeros((5,5))
 
         #initialize section,frame, ch and  initialization state
         self.section = 0
         self.frame = 0
         self.ch = self.mp.channel_settings.channels[0]
-        self.initial_offset = self.mp.imgSrc.get_autofocus_offset()
+
         #get the outdirectory from mosaicplanner settings
         for key,value in self.mp.outdirdict.iteritems():
-            self.outdir = self.outdirdict[key]
+            self.outdir = self.mp.outdirdict[key]
         #load the focus score data
         self.loadFocusScoreData()
 
@@ -48,8 +51,8 @@ class RetakeView(QtGui.QWidget):
         p1.addItem(self.img)
         self.hist = pg.HistogramLUTItem()
         self.hist.setImageItem(self.img)
-        self.graphicsLayoutWidget.addItem(self.hist,0,1)
-        self.img.setLevels(o,self.mp.imgSrc.get_max_pixel_value())
+        self.image_graphicsLayoutWidget.addItem(self.hist,0,1)
+        self.img.setLevels(0,self.mp.imgSrc.get_max_pixel_value())
         self.hist.setLevels(0,self.mp.imgSrc.get_max_pixel_value())
 
         #setup the channel buttons 
@@ -58,6 +61,8 @@ class RetakeView(QtGui.QWidget):
             btn=QtGui.QRadioButton(ch)
             self.chnButtons.append(btn)
             self.channel_verticalLayout.addWidget(btn)
+            if ch == self.mp.cfg['ChannelSettings']['focusscore_chan']:
+                btn.setDown(True)
             btn.clicked.connect(lambda: self.changeChannel(ch))
 
         #initialize AFCoffset UI, and connect valueChanged to setting it
@@ -83,19 +88,19 @@ class RetakeView(QtGui.QWidget):
         score_ch=self.mp.cfg['ChannelSettings']['focusscore_chan']
         protName = self.mp.channel_settings.prot_names[score_ch]
         ch_dir = os.path.join(self.outdir,protName)
-        data_files = [os.path.join(data_directory,f) for f in os.listdir(data_directory) if f.endswith('.csv') ]
+        data_files = [os.path.join(ch_dir,f) for f in os.listdir(ch_dir) if f.endswith('.csv') ]
         df = pd.DataFrame()
         data_files.sort()
         for data_file in data_files:
             dft = pd.read_csv(data_file)
             df = df.append(dft,ignore_index=True)
         
-        frame1 = df[df['section']==0]
-        frame_medians = df.groupby('frame')['score1_median'].median()
-        frame_stds = df.groupby('frame')['score1_median'].std()
+
+        frame_medians = df.groupby('frame_index')['score1_median'].median()
+        frame_stds = df.groupby('frame_index')['score1_median'].std()
 
         for i,row in df.iterrows():
-            df.loc[i,'score1_norm'] = (row.score1_median - frame_medians[row.frame])/frame_std[row.frame]
+            df.loc[i,'score1_norm'] = (row.score1_median - frame_medians[row.frame_index])/frame_stds[row.frame_index]
         
         self.focus_df = df
 
@@ -109,18 +114,19 @@ class RetakeView(QtGui.QWidget):
         self.mp.imgSrc.move_stage(fpos.x,fpos.y)
 
     def changeLiveReview(self,isLive):
-        self.review_pushButton.setDown(isLive)
+        self.livereview_pushButton.setDown(isLive)
         if isLive:
-            self.review_pushButton.setText("Showing Live")
+            self.livereview_pushButton.setText("Showing Live")
             self.loadLiveData()
         else:
-            self.review_pushButton.setText("Showing Review")
+            self.livereview_pushButton.setText("Showing Review")
             self.loadReviewData()
 
     def changeReviewData(self,evt=None):
-        ch_dir = os.path.join(self.outdir,self.mp.channel_settings.prot_names[ch])
+        prot_name = self.mp.channel_settings.prot_names[self.ch]
+        ch_dir = os.path.join(self.outdir,prot_name)
         tif_filepath = os.path.join(ch_dir, prot_name + "_S%04d_F%04d_Z%02d.tif" % (slice_index, frame_index, 0))
-        data = tiffile.imread(tif_filepath)
+        data = tifffile.imread(tif_filepath)
         self.review_data = data
 
     def changeChannel(self,ch):

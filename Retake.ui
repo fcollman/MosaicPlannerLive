@@ -249,6 +249,19 @@
     <layout class="QVBoxLayout" name="channel_verticalLayout"/>
    </widget>
   </widget>
+  <widget class="QPushButton" name="exit_pushButton">
+   <property name="geometry">
+    <rect>
+     <x>1120</x>
+     <y>1030</y>
+     <width>75</width>
+     <height>23</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Exit</string>
+   </property>
+  </widget>
  </widget>
  <customwidgets>
   <customwidget>
