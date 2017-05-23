@@ -23,17 +23,10 @@ class SnapView(QtGui.QWidget):
         self.exposure_times=exposure_times
         #self.setContentsMargins(0,0,0,0)
         self.imgSrc = imgSrc
-
-
         self.channels=self.imgSrc.get_channels()
         self.initUI()
-        
-        
         self.i = 0
         self.ended = False
-
-
-
     
     def initUI(self):
 
