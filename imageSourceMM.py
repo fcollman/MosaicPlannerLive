@@ -4,7 +4,6 @@ from PIL import Image
 import time
 from Rectangle import Rectangle
 import wx
-from retry import retry
 import datetime
 import os
 from MMArduino import MMArduino

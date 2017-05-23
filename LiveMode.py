@@ -5,12 +5,7 @@ from pyqtgraph.Qt import QtCore, QtGui
 import numpy as np
 import pyqtgraph as pg
 import pyqtgraph.ptime as ptime
-import time
-from skimage import img_as_ubyte,exposure
-import cv2
-from pyqtgraph.widgets.RawImageWidget import RawImageWidget
-import functools
-from imageSourceMM import imageSource
+
 
 
 class VideoView(QtGui.QWidget):
@@ -45,7 +40,7 @@ class VideoView(QtGui.QWidget):
                 self.imgSrc.set_channel(ch)
         self.imgSrc.set_binning(1)
         print 'Binning is:', self.imgSrc.get_binning()
-        self.startContinuousSequenceAcquisition(1)
+        self.imgSrc.startContinuousSequenceAcquisition(1)
     
     def initUI(self):
 
@@ -299,6 +294,8 @@ if __name__ == '__main__':
 
     import sys
     import faulthandler
+
+    from imageSourceMM import imageSource
     app = QtGui.QApplication(sys.argv)
     faulthandler.enable()
 

@@ -31,7 +31,7 @@ class DirectorySettings():
         self.Session_ID = Session_ID
         self.Slot_num = Slot_num
         self.Map_num = Map_num
-        self.meta_experiemnt_name = meta_experiment_name
+        self.meta_experiment_name = meta_experiment_name
 
 
 
@@ -42,7 +42,7 @@ class DirectorySettings():
         cfg['Directories']['Map_num'] = self.Map_num
         cfg['Directories']['Default_Path'] = self.default_path
         cfg['Directories']['Slot_num'] = self.Slot_num
-        cfg['SSH']['meta_experiment_name'] = self.meta_experiemnt_name
+        cfg['Directories']['meta_experiment_name'] = self.meta_experiment_name
         cfg.write()
 
     def load_settings(self,cfg):
@@ -52,7 +52,7 @@ class DirectorySettings():
         self.Session_ID = cfg['Directories']['Session_ID']
         self.Map_num = cfg['Directories']['Map_num']
         self.Slot_num = cfg['Directories']['Slot_num']
-        self.meta_experiemnt_name = cfg['SSH']['meta_experiment_name']
+        self.meta_experiment_name = cfg['Directories']['meta_experiment_name']
 
     def create_directory(self,cfg,kind):
         root = self.default_path
@@ -127,7 +127,7 @@ class ChangeDirectorySettings(wx.Dialog):
         # self.settings = settings
 
         self.MetaExp_txt = wx.StaticText(self,label = 'Meta Experiment Name:')
-        self.MetaExp_Ctrl = wx.TextCtrl(self,value = settings.meta_experiemnt_name)
+        self.MetaExp_Ctrl = wx.TextCtrl(self,value = settings.meta_experiment_name)
 
         self.RootDir_txt = wx.StaticText(self,label = 'Data Directory:')
         self.RootDir_Ctrl = wx.DirPickerCtrl(self,path=settings.default_path)
@@ -445,7 +445,7 @@ class CameraSettings():
     def to_dict(self):
         d={'sensor_height':self.sensor_height,
            'sensor_width':self.sensor_width,
-           'pix_width':,self.pix_width,
+           'pix_width':self.pix_width,
            'pix_height':self.pix_height
         }
         

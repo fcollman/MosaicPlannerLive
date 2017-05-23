@@ -17,7 +17,7 @@
 # 
 #===============================================================================
  
-from Settings import MosaicSettings, CameraSettings, SmartSEMSettings
+from Settings import MosaicSettings, CameraSettings, SmartSEMSettings,MosaicSettingsSchema, CameraSettingsSchema
 import numpy as np
 from numpy import sin, pi, cos, arctan, sin, tan, sqrt
 import csv
@@ -48,12 +48,24 @@ class NumberDisplaySettings(object):
         self.horizontalAlignment = horizontalAlignment
         self.verticalAlignment = verticalAlignment
 
+class slicePositionSchema(mm.Schema):
+    x = mm.fields.Float(required=True)
+    y = mm.fields.Float(required=True)
+    angle = mm.fields.Float(required=True)
+    showAngle = mm.fields.Bool(required=False,default=True)
+    selected = mm.fields.Bool(required=False,default=False)
+    activated = mm.fields.Bool(required=False,default=True)
+    withpoint = mm.fields.Bool(required=False,default=True)
+    number = mm.fields.Int(required=True)
+    numberDisplaySettings = mm.fields.Nested(NumberDisplaySettingsSchema)
+    frameList = mm.fields.Nested('posListSchema')
+
 class posListSchema(mm.Schema):
-    mosaic_settings = mm.Nested(MosaicSettingsSchema,required=True)
-    camera_settings = mm.Nested(CameraSettingsSchema,required=True)
-    slicePositions = mm.List(slicePositionSchema)
+    mosaic_settings = mm.fields.Nested(MosaicSettingsSchema,required=True)
+    camera_settings = mm.fields.Nested(CameraSettingsSchema,required=True)
+    slicePositions = mm.fields.Nested(slicePositionSchema,many=True)
     dosort = mm.fields.Bool(required=False,default=True)
-    numberDisplaySettings = mm.Nested(NumberDisplaySettingsSchema)
+    numberDisplaySettings = mm.fields.Nested(NumberDisplaySettingsSchema)
 
 class posList():
     """class for holding, altering, and plotting the position list"""
@@ -959,17 +971,6 @@ class posList():
             pos.destroy()
             del pos
 
-class slicePositionSchema(mm.Schema):
-    x = mm.fields.Float(required=True)
-    y = mm.fields.Float(required=True)
-    angle = mm.fields.Angle(required=True)
-    showAngle = mm.fields.Bool(required=False,default=True)
-    selected = mm.fields.Bool(required=False,default=False)
-    activated = mm.fields.Bool(required=False,default=True)
-    withpoint = mm.fields.Bool(required=False,default=True)
-    number = mm.fields.Int(required=True)
-    numberDisplaySettings = mm.Nested(NumberDisplaySettingsSchema)
-    self.frameList = mm.Nested(posListSchema)
 
 
 class slicePosition():

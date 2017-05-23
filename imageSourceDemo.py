@@ -229,7 +229,7 @@ class imageSource():
         return 6.5
 
     def make_random_image(self):
-        return np.random(self.get_sensor_size())
+        return np.random.random(self.get_sensor_size())
     def get_image(self):
         return self.make_random_image()
 

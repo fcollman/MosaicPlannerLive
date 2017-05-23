@@ -1084,7 +1084,7 @@ class MosaicPanel(FigureCanvas):
         dlg.Destroy()
 
     def edit_Directory_settings(self,event="none"):
-        dlg = ChangeDirectorySettings(None,-1,title = "Enter Sample Information",style = wx.OK,settings=self.directory_settings)
+        dlg = ChangeDirectorySettings(None,-1,title = u"Enter Sample Information",style = wx.OK,settings=self.directory_settings)
         ret = dlg.ShowModal()
         if ret == wx.ID_OK:
             self.directory_settings = dlg.get_settings()
