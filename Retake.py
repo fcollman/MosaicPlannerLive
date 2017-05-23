@@ -15,7 +15,7 @@ import pandas as pd
 
 class RetakeView(QtGui.QWidget):
 
-    def __init__(self,mp,channel):
+    def __init__(self,mp):
         super(RetakeView,self).__init__()
 
         self.mp = mp
@@ -133,7 +133,6 @@ class RetakeView(QtGui.QWidget):
         self.frame = frame
 
     def exitClicked(self,evt):
-        print "exiting"
         self.hide()
  
     def loadLiveData(self,evt=None):

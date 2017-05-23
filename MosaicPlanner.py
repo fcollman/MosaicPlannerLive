@@ -53,6 +53,7 @@ from validate import Validator
 import cv2 #MultiRibbons
 from skimage.measure import block_reduce #MultiRibbons
 from Snap import SnapView
+from Retake import RetakeView
 from slacker import Slacker
 from SaveThread import file_save_process
 import scipy.optimize as opt #softwarea-autofocus
@@ -451,6 +452,7 @@ class MosaicPanel(FigureCanvas):
         self.zstack_settings = ZstackSettings()
         self.zstack_settings.load_settings(config)
         self.snapView = None
+        self.retakeView = None
 
         #setup a blank position list
         self.posList=posList(self.subplot,mosaic_settings,self.camera_settings)
@@ -1131,6 +1133,11 @@ class MosaicPanel(FigureCanvas):
         global win
         win = MMPropertyBrowser(self.imgSrc.mmc)
         win.show()
+
+    def launch_retake(self,event=None):
+        if self.retakeView is None:
+            self.retakeView = RetakeView(self)
+        self.retakeView.show()
 
     def launch_snap(self, event=None):
         if self.snapView is None:
@@ -1828,6 +1835,7 @@ class ZVISelectFrame(wx.Frame):
     ID_EDIT_ZSTACK = wx.NewId()
     ID_ASIAUTOFOCUS = wx.NewId()
     ID_SNAPCONTROL = wx.NewId()
+    ID_RETAKECONTROL = wx.NewId()
 
     # ID_Alfred = wx.NewId()
 
@@ -1920,6 +1928,7 @@ class ZVISelectFrame(wx.Frame):
         self.use_focus_correction = Imaging_Menu.Append(self.ID_USE_FOCUS_CORRECTION,'Use Focus Correction?','Use Focus Correction For Mapping',kind=wx.ITEM_CHECK)
         self.launch_ASIControl = Imaging_Menu.Append(self.ID_ASIAUTOFOCUS, 'Allen ASI AutoFocus Control', kind= wx.ITEM_NORMAL)
         self.launch_Snap = Imaging_Menu.Append(self.ID_SNAPCONTROL,'Snap single channel images',kind = wx.ITEM_NORMAL)
+        self.launch_Retake = Imaging_Menu.Append(self.ID_RETAKECONTROL,'Retake dialog',kind = wx.ITEM_NORMAL)
 
         self.Bind(wx.EVT_MENU, self.toggle_use_focus_correction,id=self.ID_USE_FOCUS_CORRECTION)
         self.Bind(wx.EVT_MENU, self.mosaicCanvas.edit_Zstack_settings,id=self.ID_EDIT_ZSTACK)
@@ -1931,7 +1940,7 @@ class ZVISelectFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.mosaicCanvas.edit_focus_correction_plane, id = self.ID_EDIT_FOCUS_CORRECTION)
         self.Bind(wx.EVT_MENU, self.mosaicCanvas.launch_ASI,id = self.ID_ASIAUTOFOCUS)
         self.Bind(wx.EVT_MENU, self.mosaicCanvas.launch_snap,id = self.ID_SNAPCONTROL)
-
+        self.Bind(wx.EVT_MENU, self.mosaicCanvas.launch_retake,id = self.ID_RETAKECONTROL)
 
         Imaging_Menu.Check(self.ID_USE_FOCUS_CORRECTION,self.cfg['MosaicPlanner']['use_focus_correction'])
 
