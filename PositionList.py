@@ -53,7 +53,7 @@ class posListSchema(mm.Schema):
     camera_settings = mm.Nested(CameraSettingsSchema,required=True)
     slicePositions = mm.List(slicePositionSchema)
     dosort = mm.fields.Bool(required=False,default=True)
-    numberDisplaySettings = mm.Nested(NumberDisplaySettings)
+    numberDisplaySettings = mm.Nested(NumberDisplaySettingsSchema)
 
 class posList():
     """class for holding, altering, and plotting the position list"""
@@ -968,7 +968,7 @@ class slicePositionSchema(mm.Schema):
     activated = mm.fields.Bool(required=False,default=True)
     withpoint = mm.fields.Bool(required=False,default=True)
     number = mm.fields.Int(required=True)
-    numberDisplaySettings = mm.Nested(NumberDisplaySettings)
+    numberDisplaySettings = mm.Nested(NumberDisplaySettingsSchema)
     self.frameList = mm.Nested(posListSchema)
 
 

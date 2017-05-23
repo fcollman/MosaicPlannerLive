@@ -432,7 +432,7 @@ class CameraSettingsSchema(mm.Schema):
     sensor_widht = mm.fields.Int(required=True)
     pix_width = mm.fields.Float(required=True)
     pix_height = mm.fields.Float(required=True)
-         
+
 class CameraSettings():
     """simple struct for containing the parameters for the camera"""
     def __init__(self,sensor_height=1040,sensor_width=1388,pix_width=6.5,pix_height=6.5):
@@ -442,6 +442,13 @@ class CameraSettings():
         #in microns
         self.pix_width=pix_width
         self.pix_height=pix_height
+    def to_dict(self):
+        d={'sensor_height':self.sensor_height,
+           'sensor_width':self.sensor_width,
+           'pix_width':,self.pix_width,
+           'pix_height':self.pix_height
+        }
+        
     def save_settings(self,cfg):
         cfg['Camera_Settings']['sensor_height']=self.sensor_height
         cfg['Camera_Settings']['sensor_width']=self.sensor_width
