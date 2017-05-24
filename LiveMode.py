@@ -40,7 +40,7 @@ class VideoView(QtGui.QWidget):
                 self.imgSrc.set_channel(ch)
         self.imgSrc.set_binning(1)
         print 'Binning is:', self.imgSrc.get_binning()
-        self.imgSrc.startContinuousSequenceAcquisition(1)
+        self.imgSrc.startContinuousSequenceAcquisition(100)
     
     def initUI(self):
 
@@ -231,7 +231,7 @@ class VideoView(QtGui.QWidget):
     def closeEvent(self,evt):
         self.imgSrc.stopSequenceAcquisition()
         self.imgSrc.set_binning(2)
-        print 'Binning is:', self.get_binning()
+        print 'Binning is:', self.imgSrc.get_binning()
         print "stopped acquisition"
         #if self.timer is not None:
         #    print "cancelling timer if it exists"
@@ -263,7 +263,7 @@ class VideoView(QtGui.QWidget):
        
         data =  self.imgSrc.get_image()
         data = np.rot90(data, k=3)
-        maxval=self.imgSrc.get_max_pixel_value()
+
         self.img.setImage(data,autoLevels=True)
 
         if not self.ended:
@@ -274,6 +274,7 @@ class VideoView(QtGui.QWidget):
         self.fps = self.fps * 0.6 + fps1 * 0.4
         if self.i == 0:
             print "%0.1f fps" % self.fps
+        self.update()
             
 
 def launchLive(imgSrc,exposure_times):  

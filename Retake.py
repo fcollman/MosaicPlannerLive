@@ -12,7 +12,8 @@ from functools import partial
 import shutil
 import multiprocessing as mp
 from SaveThread import file_save_process
-import MosaicPlanner
+STOP_TOKEN = 'STOP!!!'
+
 
 # class myHistographLUTItem(pg.HistogramLUTItem):
 #     def __init__(self,*kargs,**kwargs):
@@ -384,7 +385,7 @@ class RetakeView(QtGui.QWidget):
         self.mp.saveProcess = mp.Process(target=file_save_process,
                                         args=(self.mp.dataQueue,
                                               self.mp.messageQueue,
-                                              MosaicPlanner.STOP_TOKEN,
+                                              STOP_TOKEN,
                                               metadata_dictionary,
                                               ssh_opts))
         self.saveProcess.start()
@@ -393,7 +394,7 @@ class RetakeView(QtGui.QWidget):
                           False, currx, curry, currz, self.section,
                           self.frame, hold_focus=True)
 
-        self.mp.dataQueue.put(MosaicPlanner.STOP_TOKEN)
+        self.mp.dataQueue.put(STOP_TOKEN)
         self.mp.saveProcess.join()
         if self.mp.cfg['MosaicPlanner']['hardware_trigger']:
             self.mp.imgSrc.stop_hardware_triggering()

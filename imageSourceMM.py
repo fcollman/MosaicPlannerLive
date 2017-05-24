@@ -385,7 +385,7 @@ class imageSource():
 
     def get_image(self):
         while self.mmc.getRemainingImageCount()==0:
-            time.sleep(.001)
+            time.sleep(.01)
         data = self.mmc.popNextImage()
         return self.flip_image(data)
 
