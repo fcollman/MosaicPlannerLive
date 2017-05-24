@@ -201,5 +201,5 @@ if __name__ == '__main__':
     win = FocusCorrectionPlaneWindow(plist,imgSrc)
     win.show()
     app.exec_()
-    imgSrc.mmc.reset()
+    imgSrc.shutdown()
     sys.exit()

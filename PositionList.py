@@ -17,7 +17,7 @@
 # 
 #===============================================================================
  
-from Settings import MosaicSettings, CameraSettings, SmartSEMSettings
+from Settings import MosaicSettings, CameraSettings, SmartSEMSettings,MosaicSettingsSchema, CameraSettingsSchema
 import numpy as np
 from numpy import sin, pi, cos, arctan, sin, tan, sqrt
 import csv
@@ -33,14 +33,40 @@ from CenterRectangle import CenterRectangle
 from scipy.interpolate import griddata
 import lxml.etree as ET
 import json
-  
+import marshmallow as mm
+
+class NumberDisplaySettingsSchema(mm.Schema):
+    shownumbers = mm.fields.Bool(required=True)
+    color = mm.fields.Str(required=True)
+    horizontalAlignment = mm.fields.Str(required=True)
+    verticalAlignment = mm.fields.Str(required=True)
+    
 class NumberDisplaySettings(object):
     def __init__(self,shownumbers=False,color='darkorange',horizontalAlignment='right',verticalAlignment='top'):
         self.shownumbers = shownumbers
         self.color=color
         self.horizontalAlignment = horizontalAlignment
         self.verticalAlignment = verticalAlignment
-  
+
+class slicePositionSchema(mm.Schema):
+    x = mm.fields.Float(required=True)
+    y = mm.fields.Float(required=True)
+    angle = mm.fields.Float(required=True)
+    showAngle = mm.fields.Bool(required=False,default=True)
+    selected = mm.fields.Bool(required=False,default=False)
+    activated = mm.fields.Bool(required=False,default=True)
+    withpoint = mm.fields.Bool(required=False,default=True)
+    number = mm.fields.Int(required=True)
+    numberDisplaySettings = mm.fields.Nested(NumberDisplaySettingsSchema)
+    frameList = mm.fields.Nested('posListSchema')
+
+class posListSchema(mm.Schema):
+    mosaic_settings = mm.fields.Nested(MosaicSettingsSchema,required=True)
+    camera_settings = mm.fields.Nested(CameraSettingsSchema,required=True)
+    slicePositions = mm.fields.Nested(slicePositionSchema,many=True)
+    dosort = mm.fields.Bool(required=False,default=True)
+    numberDisplaySettings = mm.fields.Nested(NumberDisplaySettingsSchema)
+
 class posList():
     """class for holding, altering, and plotting the position list"""
     def __init__(self,axis,mosaic_settings=MosaicSettings(),camera_settings=CameraSettings(),
@@ -944,7 +970,9 @@ class posList():
         for pos in self.slicePositions:
             pos.destroy()
             del pos
-               
+
+
+
 class slicePosition():
     """class which contains information about a single position in the position list, and is responsible for keeping 
     its matplotlib representation up to date via function calls which are mostly managed by its posList"""

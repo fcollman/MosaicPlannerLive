@@ -85,7 +85,6 @@ if __name__ == '__main__':
     faulthandler.enable()
     cfg = ConfigObj(SETTINGS_FILE,unrepr=True)
 
-    #mmc = MMCorePy.CMMCore()
     #defaultMMpath = "C:\Program Files\Micro-Manager-1.4"
     #configFile = QtGui.QFileDialog.getOpenFileName(
     #    None, "pick a uManager cfg file", defaultMMpath, "*.cfg")

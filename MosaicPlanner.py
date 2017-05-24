@@ -38,7 +38,7 @@ from PositionList import posList
 from MyLasso import MyLasso
 from MosaicImage import MosaicImage
 from Transform import Transform,ChangeTransform
-from imageSourceMM import imageSource
+from imageSourceDemo import imageSource
 from MMPropertyBrowser import MMPropertyBrowser
 from ASI_Control import ASI_AutoFocus
 from FocusCorrectionPlaneWindow import FocusCorrectionPlaneWindow
@@ -512,7 +512,7 @@ class MosaicPanel(FigureCanvas):
         print "handling close"
         #if not self.mosaicImage == None:
         #    self.mosaicImage.cursor_timer.cancel()
-        self.imgSrc.mmc.unloadAllDevices()
+        self.imgSrc.shutdown()
 
     def on_load(self,rootPath):
         self.rootPath = rootPath
@@ -677,29 +677,8 @@ class MosaicPanel(FigureCanvas):
 
         do_stage_reset=self.cfg['StageResetSettings']['enableStageReset']
         if do_stage_reset:
-            z_label = self.cfg['StageResetSettings']['compensationStage']
-            piezo_label = self.cfg['StageResetSettings']['resetStage']
-            min_threshold = self.cfg['StageResetSettings']['minThreshold']
-            max_threshold = self.cfg['StageResetSettings']['maxThreshold']
-            reset_position = self.cfg['StageResetSettings']['resetPosition']
-            invert_compensation = self.cfg['StageResetSettings']['invertCompensation']
+            self.imgSrc.reset_piezo(self.cfg['StageResetSettings'])
 
-            piezo = self.imgSrc.mmc.getPosition(piezo_label)
-            if (piezo<min_threshold) or (piezo>max_threshold):
-                z = self.imgSrc.mmc.getPosition(z_label)
-                islocked = self.imgSrc.mmc.isContinuousFocusEnabled()
-
-                if islocked:
-                    self.imgSrc.mmc.enableContinuousFocus(False)
-
-                if invert_compensation:
-                    self.imgSrc.mmc.setPosition(z_label,z+(piezo-reset_position))
-                else:
-                    self.imgSrc.mmc.setPosition(z_label,z-(piezo-reset_position))
-                self.imgSrc.mmc.setPosition(piezo_label,reset_position)
-
-                if islocked:
-                    self.imgSrc.mmc.enableContinuousFocus(True)
 
     def summarize_stage_settings(self):
         do_stage_reset = self.cfg['StageResetSettings']['enableStageReset']
@@ -831,7 +810,7 @@ class MosaicPanel(FigureCanvas):
             if pos.activated:
                 if not goahead:
                     break
-                if not self.imgSrc.mmc.isContinuousFocusEnabled():
+                if not self.imgSrc.get_hardware_autofocus_state():
                     print "autofocus not enabled when moving between sections.. "
                     goahead=False
                     break
@@ -846,7 +825,7 @@ class MosaicPanel(FigureCanvas):
                         if not goahead:
                             print "breaking out!"
                             break
-                        if not self.imgSrc.mmc.isContinuousFocusEnabled():
+                        if not self.imgSrc.get_hardware_autofocus_state():
                             print "autofocus no longer enabled while moving between frames.. quiting"
                             goahead = False
                             break
@@ -968,7 +947,8 @@ class MosaicPanel(FigureCanvas):
 
 
         goahead = True
-        if not self.imgSrc.mmc.isContinuousFocusEnabled():
+
+        if not self.imgSrc.get_hardware_autofocus_state():
             self.slack_notify('HELP! lost autofocus on way to first position',notify=True)
             print 'HELP! lost autofocus on way to first position'
             goahead=False
@@ -981,7 +961,7 @@ class MosaicPanel(FigureCanvas):
             if pos.activated:
                 if not goahead:
                     break
-                if not self.imgSrc.mmc.isContinuousFocusEnabled():
+                if not self.imgSrc.get_hardware_autofocus_state():
                     self.slack_notify('HELP! lost autofocus between sections',notify=True)
                     goahead=False
                     break
@@ -1001,7 +981,7 @@ class MosaicPanel(FigureCanvas):
                         if not goahead:
                             print "breaking out!"
                             break
-                        if not self.imgSrc.mmc.isContinuousFocusEnabled():
+                        if not self.imgSrc.get_hardware_autofocus_state():
                             self.slack_notify('HELP! lost autofocus between frames',notify=True)
                             print "autofocus no longer enabled while moving between frames.. quiting"
                             goahead = False
@@ -1106,7 +1086,7 @@ class MosaicPanel(FigureCanvas):
         dlg.Destroy()
 
     def edit_Directory_settings(self,event="none"):
-        dlg = ChangeDirectorySettings(None,-1,title = "Enter Sample Information",style = wx.OK,settings=self.directory_settings)
+        dlg = ChangeDirectorySettings(None,-1,title = u"Enter Sample Information",style = wx.OK,settings=self.directory_settings)
         ret = dlg.ShowModal()
         if ret == wx.ID_OK:
             self.directory_settings = dlg.get_settings()
@@ -1670,7 +1650,7 @@ class MosaicPanel(FigureCanvas):
                     if pos.activated:
                         if not goahead:
                             break
-                        if not self.imgSrc.mmc.isContinuousFocusEnabled():
+                        if not self.imgSrc.get_hardware_autofocus_state():
                             self.slack_notify('HELP! lost autofocus between frames',notify=True)
                             print "autofocus not enabled when moving between sections.. "
                             goahead=False
@@ -1689,7 +1669,7 @@ class MosaicPanel(FigureCanvas):
                                 if not goahead:
                                     print "breaking out!"
                                     break
-                                if not self.imgSrc.mmc.isContinuousFocusEnabled():
+                                if not self.imgSrc.get_hardware_autofocus_state():
                                     self.slack_notify('HELP! lost autofocus between frames',notify=True)
                                     print "autofocus no longer enabled while moving between frames.. quiting"
                                     goahead = False

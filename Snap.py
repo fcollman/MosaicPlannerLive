@@ -23,32 +23,10 @@ class SnapView(QtGui.QWidget):
         self.exposure_times=exposure_times
         #self.setContentsMargins(0,0,0,0)
         self.imgSrc = imgSrc
-        self.mmc = imgSrc.mmc
-
-        self.camera = self.mmc.getCameraDevice()
-        # self.mmc.setProperty(self.camera,'Binning','1x1')
-        # self.mmc.waitForDevice(self.camera)
-        self.channels=self.mmc.getAvailableConfigs(self.channelGroup)
-        #self.init_mmc()
+        self.channels=self.imgSrc.get_channels()
         self.initUI()
-        
-        
         self.i = 0
         self.ended = False
-
-       
-    # def init_mmc(self):
-    #     #filename="C:\Users\Smithlab\Documents\ASI_LUM_RETIGA_CRISP.cfg"
-    #     #self.mmc.loadSystemConfiguration(filename)
-    #     #self.mmc.enableStderrLog(False)
-    #     #self.mmc.enableDebugLog(False)
-    #     # # mmc.setCircularBufferMemoryFootprint(100)
-    #     #self.cam=self.mmc.getCameraDevice()
-    #     #self.mmc.setExposure(50)
-    #     #self.mmc.setProperty(self.cam, 'Gain', 1)
-    #     Nch=len(self.channels)
-    #     startChan=self.channels[Nch-1]
-
     
     def initUI(self):
 
@@ -74,23 +52,10 @@ class SnapView(QtGui.QWidget):
 
         self.graphicsLayoutWidget.addItem(self.hist,0,1)
 
-
-
-
-        #self.layout.addWidget(self.img)
-     
-        #self.setLayout(self.layout)
-        #self.setAutoFillBackground(True)
-        #p = self.palette()
-        #p.setColor(self.backgroundRole(), QtCore.Qt.black)
-        #self.setPalette(p)
-        
         
         keys = self.exposure_times.keys()
         
-        #gridlay=QtGui.QGridLayout(margin=0,spacing=-1)
 
-        # print 'Binning is:', self.mmc.getProperty(self.camera,'Binning')
         for i,ch in enumerate(self.channels):
             btn=QtGui.QPushButton(ch,self)
             self.chnButtons.append(btn)
@@ -103,7 +68,7 @@ class SnapView(QtGui.QWidget):
             if ch in keys:
                 spnBox.setValue(self.exposure_times[ch])
             else:
-                spnBox.setValue(self.mmc.getExposure())
+                spnBox.setValue(self.imgSrc.get_exposure())
             spnBox.setSuffix(" ms")
             btn.clicked.connect(self.make_channelButtonClicked(ch,spnBox))
             self.expSpnBoxes.append(spnBox)
@@ -157,41 +122,35 @@ class SnapView(QtGui.QWidget):
         for i,ch in enumerate(self.channels):
             if 'Dark' not in ch:
                 print ch
-                self.mmc.setConfig(self.channelGroup,ch)
-                self.mmc.waitForConfig(self.channelGroup,ch)
+                self.imgSrc.set_channel(ch)
                 spnBox=self.expSpnBoxes[i]
                 curr_exposure=spnBox.value()
-                self.mmc.setExposure(curr_exposure)
-                self.mmc.snapImage()
-                img=self.mmc.getImage()
-                if data is None:
-                    data = np.zeros((Nch,img.shape[0],img.shape[1]))
+                self.imgSrc.set_exposure(curr_exposure)
+                img=self.imgSrc.snap_image()
                 data[i,:,:]=img
                 print(np.max(img))
         self.img.setImage(data,xvals = np.array(range(Nch)))
-        self.img.setLevels(0,2**self.mmc.getImageBitDepth())
-        self.hist.setLevels(0,2**self.mmc.getImageBitDepth())
+        self.img.setLevels(0,self.imgSrc.get_max_pixel_value())
+        self.hist.setLevels(0,self.imgSrc.get_max_pixel_value())
 
     # def autoExposure(self,evt):
     #
-    #     self.mmc.stopSequenceAcquisition()
+    #     self.imgSrc.stopSequenceAcquisition()
     #
     #     perc=95; #the goal is to make the X percentile value equal to Y percent of the maximum value
     #     #perc is X
     #     desired_frac=.7 #desired_frac is Y
     #     max_exposure = 3000 #exposure times shall not end up more than this
     #     close_frac = .2 #fractional change in exposure for which we will just trust the math
-    #     bit_depth=self.mmc.getImageBitDepth()
-    #     max_val=np.power(2,bit_depth)
+    #     max_val=self.imgSrc.get_max_pixel_value()
     #     #loop over the channels
     #     for i,ch in enumerate(self.channels):
     #         img_counter =0 #counter to count how many snaps it takes us
     #         if 'Dark' not in ch: #don't set the 'Dark' channel for obvious reasons
     #             print ch
     #             #setup to use the channel
-    #             self.mmc.setConfig(self.channelGroup,ch)
-    #             self.mmc.waitForConfig(self.channelGroup,ch)
-    #
+    #             self.imgSrc.set_channel(ch)
+
     #
     #             #get current exposure
     #             spnBox=self.expSpnBoxes[i]
@@ -201,10 +160,10 @@ class SnapView(QtGui.QWidget):
     #             #follow loop till we get it right
     #             while 1:
     #
-    #                 self.mmc.setExposure(curr_exposure)
-    #                 self.mmc.snapImage()
+    #                 self.imgSrc.set_exposure(curr_exposure)
+    #                 img= self.imgSrc.snap_image()
     #                 img_counter+=1
-    #                 img=self.mmc.getImage()
+    #                 
     #                 vec=img.flatten()
     #
     #                 #the value which is at the perc percentile
@@ -264,23 +223,16 @@ class SnapView(QtGui.QWidget):
             #print ch
             #print spnBox.value()
 
-            # self.mmc.stopSequenceAcquisition()
-            # self.mmc.clearCircularBuffer()
-            self.mmc.setConfig(self.channelGroup,ch)
+            self.imgSrc.set_channel(ch)
             expTime=spnBox.value()
-            self.mmc.setExposure(expTime)
-            self.mmc.waitForConfig(self.channelGroup,ch)
-            self.mmc.snapImage()
-            data= self.mmc.getImage()
+            self.imgSrc.set_exposure(expTime)
+            data=self.imgSrc.snap_image()
             self.img.setImage(data)
-            # self.mmc.startContinuousSequenceAcquisition(expTime)
         return channelButtonClicked
         
     def closeEvent(self,evt):
-        # camera = self.mmc.getCameraDevice()
-        self.mmc.setProperty(self.camera,'Binning','2x2')
-        print 'Binning is:', self.mmc.getProperty(self.camera,'Binning')
-        self.changedExposureTimes.emit()
+        self.imgSrc.set_binning(2)
+        print 'Binning is:', self.imgSrc.get_binning()
         return QtGui.QWidget.closeEvent(self,evt)
         #evt.accept()
 
@@ -292,8 +244,6 @@ def launchSnap(imgSrc,exposure_times):
     #vidview.setGeometry(250,50,1100,1000)
     dlg.setModal(True)
     dlg.show()
-
-
     
     if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
         QtGui.QApplication.instance().exec_()
@@ -313,7 +263,6 @@ if __name__ == '__main__':
     faulthandler.enable()
     cfg = ConfigObj(SETTINGS_FILE,unrepr=True)
 
-    #mmc = MMCorePy.CMMCore()
     #defaultMMpath = "C:\Program Files\Micro-Manager-1.4"
     #configFile = QtGui.QFileDialog.getOpenFileName(
     #    None, "pick a uManager cfg file", defaultMMpath, "*.cfg")
@@ -324,13 +273,12 @@ if __name__ == '__main__':
     logname=dt.strftime('SnapLog_%Y%m%d_%H%M.txt')
     imgSrc = imageSource(configFile,logfile=logname)
 
-    #mmc.loadSystemConfiguration(configFile)
     print "loaded configuration file"
     imgSrc.set_binning(1)
 
     launchSnap(imgSrc,dict([]))
     #app.exec_()
     print "got out of the event loop"
-    imgSrc.mmc.reset()
+    imgSrc.shutdown()
     print "reset micromanager core"
     sys.exit()
