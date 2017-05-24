@@ -194,10 +194,6 @@ class imageSource():
 
 
     def get_xy_flip(self):
-        xystg=self.mmc.getXYStageDevice()
-        flipx=int(self.mmc.getProperty(xystg,"TransposeMirrorX"))==1
-        flipy=int(self.mmc.getProperty(xystg,"TransposeMirrorY"))==1
-
         return False,False
     def get_xy(self):
         #NEED TO IMPLEMENT IF NOT MICROMANAGER
@@ -295,7 +291,7 @@ class imageSource():
         self.channel = channel
         
     def get_channels(self):
-        return ['DAPI','ALEXA488','ALEXA594','ALEXA647']
+        return ['QuadBand1DAPI','QuadBand1Alexa488','QuadBand1Alexa594','QuadBand1Alexa647']
         
     def take_best_of_stack(self):
         print "need to implement take best of stack"

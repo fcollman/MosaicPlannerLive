@@ -7,17 +7,23 @@
     <x>0</x>
     <y>0</y>
     <width>1280</width>
-    <height>1080</height>
+    <height>852</height>
    </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <widget class="QGraphicsView" name="focusScore_graphicsView">
+  <widget class="GraphicsLayoutWidget" name="focusScore_graphicsLayoutWidget">
    <property name="geometry">
     <rect>
-     <x>10</x>
-     <y>50</y>
+     <x>0</x>
+     <y>30</y>
      <width>1031</width>
      <height>171</height>
     </rect>
@@ -26,10 +32,10 @@
   <widget class="GraphicsLayoutWidget" name="image_graphicsLayoutWidget">
    <property name="geometry">
     <rect>
-     <x>10</x>
-     <y>230</y>
+     <x>0</x>
+     <y>200</y>
      <width>1031</width>
-     <height>841</height>
+     <height>621</height>
     </rect>
    </property>
    <property name="frameShape">
@@ -46,9 +52,9 @@
    <property name="geometry">
     <rect>
      <x>1050</x>
-     <y>50</y>
+     <y>30</y>
      <width>221</width>
-     <height>379</height>
+     <height>631</height>
     </rect>
    </property>
    <layout class="QVBoxLayout" name="verticalLayout">
@@ -179,13 +185,37 @@
       </property>
      </widget>
     </item>
+    <item>
+     <widget class="QGroupBox" name="channel_groupBox">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Preferred" vsizetype="MinimumExpanding">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="title">
+       <string>channels</string>
+      </property>
+      <widget class="QWidget" name="verticalLayoutWidget_2">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>30</y>
+         <width>181</width>
+         <height>261</height>
+        </rect>
+       </property>
+       <layout class="QVBoxLayout" name="channel_verticalLayout"/>
+      </widget>
+     </widget>
+    </item>
    </layout>
   </widget>
-  <widget class="QComboBox" name="comboBox">
+  <widget class="QComboBox" name="clickMode_comboBox">
    <property name="geometry">
     <rect>
-     <x>90</x>
-     <y>20</y>
+     <x>70</x>
+     <y>0</y>
      <width>161</width>
      <height>26</height>
     </rect>
@@ -209,8 +239,8 @@
   <widget class="QLabel" name="label_5">
    <property name="geometry">
     <rect>
-     <x>20</x>
-     <y>20</y>
+     <x>10</x>
+     <y>0</y>
      <width>71</width>
      <height>16</height>
     </rect>
@@ -219,41 +249,11 @@
     <string>ClickMode</string>
    </property>
   </widget>
-  <widget class="QGroupBox" name="channel_groupBox">
-   <property name="geometry">
-    <rect>
-     <x>1060</x>
-     <y>410</y>
-     <width>201</width>
-     <height>301</height>
-    </rect>
-   </property>
-   <property name="sizePolicy">
-    <sizepolicy hsizetype="Preferred" vsizetype="MinimumExpanding">
-     <horstretch>0</horstretch>
-     <verstretch>0</verstretch>
-    </sizepolicy>
-   </property>
-   <property name="title">
-    <string>channels</string>
-   </property>
-   <widget class="QWidget" name="verticalLayoutWidget_2">
-    <property name="geometry">
-     <rect>
-      <x>10</x>
-      <y>30</y>
-      <width>181</width>
-      <height>261</height>
-     </rect>
-    </property>
-    <layout class="QVBoxLayout" name="channel_verticalLayout"/>
-   </widget>
-  </widget>
   <widget class="QPushButton" name="exit_pushButton">
    <property name="geometry">
     <rect>
-     <x>1120</x>
-     <y>1030</y>
+     <x>1110</x>
+     <y>790</y>
      <width>75</width>
      <height>23</height>
     </rect>
