@@ -262,6 +262,7 @@ class VideoView(QtGui.QWidget):
     
        
         data =  self.imgSrc.get_image()
+        data = np.rot90(data, k=3)
         maxval=self.imgSrc.get_max_pixel_value()
         self.img.setImage(data,autoLevels=True)
 

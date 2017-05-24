@@ -1121,7 +1121,6 @@ class MosaicPanel(FigureCanvas):
 
     def launch_snap(self, event=None):
         if self.snapView is None:
-            self.imgSrc.set_binning(1)
             print 'Binning is', self.imgSrc.get_binning()
             self.snapView = SnapView(self.imgSrc,exposure_times=self.channel_settings.exposure_times)
             self.snapView.changedExposureTimes.connect(self.getSnapExposures)

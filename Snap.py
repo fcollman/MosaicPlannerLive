@@ -227,6 +227,7 @@ class SnapView(QtGui.QWidget):
             expTime=spnBox.value()
             self.imgSrc.set_exposure(expTime)
             data=self.imgSrc.snap_image()
+            data = np.rot90(data, k=3)
             self.img.setImage(data)
         return channelButtonClicked
         

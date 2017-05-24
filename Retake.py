@@ -4,11 +4,16 @@
 from PyQt4 import QtCore, QtGui, uic
 import numpy as np
 import pyqtgraph as pg
-import os.path
+import os
 from imageSourceMM import imageSource
 import pandas as pd
 import tifffile
 from functools import partial
+import shutil
+import multiprocessing as mp
+from SaveThread import file_save_process
+import MosaicPlanner
+
 # class myHistographLUTItem(pg.HistogramLUTItem):
 #     def __init__(self,*kargs,**kwargs):
 #         super(myHistographLUTItem, self).__init__(*kargs,**kwargs)
@@ -286,15 +291,19 @@ class RetakeView(QtGui.QWidget):
         #initialize section,frame, ch and  initialization state
         self.section = 0
         self.frame = 0
-        self.ch = self.mp.channel_settings.channels[0]
+        self.ch = self.mp.cfg['ChannelSettings']['focusscore_chan']
 
         #get the outdirectory from mosaicplanner settings
         for key,value in self.mp.outdirdict.iteritems():
             self.outdir = self.mp.outdirdict[key]
         #load the focus score data
         self.loadFocusScoreData()
+        ## Make all plots clickable
+        self.archiveDir = self.outdir.replace('raw\\data','raw\\bad_data')
+        if not os.path.isdir(self.archiveDir):
+            os.makedirs(self.archiveDir)
 
-    
+
     def initUI(self):
         #load the UI from layout file
         currpath=os.path.split(os.path.realpath(__file__))[0]
@@ -313,7 +322,8 @@ class RetakeView(QtGui.QWidget):
         self.hist.setLevels(0,self.mp.imgSrc.get_max_pixel_value())
 
         self.dataplot = self.focusScore_graphicsLayoutWidget.addPlot()
-
+        self.dataplot.setAspectLocked(True, ratio=1)
+        self.dataplot.invertY(True)
         #setup the channel buttons 
         self.chnButtons=[]
         for i,ch in enumerate(self.mp.channel_settings.channels):
@@ -327,6 +337,7 @@ class RetakeView(QtGui.QWidget):
         #initialize AFCoffset UI, and connect valueChanged to setting it
         self.AFCoffset_doubleSpinBox.setValue(self.initial_offset)
         self.AFCoffset_doubleSpinBox.valueChanged[float].connect(self.mp.imgSrc.set_autofocus_offset)
+        self.resetOffset_pushButton.clicked.connect(self.resetOffset)
 
         #connect various UI slots to their change functions
         self.section_spinBox.valueChanged[int].connect(self.changeSection)
@@ -336,12 +347,82 @@ class RetakeView(QtGui.QWidget):
         self.move_pushButton.clicked.connect(self.moveToFrame)
         
         self.review_pushButton.clicked.connect(self.reviewFrame)
-        
+        self.retake_pushButton.clicked.connect(self.retakeFrame)
+
         self.softwareaf_pushButton.clicked.connect(self.mp.on_software_af_tool)
         self.snap_pushButton.clicked.connect(self.doSnap)
         self.livereview_pushButton.clicked[bool].connect(self.changeLiveReview)
         
         self.exit_pushButton.clicked.connect(self.exitClicked)
+    def retakeFrame(self,evt=None):
+        currx, curry = self.mp.imgSrc.get_xy()
+        currz = self.mp.imgSrc.get_z()
+        row = self.getDataRow()
+        assert(np.abs(row.xpos-currx)<2)
+        assert(np.abs(row.ypos-curry)<2)
+        self.archiveFrame()
+
+        self.mp.imgSrc.set_binning(1)
+        numchan, chrom_correction = self.mp.summarize_channel_settings()
+        self.mp.dataQueue = mp.Queue()
+        self.mp.messageQueue = mp.Queue()
+        metadata_dictionary = {
+            'channelname': self.mp.channel_settings.prot_names,
+            '(height,width)': self.mp.imgSrc.get_sensor_size(),
+            'ScaleFactorX': self.mp.imgSrc.get_pixel_size(),
+            'ScaleFactorY': self.mp.imgSrc.get_pixel_size(),
+            'exp_time': self.mp.channel_settings.exposure_times,
+        }
+        if self.mp.cfg['MosaicPlanner']['hardware_trigger']:
+            #iterates over channels/exposure times in appropriate order
+            channels = [ch for ch in self.mp.channel_settings.channels if self.mp.channel_settings.usechannels[ch]]
+            exp_times = [self.mp.channel_settings.exposure_times[ch] for ch in self.mp.channel_settings.channels if self.mp.channel_settings.usechannels[ch]]
+            success=self.mp.imgSrc.setup_hardware_triggering(channels,exp_times)
+
+        ssh_opts = dict(self.mp.cfg['SSH'])
+        ssh_opts['mount_point'] = self.mp.lookup_mountpoint(self.outdir)
+        self.mp.saveProcess = mp.Process(target=file_save_process,
+                                        args=(self.mp.dataQueue,
+                                              self.mp.messageQueue,
+                                              MosaicPlanner.STOP_TOKEN,
+                                              metadata_dictionary,
+                                              ssh_opts))
+        self.saveProcess.start()
+
+        self.mp.multiDacq(success, self.outdir, chrom_correction,
+                          False, currx, curry, currz, self.section,
+                          self.frame, hold_focus=True)
+
+        self.mp.dataQueue.put(MosaicPlanner.STOP_TOKEN)
+        self.mp.saveProcess.join()
+        if self.mp.cfg['MosaicPlanner']['hardware_trigger']:
+            self.mp.imgSrc.stop_hardware_triggering()
+
+
+    def archiveFrame(self):
+        for ch in self.mp.channel_settings.channels:
+            prot_name = self.mp.channel_settings.prot_names[self.ch]
+            ch_dir = os.path.join(self.outdir, prot_name)
+            out_ch_dir = os.path.join(self.archiveDir,prot_name)
+            if not os.path.isdir(out_ch_dir):
+                os.makedirs(out_ch_dir)
+
+            tif_file = prot_name + "_S%04d_F%04d_Z%02d.tif" % (self.section, self.frame, 0)
+            metadata_file =  prot_name + "_S%04d_F%04d_Z%02d_metadata.txt"%(self.section, self.frame, 0)
+            focus_file = prot_name + "_S%04d_F%04d_Z%02d_focus.csv" %(self.section, self.frame, 0)
+
+            if not os.path.exists(os.path.join(out_ch_dir,tif_file)):
+                shutil.move(os.path.join(ch_dir,tif_file),os.path.join(out_ch_dir,tif_file))
+                shutil.move(os.path.join(ch_dir,metadata_file),os.path.join(out_ch_dir,metadata_file))
+                shutil.move(os.path.join(ch_dir,focus_file),os.path.join(out_ch_dir,focus_file))
+            else:
+                os.remove(os.path.join(ch_dir, tif_file))
+                os.remove(os.path.join(ch_dir, metadata_file))
+                os.remove(os.path.join(ch_dir, focus_file))
+
+    def resetOffset(self,evt=None):
+        self.AFCoffset_doubleSpinBox.setValue(self.initial_offset)
+        self.mp.imgSrc.set_autofocus_offset(self.initial_offset)
 
     def loadFocusScoreData(self):
         score_ch=self.mp.cfg['ChannelSettings']['focusscore_chan']
@@ -355,41 +436,47 @@ class RetakeView(QtGui.QWidget):
             df = df.append(dft,ignore_index=True)
         
 
-        #frame_medians = df.groupby('frame_index')['score1_median'].median()
-        #frame_stds = df.groupby('frame_index')['score1_median'].std()
-        df['score1_norm']=df.groupby('frame_index')['score1_median'].transform(lambda x: (x - x.median())/x.std())
-        #for i,row in df.iterrows():
-        #    df.loc[i,'score1_norm'] = (row.score1_median - frame_medians[row.frame_index])/frame_stds[row.frame_index]
+        frame_medians = df.groupby('frame_index')['score1_median'].median()
+        frame_stds = df.groupby('frame_index')['score1_std'].median()
+
+        for i,row in df.iterrows():
+            df.loc[i,'score1_norm'] = (row.score1_median - frame_medians[row.frame_index])/frame_stds[row.frame_index]
         
         self.focus_df = df
-
-        cmap = pg.ColorMap(pos=np.linspace(start=-2,stop=2,num=255), color=viridis)
+        print self.focus_df.score1_norm
+        cmap = pg.ColorMap(pos=np.linspace(start=-.04,stop=.04,num=255), color=viridis)
         colors = cmap.map(df.score1_norm)
         brushes = [pg.mkBrush(c) for c in colors]
 
-        self.sp = pg.ScatterPlotItem()
+        self.sp = pg.ScatterPlotItem(size=150)
         self.sp.sigClicked.connect(self.selectPoint)
-        self.sp.setData(x=df.xpos, y=df.ypos, brush=brushes,data=df.to_dict('records'))
+        self.sp.setData(x=df.xpos, y=df.ypos, pxMode=False,brush=brushes,data=df.to_dict('records'))
+        self.currPosScatterPlot = pg.ScatterPlotItem()
+        self.currPointScatterPlot = pg.ScatterPlotItem()
+        self.updatePosition()
 
         self.dataplot.addItem(self.sp)
+        self.dataplot.addItem(self.currPointScatterPlot)
+        self.dataplot.addItem(self.currPosScatterPlot)
+
     def selectPoint(self,plot,points):
+        lastClicked = points
         if len(points)==1:
+            #for p in points:
+            #    p.setPen('r', width=2)
+            #self.lastClicked = points
             d=points[0].data()
             mode=self.clickMode_comboBox.currentText()
             if 'Review' in mode:
                 self.section_spinBox.setValue(d['slide_index'])
                 self.frame_spinBox.setValue(d['frame_index'])
             if 'Move' in mode:
-                self.doMove()
+                self.moveToFrame()
 
     def reviewFrame(self,evt=None):
         self.changeReviewData()
         self.changeLiveReview(isLive=False)
 
-    def moveToFrame(self,evt=None):
-        pos = self.mp.posList.slicePositions[self.section]
-        fpos = pos.frameList.slicePositions[self.frame]
-        self.mp.imgSrc.move_stage(fpos.x,fpos.y)
 
     def changeLiveReview(self,isLive=None):
         if isLive is None:
@@ -411,6 +498,11 @@ class RetakeView(QtGui.QWidget):
         data = tifffile.imread(tif_filepath)
         self.review_data = data
 
+        self.currPointScatterPlot.clear()
+        row = self.getDataRow()
+        d = {'pos': (row.xpos, row.ypos), 'symbol': 'o', 'pen': pg.mkPen('r', width=1)}
+        self.currPointScatterPlot.addPoints([d])
+
     def changeChannel(self,ch):
         self.ch = ch
         if self.isLive == False:
@@ -428,10 +520,12 @@ class RetakeView(QtGui.QWidget):
         self.hide()
  
     def loadLiveData(self,evt=None):
-        self.img.setImage(self.live_data)
+        self.img.setImage(np.rot90(self.live_data,k=3))
+        self.img.setLevels((0, self.mp.imgSrc.get_max_pixel_value()))
         
     def loadReviewData(self,evt=None):
-        self.img.setImage(self.review_data)
+        self.img.setImage(np.rot90(self.review_data,k=3))
+        self.img.setLevels((0, self.mp.imgSrc.get_max_pixel_value()))
 
     def doSnap(self,evt=None):
         self.mp.imgSrc.set_channel(self.ch)
@@ -439,5 +533,23 @@ class RetakeView(QtGui.QWidget):
         data=self.mp.imgSrc.snap_image()
         self.live_data = data
         self.changeLiveReview(isLive=True)
-    def doMove(self,evt=None):
-        print 'doing move, need to implement'
+        self.AFCoffset_doubleSpinBox.setValue(self.mp.imgSrc.get_autofocus_offset())
+
+    def updatePosition(self):
+        self.currPosScatterPlot.clear()
+        x,y = self.mp.imgSrc.get_xy()
+        d={'pos':(x,y),'symbol':'+','pen':pg.mkPen('m',width=2)}
+        self.currPosScatterPlot.addPoints([d])
+
+    def getDataRow(self):
+        issection = self.focus_df['slide_index'] == self.section
+        isframe = self.focus_df['frame_index'] == self.frame
+        goodpos = self.focus_df[issection & isframe]
+        for i, row in goodpos.iterrows():
+            return row
+
+    def moveToFrame(self,evt=None):
+
+        row = self.getDataRow()
+        self.mp.imgSrc.set_xy(row.xpos,row.ypos)
+        self.updatePosition()

@@ -197,7 +197,7 @@ class imageSource():
         return False,False
     def get_xy(self):
         #NEED TO IMPLEMENT IF NOT MICROMANAGER
-        xystg=self.mmc.getXYStageDevice()
+
         
         flipx,flipy = self.get_xy_flip()
 
