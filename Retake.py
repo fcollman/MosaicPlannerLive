@@ -313,15 +313,26 @@ class RetakeView(QtGui.QWidget):
         uic.loadUi(filename,self)
 
         #add a pyqtgraph image to graphics view
-        self.img = pg.ImageItem()
-        self.imageplot = self.image_graphicsLayoutWidget.addPlot()
-        self.imageplot.setAspectLocked(True,ratio=1)
-        self.imageplot.addItem(self.img)
-        self.hist = pg.HistogramLUTItem()
-        self.hist.setImageItem(self.img)
-        self.image_graphicsLayoutWidget.addItem(self.hist,0,1)
-        self.img.setLevels(0,self.mp.imgSrc.get_max_pixel_value())
-        self.hist.setLevels(0,self.mp.imgSrc.get_max_pixel_value())
+        self.img1 = pg.ImageItem()
+        self.imageplot1 = self.image1_graphicsLayoutWidget.addPlot()
+        self.imageplot1.setAspectLocked(True,ratio=1)
+        self.imageplot1.addItem(self.img1)
+        self.hist1 = pg.HistogramLUTItem()
+        self.hist1.setImageItem(self.img1)
+        self.image1_graphicsLayoutWidget.addItem(self.hist1,0,1)
+        self.img1.setLevels(0,self.mp.imgSrc.get_max_pixel_value())
+        self.hist1.setLevels(0,self.mp.imgSrc.get_max_pixel_value())
+
+        #add a pyqtgraph image to graphics view
+        self.img2 = pg.ImageItem()
+        self.imageplot2 = self.image2_graphicsLayoutWidget.addPlot()
+        self.imageplot2.setAspectLocked(True,ratio=1)
+        self.imageplot2.addItem(self.img2)
+        self.hist2 = pg.HistogramLUTItem()
+        self.hist2.setImageItem(self.img2)
+        self.image2_graphicsLayoutWidget.addItem(self.hist2,0,1)
+        self.img2.setLevels(0,self.mp.imgSrc.get_max_pixel_value())
+        self.hist2.setLevels(0,self.mp.imgSrc.get_max_pixel_value())
 
         self.dataplot = self.focusScore_graphicsLayoutWidget.addPlot()
         self.dataplot.setAspectLocked(True, ratio=1)
@@ -350,12 +361,17 @@ class RetakeView(QtGui.QWidget):
         
         self.review_pushButton.clicked.connect(self.reviewFrame)
         self.retake_pushButton.clicked.connect(self.retakeFrame)
-
+        self.hold_pushButton.clicked.connect(self.holdHere)
         self.softwareaf_pushButton.clicked.connect(self.mp.on_software_af_tool)
         self.snap_pushButton.clicked.connect(self.doSnap)
         self.livereview_pushButton.clicked[bool].connect(self.changeLiveReview)
         
         self.exit_pushButton.clicked.connect(self.exitClicked)
+
+    def holdHere(self,evt=None):
+        self.mp.imgSrc.set_autofocus_offset(-1)
+        self.mp.imgSrc.set_hardware_autofocus_state(True)
+
     def retakeFrame(self,evt=None):
         currx, curry = self.mp.imgSrc.get_xy()
         currz = self.mp.imgSrc.get_z()
@@ -399,6 +415,8 @@ class RetakeView(QtGui.QWidget):
         self.mp.saveProcess.join()
         if self.mp.cfg['MosaicPlanner']['hardware_trigger']:
             self.mp.imgSrc.stop_hardware_triggering()
+        d = {'pos': (currx, curry), 'symbol': '+','pen': pg.mkPen('w', width=5)}
+        self.retakesScatterPlot.addPoints([d])
 
 
     def archiveFrame(self):
@@ -463,11 +481,13 @@ class RetakeView(QtGui.QWidget):
         self.sp.setData(x=df.xpos, y=df.ypos, pxMode=False,brush=brushes,data=df.to_dict('records'))
         self.currPosScatterPlot = pg.ScatterPlotItem()
         self.currPointScatterPlot = pg.ScatterPlotItem()
-
+        self.retakesScatterPlot = pg.ScatterPlotItem(size=150,pxMode=False)
 
         self.dataplot.addItem(self.sp)
+        self.dataplot.addItem(self.retakesScatterPlot)
         self.dataplot.addItem(self.currPointScatterPlot)
         self.dataplot.addItem(self.currPosScatterPlot)
+
         self.updatePosition()
 
     def selectPoint(self,plot,points):
@@ -531,12 +551,15 @@ class RetakeView(QtGui.QWidget):
         self.hide()
  
     def loadLiveData(self,evt=None):
-        self.img.setImage(np.rot90(self.live_data,k=3))
-        self.img.setLevels((0, self.mp.imgSrc.get_max_pixel_value()))
-        
+        self.img1.setImage(np.rot90(self.live_data,k=3))
+        self.img1.setLevels((0, self.mp.imgSrc.get_max_pixel_value()))
+        self.img2.setImage(np.rot90(self.live_data,k=3))
+        self.img2.setLevels((0, self.mp.imgSrc.get_max_pixel_value()))
     def loadReviewData(self,evt=None):
-        self.img.setImage(np.rot90(self.review_data,k=3))
-        self.img.setLevels((0, self.mp.imgSrc.get_max_pixel_value()))
+        self.img1.setImage(np.rot90(self.review_data,k=3))
+        self.img1.setLevels((0, self.mp.imgSrc.get_max_pixel_value()))
+        self.img2.setImage(np.rot90(self.review_data,k=3))
+        self.img2.setLevels((0, self.mp.imgSrc.get_max_pixel_value()))
 
     def doSnap(self,evt=None):
         self.mp.imgSrc.set_channel(self.ch)

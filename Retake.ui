@@ -24,6 +24,9 @@
     <layout class="QHBoxLayout" name="horizontalLayout_5" stretch="100,10">
      <item>
       <layout class="QVBoxLayout" name="verticalLayout_3" stretch="0,0,1">
+       <property name="sizeConstraint">
+        <enum>QLayout::SetFixedSize</enum>
+       </property>
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_7">
          <property name="sizeConstraint">
@@ -43,7 +46,7 @@
            <property name="maximumSize">
             <size>
              <width>100</width>
-             <height>100</height>
+             <height>50</height>
             </size>
            </property>
            <property name="text">
@@ -54,7 +57,7 @@
          <item>
           <widget class="QComboBox" name="clickMode_comboBox">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <sizepolicy hsizetype="Fixed" vsizetype="MinimumExpanding">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
@@ -95,7 +98,7 @@
        <item>
         <widget class="GraphicsLayoutWidget" name="focusScore_graphicsLayoutWidget">
          <property name="sizePolicy">
-          <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
+          <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
@@ -115,23 +118,46 @@
         </widget>
        </item>
        <item>
-        <widget class="GraphicsLayoutWidget" name="image_graphicsLayoutWidget">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
+        <layout class="QHBoxLayout" name="horizontalLayout_9">
+         <property name="leftMargin">
+          <number>10</number>
          </property>
-         <property name="frameShape">
-          <enum>QFrame::Box</enum>
+         <property name="topMargin">
+          <number>10</number>
          </property>
-         <property name="frameShadow">
-          <enum>QFrame::Plain</enum>
-         </property>
-         <property name="lineWidth">
-          <number>5</number>
-         </property>
-        </widget>
+         <item>
+          <widget class="GraphicsLayoutWidget" name="image2_graphicsLayoutWidget">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="frameShape">
+            <enum>QFrame::Box</enum>
+           </property>
+           <property name="frameShadow">
+            <enum>QFrame::Plain</enum>
+           </property>
+           <property name="lineWidth">
+            <number>5</number>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="GraphicsLayoutWidget" name="image1_graphicsLayoutWidget">
+           <property name="frameShape">
+            <enum>QFrame::Box</enum>
+           </property>
+           <property name="frameShadow">
+            <enum>QFrame::Plain</enum>
+           </property>
+           <property name="lineWidth">
+            <number>5</number>
+           </property>
+          </widget>
+         </item>
+        </layout>
        </item>
       </layout>
      </item>
@@ -141,6 +167,9 @@
         <layout class="QHBoxLayout" name="horizontalLayout">
          <item>
           <widget class="QDoubleSpinBox" name="AFCoffset_doubleSpinBox">
+           <property name="decimals">
+            <number>2</number>
+           </property>
            <property name="maximum">
             <double>999999.989999999990687</double>
            </property>
@@ -250,6 +279,13 @@
         <widget class="QPushButton" name="snap_pushButton">
          <property name="text">
           <string>Snap</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="hold_pushButton">
+         <property name="text">
+          <string>Hold</string>
          </property>
         </widget>
        </item>
