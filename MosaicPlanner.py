@@ -586,7 +586,8 @@ class MosaicPanel(FigureCanvas):
         stagexy = self.imgSrc.get_xy()
         wx.Yield()
         self.autofocus_loop(hold_focus,self.cfg['MosaicPlanner']['autofocus_wait'],self.cfg['MosaicPlanner']['autofocus_sleep'])
-        self.autofocus_loop(hold_focus,.4,self.cfg['MosaicPlanner']['autofocus_sleep'])
+        if self.cfg['MosaicPlanner']['do_second_autofocus_wait']:
+            self.autofocus_loop(hold_focus,self.cfg['MosaicPlanner']['second_autofocus_wait'],self.cfg['MosaicPlanner']['autofocus_sleep'])
 
         #print datetime.datetime.now().time()," starting multichannel acq"
         current_z = self.imgSrc.get_z()
