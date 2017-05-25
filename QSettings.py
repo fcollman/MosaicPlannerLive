@@ -1,6 +1,6 @@
 from PyQt4 import QtCore, QtGui, uic
 import os
-import MMCorePy
+
 
 
 class StageResetSettings:
@@ -235,14 +235,9 @@ class ChangeChannelSettings(wx.Dialog):
 
 if __name__ == '__main__':
     import sys
+    import MMCorePy
     app = QtGui.QApplication(sys.argv)
-    defaultMMpath = "C:\Users\Administrator\Documents"
-    configFile = QtGui.QFileDialog.getOpenFileName(
-        None, "pick a uManager cfg file", defaultMMpath, "*.cfg")
-    configFile = str(configFile.replace("/", "\\"))
 
-    mmc = MMCorePy.CMMCore()
-    mmc.loadSystemConfiguration(configFile)
     print "loaded configuration file"
     #settings = StageResetSettings()
     #resetSettings=ChangeStageResetSettings(mmc,settings)
@@ -261,6 +256,5 @@ if __name__ == '__main__':
     app.exec_()
     settings=resetSettings.getSettings()
     print(settings)
-    mmc.reset()
-    print "reset micromanager core"
+
     sys.exit()

@@ -53,6 +53,7 @@ from validate import Validator
 import cv2 #MultiRibbons
 from skimage.measure import block_reduce #MultiRibbons
 from Snap import SnapView
+from Retake import RetakeView
 from slacker import Slacker
 from SaveThread import file_save_process
 import scipy.optimize as opt #softwarea-autofocus
@@ -61,6 +62,8 @@ STOP_TOKEN = 'STOP!!!'
 DEFAULT_SETTINGS_FILE = 'MosaicPlannerSettings.default.cfg'
 SETTINGS_FILE = 'MosaicPlannerSettings.cfg'
 SETTINGS_MODEL_FILE = 'MosaicPlannerSettingsModel.cfg'
+import logging
+logging.getLogger('MosaicPlanner').addHandler(logging.NullHandler())
 
 class RemoteInterface(RemoteObject):
     def __init__(self, rep_port, parent):
@@ -451,6 +454,7 @@ class MosaicPanel(FigureCanvas):
         self.zstack_settings = ZstackSettings()
         self.zstack_settings.load_settings(config)
         self.snapView = None
+        self.retakeView = None
 
         #setup a blank position list
         self.posList=posList(self.subplot,mosaic_settings,self.camera_settings)
@@ -510,7 +514,8 @@ class MosaicPanel(FigureCanvas):
         print "handling close"
         #if not self.mosaicImage == None:
         #    self.mosaicImage.cursor_timer.cancel()
-        self.imgSrc.mmc.unloadAllDevices()
+        self.imgSrc.stopSequenceAcquisition()
+        self.imgSrc.shutdown()
 
     def on_load(self,rootPath):
         self.rootPath = rootPath
@@ -678,29 +683,8 @@ class MosaicPanel(FigureCanvas):
 
         do_stage_reset=self.cfg['StageResetSettings']['enableStageReset']
         if do_stage_reset:
-            z_label = self.cfg['StageResetSettings']['compensationStage']
-            piezo_label = self.cfg['StageResetSettings']['resetStage']
-            min_threshold = self.cfg['StageResetSettings']['minThreshold']
-            max_threshold = self.cfg['StageResetSettings']['maxThreshold']
-            reset_position = self.cfg['StageResetSettings']['resetPosition']
-            invert_compensation = self.cfg['StageResetSettings']['invertCompensation']
+            self.imgSrc.reset_piezo(self.cfg['StageResetSettings'])
 
-            piezo = self.imgSrc.mmc.getPosition(piezo_label)
-            if (piezo<min_threshold) or (piezo>max_threshold):
-                z = self.imgSrc.mmc.getPosition(z_label)
-                islocked = self.imgSrc.mmc.isContinuousFocusEnabled()
-
-                if islocked:
-                    self.imgSrc.mmc.enableContinuousFocus(False)
-
-                if invert_compensation:
-                    self.imgSrc.mmc.setPosition(z_label,z+(piezo-reset_position))
-                else:
-                    self.imgSrc.mmc.setPosition(z_label,z-(piezo-reset_position))
-                self.imgSrc.mmc.setPosition(piezo_label,reset_position)
-
-                if islocked:
-                    self.imgSrc.mmc.enableContinuousFocus(True)
 
     def summarize_stage_settings(self):
         do_stage_reset = self.cfg['StageResetSettings']['enableStageReset']
@@ -832,7 +816,7 @@ class MosaicPanel(FigureCanvas):
             if pos.activated:
                 if not goahead:
                     break
-                if not self.imgSrc.mmc.isContinuousFocusEnabled():
+                if not self.imgSrc.get_hardware_autofocus_state():
                     print "autofocus not enabled when moving between sections.. "
                     goahead=False
                     break
@@ -847,7 +831,7 @@ class MosaicPanel(FigureCanvas):
                         if not goahead:
                             print "breaking out!"
                             break
-                        if not self.imgSrc.mmc.isContinuousFocusEnabled():
+                        if not self.imgSrc.get_hardware_autofocus_state():
                             print "autofocus no longer enabled while moving between frames.. quiting"
                             goahead = False
                             break
@@ -969,7 +953,8 @@ class MosaicPanel(FigureCanvas):
 
 
         goahead = True
-        if not self.imgSrc.mmc.isContinuousFocusEnabled():
+
+        if not self.imgSrc.get_hardware_autofocus_state():
             self.slack_notify('HELP! lost autofocus on way to first position',notify=True)
             print 'HELP! lost autofocus on way to first position'
             goahead=False
@@ -982,7 +967,7 @@ class MosaicPanel(FigureCanvas):
             if pos.activated:
                 if not goahead:
                     break
-                if not self.imgSrc.mmc.isContinuousFocusEnabled():
+                if not self.imgSrc.get_hardware_autofocus_state():
                     self.slack_notify('HELP! lost autofocus between sections',notify=True)
                     goahead=False
                     break
@@ -1002,7 +987,7 @@ class MosaicPanel(FigureCanvas):
                         if not goahead:
                             print "breaking out!"
                             break
-                        if not self.imgSrc.mmc.isContinuousFocusEnabled():
+                        if not self.imgSrc.get_hardware_autofocus_state():
                             self.slack_notify('HELP! lost autofocus between frames',notify=True)
                             print "autofocus no longer enabled while moving between frames.. quiting"
                             goahead = False
@@ -1107,7 +1092,7 @@ class MosaicPanel(FigureCanvas):
         dlg.Destroy()
 
     def edit_Directory_settings(self,event="none"):
-        dlg = ChangeDirectorySettings(None,-1,title = "Enter Sample Information",style = wx.OK,settings=self.directory_settings)
+        dlg = ChangeDirectorySettings(None,-1,title = u"Enter Sample Information",style = wx.OK,settings=self.directory_settings)
         ret = dlg.ShowModal()
         if ret == wx.ID_OK:
             self.directory_settings = dlg.get_settings()
@@ -1135,9 +1120,13 @@ class MosaicPanel(FigureCanvas):
         win = MMPropertyBrowser(self.imgSrc.mmc)
         win.show()
 
+    def launch_retake(self,event=None):
+        if self.retakeView is None:
+            self.retakeView = RetakeView(self)
+        self.retakeView.show()
+
     def launch_snap(self, event=None):
         if self.snapView is None:
-            self.imgSrc.set_binning(1)
             print 'Binning is', self.imgSrc.get_binning()
             self.snapView = SnapView(self.imgSrc,exposure_times=self.channel_settings.exposure_times)
             self.snapView.changedExposureTimes.connect(self.getSnapExposures)
@@ -1666,7 +1655,7 @@ class MosaicPanel(FigureCanvas):
                     if pos.activated:
                         if not goahead:
                             break
-                        if not self.imgSrc.mmc.isContinuousFocusEnabled():
+                        if not self.imgSrc.get_hardware_autofocus_state():
                             self.slack_notify('HELP! lost autofocus between frames',notify=True)
                             print "autofocus not enabled when moving between sections.. "
                             goahead=False
@@ -1685,7 +1674,7 @@ class MosaicPanel(FigureCanvas):
                                 if not goahead:
                                     print "breaking out!"
                                     break
-                                if not self.imgSrc.mmc.isContinuousFocusEnabled():
+                                if not self.imgSrc.get_hardware_autofocus_state():
                                     self.slack_notify('HELP! lost autofocus between frames',notify=True)
                                     print "autofocus no longer enabled while moving between frames.. quiting"
                                     goahead = False
@@ -1826,6 +1815,7 @@ class ZVISelectFrame(wx.Frame):
     ID_EDIT_ZSTACK = wx.NewId()
     ID_ASIAUTOFOCUS = wx.NewId()
     ID_SNAPCONTROL = wx.NewId()
+    ID_RETAKECONTROL = wx.NewId()
 
     # ID_Alfred = wx.NewId()
 
@@ -1918,6 +1908,7 @@ class ZVISelectFrame(wx.Frame):
         self.use_focus_correction = Imaging_Menu.Append(self.ID_USE_FOCUS_CORRECTION,'Use Focus Correction?','Use Focus Correction For Mapping',kind=wx.ITEM_CHECK)
         self.launch_ASIControl = Imaging_Menu.Append(self.ID_ASIAUTOFOCUS, 'Allen ASI AutoFocus Control', kind= wx.ITEM_NORMAL)
         self.launch_Snap = Imaging_Menu.Append(self.ID_SNAPCONTROL,'Snap single channel images',kind = wx.ITEM_NORMAL)
+        self.launch_Retake = Imaging_Menu.Append(self.ID_RETAKECONTROL,'Retake dialog',kind = wx.ITEM_NORMAL)
 
         self.Bind(wx.EVT_MENU, self.toggle_use_focus_correction,id=self.ID_USE_FOCUS_CORRECTION)
         self.Bind(wx.EVT_MENU, self.mosaicCanvas.edit_Zstack_settings,id=self.ID_EDIT_ZSTACK)
@@ -1929,7 +1920,7 @@ class ZVISelectFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.mosaicCanvas.edit_focus_correction_plane, id = self.ID_EDIT_FOCUS_CORRECTION)
         self.Bind(wx.EVT_MENU, self.mosaicCanvas.launch_ASI,id = self.ID_ASIAUTOFOCUS)
         self.Bind(wx.EVT_MENU, self.mosaicCanvas.launch_snap,id = self.ID_SNAPCONTROL)
-
+        self.Bind(wx.EVT_MENU, self.mosaicCanvas.launch_retake,id = self.ID_RETAKECONTROL)
 
         Imaging_Menu.Check(self.ID_USE_FOCUS_CORRECTION,self.cfg['MosaicPlanner']['use_focus_correction'])
 
