@@ -551,23 +551,13 @@ class MosaicPanel(FigureCanvas):
                 f.write(self.channel_settings.prot_names[ch] + "\t" + "%f\t%s\n" % (self.channel_settings.exposure_times[ch],ch))
 
 
-    def multiDacq(self,success,outdir,chrome_correction,triggerflag,x,y,current_z,slice_index,frame_index=0,hold_focus = False):
-
-        #print datetime.datetime.now().time()," starting multiDAcq, autofocus on"
-        if not hold_focus:
-            if self.imgSrc.has_hardware_autofocus():
-                self.imgSrc.set_hardware_autofocus_state(True)
-        #print datetime.datetime.now().time()," starting stage move"
-        self.imgSrc.move_stage(x,y)
-        stagexy = self.imgSrc.get_xy()
-        wx.Yield()
+    def autofocus_loop(self,hold_focus,wait,sleep):
         attempts=0
-        #print datetime.datetime.now().time()," starting autofocus"
         if self.imgSrc.has_hardware_autofocus():
             #wait till autofocus settles
-            time.sleep(self.cfg['MosaicPlanner']['autofocus_wait'])
+            time.sleep(wait)
             while not self.imgSrc.is_hardware_autofocus_done():
-                time.sleep(self.cfg['MosaicPlanner']['autofocus_sleep'])
+                time.sleep(sleep)
                 attempts+=1
                 if attempts>50:
                     print "not auto-focusing correctly.. giving up after 10 seconds"
@@ -579,6 +569,19 @@ class MosaicPanel(FigureCanvas):
         else:
             score=self.imgSrc.image_based_autofocus(chan=self.channel_settings.map_chan)
             print score
+
+    def multiDacq(self,success,outdir,chrome_correction,triggerflag,x,y,current_z,slice_index,frame_index=0,hold_focus = False):
+
+        #print datetime.datetime.now().time()," starting multiDAcq, autofocus on"
+        if not hold_focus:
+            if self.imgSrc.has_hardware_autofocus():
+                self.imgSrc.set_hardware_autofocus_state(True)
+        #print datetime.datetime.now().time()," starting stage move"
+        self.imgSrc.move_stage(x,y)
+        stagexy = self.imgSrc.get_xy()
+        wx.Yield()
+        self.autofocus_loop(hold_focus,self.cfg['MosaicPlanner']['autofocus_wait'],self.cfg['MosaicPlanner']['autofocus_sleep'])
+        self.autofocus_loop(hold_focus,.4,self.cfg['MosaicPlanner']['autofocus_sleep'])
 
         #print datetime.datetime.now().time()," starting multichannel acq"
         current_z = self.imgSrc.get_z()
@@ -1763,34 +1766,29 @@ class MosaicPanel(FigureCanvas):
         print "calculating focus"
         print "offsets: ", offsets
         #using Laplacian
-        fstack = None
-        sigma = 50
+        score_med = np.zeros(zstack_number)
+        score_std = np.zeros(zstack_number)
         for i in range(len(zplanes_to_visit)):
             score = cv2.Laplacian(stack[:,:,i],cv2.CV_16U, ksize = 5)
-            score = block_reduce(score,(sigma,sigma),np.sum,cval=np.mean(score))
-            if fstack is None:
-                fstack = np.zeros((score.shape[0],score.shape[1],stack.shape[2]))
-            fstack[:,:,i]=score
-        var = np.std(fstack)
-        zscore = (fstack-np.median(fstack))/var
-        zscore1 = np.median(np.median(zscore,0),0)#added for testing
+            score_med[i] = np.median(score)
+            score_std[i] = np.std(score)
+        zscore = (score_med - np.median(score_med))/np.median(score_std)
         select = np.ones(len(offsets))
         for i in range(len(offsets)-1):
             if offsets[i]>=offsets[i+1] or offsets[i]==0:
                 select[i] = 0
         idx = np.nonzero(select)
-        zscore1 = zscore1[idx]
+        zscore = zscore[idx]
         offsets1 = np.array(offsets)
         offsets1 = offsets1[idx]
-        par_init = np.max(zscore1), np.min(zscore1), offsets1[np.argmax(zscore1)],\
-                   offsets1[np.argmax(zscore1)+1]-offsets1[np.argmax(zscore1)-1]
+        par_init = np.max(zscore)-np.min(zscore), np.min(zscore), offsets1[np.argmax(zscore)],\
+                   offsets1[int((zstack_number-1)/2)+1]-offsets1[int((zstack_number-1)/2)-1]
         def gauss_1d(x, amp, offset, x0, sigma_x):
             z = offset + amp*np.exp(-((x-x0)/sigma_x)**2)
             return z
-        print "zscore1", zscore1 #added for testing
-        popt, pcov = opt.curve_fit(gauss_1d, offsets1, zscore1, p0=par_init)
+        print "zscore", zscore
+        popt, pcov = opt.curve_fit(gauss_1d, offsets1, zscore, p0=par_init)
         best_offset = popt[2]
-
         print "best_offset: ", best_offset
         self.imgSrc.set_autofocus_offset(best_offset) #reset autofocus offset
         time.sleep(2*self.cfg['MosaicPlanner']['autofocus_wait'])
