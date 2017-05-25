@@ -261,10 +261,10 @@ class VideoView(QtGui.QWidget):
     def updateData(self):
     
        
-        data =  self.imgSrc.get_image()
-        data = np.rot90(data, k=3)
-
-        self.img.setImage(data,autoLevels=True)
+        data =  self.imgSrc.get_image(wait=False)
+        if data is not None:
+            data = np.rot90(data, k=3)
+            self.img.setImage(data,autoLevels=True)
 
         if not self.ended:
             self.timer = QtCore.QTimer.singleShot(self.imgSrc.get_exposure(), self.updateData)

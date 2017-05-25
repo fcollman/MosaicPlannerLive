@@ -226,7 +226,7 @@ class imageSource():
 
     def make_random_image(self):
         return np.random.random(self.get_sensor_size())
-    def get_image(self):
+    def get_image(self,wait=True):
         return self.make_random_image()
 
     def get_frame_size_um(self):

@@ -14,7 +14,7 @@ from imageSourceMM import imageSource
 #         self.gradient.setOrientation('bottom')
 
 class SnapView(QtGui.QWidget):
-    changedExposureTimes = QtCore.Signal()
+    changedExposureTimes = QtCore.pyqtSignal()
 
     def __init__(self,imgSrc,exposure_times=dict([]),channelGroup="Channels"):
         super(SnapView,self).__init__()

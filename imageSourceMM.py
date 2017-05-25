@@ -383,12 +383,17 @@ class imageSource():
         #NEED TO IMPLEMENT IF NOT MICROMANAGER
         return self.mmc.getPixelSizeUm()
 
-    def get_image(self):
-        while self.mmc.getRemainingImageCount()==0:
-            time.sleep(.01)
-        data = self.mmc.popNextImage()
-        return self.flip_image(data)
-
+    def get_image(self,wait=True):
+        rem = self.mmc.getRemainingImageCount()
+        if wait:
+            while (rem ==0):
+                time.sleep(.01)
+                rem = self.mmc.getRemainingImageCount()
+        if rem>0:
+            data = self.mmc.popNextImage()
+            return self.flip_image(data)
+        else:
+            return None
 
     def get_frame_size_um(self):
         (sensor_width,sensor_height)=self.get_sensor_size()

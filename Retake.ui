@@ -140,7 +140,11 @@
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout">
          <item>
-          <widget class="QDoubleSpinBox" name="AFCoffset_doubleSpinBox"/>
+          <widget class="QDoubleSpinBox" name="AFCoffset_doubleSpinBox">
+           <property name="maximum">
+            <double>999999.989999999990687</double>
+           </property>
+          </widget>
          </item>
          <item>
           <widget class="QLabel" name="label">
@@ -314,7 +318,7 @@
             <height>371</height>
            </rect>
           </property>
-          <layout class="QVBoxLayout" name="channel_verticalLayout" stretch="">
+          <layout class="QVBoxLayout" name="channel_verticalLayout">
            <property name="sizeConstraint">
             <enum>QLayout::SetDefaultConstraint</enum>
            </property>

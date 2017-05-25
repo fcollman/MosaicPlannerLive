@@ -283,6 +283,7 @@ class RetakeView(QtGui.QWidget):
         super(RetakeView,self).__init__()
 
         self.mp = mp
+        self.mp.imgSrc.set_binning(1)
         self.initial_offset = self.mp.imgSrc.get_autofocus_offset()
         self.initUI()
         #setup dummy variables of blanks for live and review data
@@ -358,9 +359,9 @@ class RetakeView(QtGui.QWidget):
     def retakeFrame(self,evt=None):
         currx, curry = self.mp.imgSrc.get_xy()
         currz = self.mp.imgSrc.get_z()
-        row = self.getDataRow()
-        assert(np.abs(row.xpos-currx)<2)
-        assert(np.abs(row.ypos-curry)<2)
+        x,y = self.getFramePos()
+        assert(np.abs(x-currx)<2)
+        assert(np.abs(y-curry)<2)
         self.archiveFrame()
 
         self.mp.imgSrc.set_binning(1)
@@ -388,7 +389,7 @@ class RetakeView(QtGui.QWidget):
                                               STOP_TOKEN,
                                               metadata_dictionary,
                                               ssh_opts))
-        self.saveProcess.start()
+        self.mp.saveProcess.start()
 
         self.mp.multiDacq(success, self.outdir, chrom_correction,
                           False, currx, curry, currz, self.section,
@@ -402,24 +403,32 @@ class RetakeView(QtGui.QWidget):
 
     def archiveFrame(self):
         for ch in self.mp.channel_settings.channels:
-            prot_name = self.mp.channel_settings.prot_names[self.ch]
-            ch_dir = os.path.join(self.outdir, prot_name)
-            out_ch_dir = os.path.join(self.archiveDir,prot_name)
-            if not os.path.isdir(out_ch_dir):
-                os.makedirs(out_ch_dir)
+           if self.mp.channel_settings.usechannels[ch]:
+                prot_name = self.mp.channel_settings.prot_names[ch]
+                ch_dir = os.path.join(self.outdir, prot_name)
+                out_ch_dir = os.path.join(self.archiveDir,prot_name)
+                if not os.path.isdir(out_ch_dir):
+                    os.makedirs(out_ch_dir)
 
-            tif_file = prot_name + "_S%04d_F%04d_Z%02d.tif" % (self.section, self.frame, 0)
-            metadata_file =  prot_name + "_S%04d_F%04d_Z%02d_metadata.txt"%(self.section, self.frame, 0)
-            focus_file = prot_name + "_S%04d_F%04d_Z%02d_focus.csv" %(self.section, self.frame, 0)
+                tif_file = prot_name + "_S%04d_F%04d_Z%02d.tif" % (self.section, self.frame, 0)
+                metadata_file =  prot_name + "_S%04d_F%04d_Z%02d_metadata.txt"%(self.section, self.frame, 0)
+                focus_file = prot_name + "_S%04d_F%04d_Z%02d_focus.csv" %(self.section, self.frame, 0)
 
-            if not os.path.exists(os.path.join(out_ch_dir,tif_file)):
-                shutil.move(os.path.join(ch_dir,tif_file),os.path.join(out_ch_dir,tif_file))
-                shutil.move(os.path.join(ch_dir,metadata_file),os.path.join(out_ch_dir,metadata_file))
-                shutil.move(os.path.join(ch_dir,focus_file),os.path.join(out_ch_dir,focus_file))
-            else:
-                os.remove(os.path.join(ch_dir, tif_file))
-                os.remove(os.path.join(ch_dir, metadata_file))
-                os.remove(os.path.join(ch_dir, focus_file))
+                if not os.path.exists(os.path.join(out_ch_dir,tif_file)):
+                    shutil.move(os.path.join(ch_dir,tif_file),os.path.join(out_ch_dir,tif_file))
+                    shutil.move(os.path.join(ch_dir,metadata_file),os.path.join(out_ch_dir,metadata_file))
+                    if os.path.exists(os.path.join(out_ch_dir,focus_file)):
+                        shutil.move(os.path.join(ch_dir,focus_file),os.path.join(out_ch_dir,focus_file))
+                else:
+
+                    try:
+                        os.remove(os.path.join(ch_dir, tif_file))
+                        os.remove(os.path.join(ch_dir, metadata_file))
+                        if os.path.exists(os.path.join(out_ch_dir,focus_file)):
+                            os.remove(os.path.join(ch_dir, focus_file))
+                    except:
+                        print "no data to remove"
+                        pass
 
     def resetOffset(self,evt=None):
         self.AFCoffset_doubleSpinBox.setValue(self.initial_offset)
@@ -445,7 +454,7 @@ class RetakeView(QtGui.QWidget):
         
         self.focus_df = df
         print self.focus_df.score1_norm
-        cmap = pg.ColorMap(pos=np.linspace(start=-.04,stop=.04,num=255), color=viridis)
+        cmap = pg.ColorMap(pos=np.linspace(start=-.04,stop=.04,num=256), color=viridis)
         colors = cmap.map(df.score1_norm)
         brushes = [pg.mkBrush(c) for c in colors]
 
@@ -454,11 +463,12 @@ class RetakeView(QtGui.QWidget):
         self.sp.setData(x=df.xpos, y=df.ypos, pxMode=False,brush=brushes,data=df.to_dict('records'))
         self.currPosScatterPlot = pg.ScatterPlotItem()
         self.currPointScatterPlot = pg.ScatterPlotItem()
-        self.updatePosition()
+
 
         self.dataplot.addItem(self.sp)
         self.dataplot.addItem(self.currPointScatterPlot)
         self.dataplot.addItem(self.currPosScatterPlot)
+        self.updatePosition()
 
     def selectPoint(self,plot,points):
         lastClicked = points
@@ -500,8 +510,8 @@ class RetakeView(QtGui.QWidget):
         self.review_data = data
 
         self.currPointScatterPlot.clear()
-        row = self.getDataRow()
-        d = {'pos': (row.xpos, row.ypos), 'symbol': 'o', 'pen': pg.mkPen('r', width=1)}
+        x,y = self.getFramePos()
+        d = {'pos': (x, y), 'symbol': 'o', 'pen': pg.mkPen('r', width=1)}
         self.currPointScatterPlot.addPoints([d])
 
     def changeChannel(self,ch):
@@ -542,15 +552,17 @@ class RetakeView(QtGui.QWidget):
         d={'pos':(x,y),'symbol':'+','pen':pg.mkPen('m',width=2)}
         self.currPosScatterPlot.addPoints([d])
 
-    def getDataRow(self):
-        issection = self.focus_df['slide_index'] == self.section
-        isframe = self.focus_df['frame_index'] == self.frame
-        goodpos = self.focus_df[issection & isframe]
-        for i, row in goodpos.iterrows():
-            return row
+    def getFramePos(self):
+        pos=self.mp.posList.slicePositions[self.section]
+        frame=pos.frameList.slicePositions[self.frame]
+        return (frame.x,frame.y)
+        # issection = self.focus_df['slide_index'] == self.section
+        # isframe = self.focus_df['frame_index'] == self.frame
+        # goodpos = self.focus_df[issection & isframe]
+        # for i, row in goodpos.iterrows():
+        #     return row
 
     def moveToFrame(self,evt=None):
-
-        row = self.getDataRow()
-        self.mp.imgSrc.set_xy(row.xpos,row.ypos)
+        x,y = self.getFramePos()
+        self.mp.imgSrc.set_xy(x,y)
         self.updatePosition()

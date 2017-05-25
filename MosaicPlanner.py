@@ -62,6 +62,8 @@ STOP_TOKEN = 'STOP!!!'
 DEFAULT_SETTINGS_FILE = 'MosaicPlannerSettings.default.cfg'
 SETTINGS_FILE = 'MosaicPlannerSettings.cfg'
 SETTINGS_MODEL_FILE = 'MosaicPlannerSettingsModel.cfg'
+import logging
+logging.getLogger('MosaicPlanner').addHandler(logging.NullHandler())
 
 class RemoteInterface(RemoteObject):
     def __init__(self, rep_port, parent):
@@ -512,6 +514,7 @@ class MosaicPanel(FigureCanvas):
         print "handling close"
         #if not self.mosaicImage == None:
         #    self.mosaicImage.cursor_timer.cancel()
+        self.imgSrc.stopSequenceAcquisition()
         self.imgSrc.shutdown()
 
     def on_load(self,rootPath):
