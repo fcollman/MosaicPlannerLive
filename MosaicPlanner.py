@@ -764,7 +764,7 @@ class MosaicPanel(FigureCanvas):
         cfg = self.cfg
         path = directory_settings.create_directory(cfg,kind = 'data')
         if path is not None:
-            dlg=wx.DirDialog(self,message="Pick output directory",defaultPath=path)
+            dlg=wx.DirDialog(self, message="Pick output directory", defaultPath=path)
             button_pressed = dlg.ShowModal()
             if button_pressed == wx.ID_CANCEL:
                 wx.MessageBox("You didn't enter a save directory... \n Aborting acquisition")
@@ -784,13 +784,13 @@ class MosaicPanel(FigureCanvas):
                     os.makedirs(thedir)
 
 
-    def show_summary_dialog(self):
-        binning=self.imgSrc.get_binning()
-        caption = "about to capture %d sections, binning is %dx%d, numchannel is %d"%(len(self.posList.slicePositions),binning,binning,numchan)
-        dlg = wx.MessageDialog(self,message=caption, style = wx.OK|wx.CANCEL)
-        button_pressed = dlg.ShowModal()
-        if button_pressed == wx.ID_CANCEL:
-            return False
+    # def show_summary_dialog(self):
+    #     binning=self.imgSrc.get_binning()
+    #     caption = "about to capture %d sections, binning is %dx%d, numchannel is %d"%(len(self.posList.slicePositions),binning,binning,numchan)
+    #     dlg = wx.MessageDialog(self,message=caption, style = wx.OK|wx.CANCEL)
+    #     button_pressed = dlg.ShowModal()
+    #     if button_pressed == wx.ID_CANCEL:
+    #         return False
 
     def execute_imaging(self,pos_list,numFrames,numSections,channel_settings,chrome_correction,sample_information,mosaic_settings,zstack_settings,acquisition_settings,
                         stage_reset_settings,autofocus_settings):
