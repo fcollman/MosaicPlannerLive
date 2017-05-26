@@ -12,7 +12,7 @@ def file_save_process(queue,message_queue, metadata_dictionary,ssh_opts):
 
     while True:
         token = queue.get()
-        if token == stop_token:
+        if token == STOP_TOKEN:
             return
         else:
             try:
