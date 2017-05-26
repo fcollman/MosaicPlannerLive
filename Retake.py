@@ -433,6 +433,7 @@ class RetakeView(QtGui.QWidget):
                               frame, hold_focus=True)
             d = {'pos': (x, y), 'symbol': '+', 'pen': pg.mkPen('w', width=5)}
             self.retakesScatterPlot.addPoints([d])
+        self.teardownAcq()
 
     def retakeFrame(self,evt=None):
         currx, curry = self.mp.imgSrc.get_xy()
@@ -455,6 +456,8 @@ class RetakeView(QtGui.QWidget):
             section = self.section
         if frame is None:
             frame = self.frame
+        section=int(section)
+        frame=int(frame)
         for ch in self.mp.channel_settings.channels:
            if self.mp.channel_settings.usechannels[ch]:
                 prot_name = self.mp.channel_settings.prot_names[ch]
@@ -639,6 +642,8 @@ class RetakeView(QtGui.QWidget):
             section = self.section
         if frame is None:
             frame = self.frame
+        section=int(section)
+        frame=int(frame)
         pos=self.mp.posList.slicePositions[section]
         frame=pos.frameList.slicePositions[frame]
         return (frame.x,frame.y)
