@@ -58,7 +58,7 @@ from slacker import Slacker
 from SaveThread import file_save_process
 import scipy.optimize as opt #softwarea-autofocus
 
-STOP_TOKEN = 'STOP!!!'
+from Tokens import STOP_TOKEN,BUBBLE_TOKEN
 DEFAULT_SETTINGS_FILE = 'MosaicPlannerSettings.default.cfg'
 SETTINGS_FILE = 'MosaicPlannerSettings.cfg'
 SETTINGS_MODEL_FILE = 'MosaicPlannerSettingsModel.cfg'
@@ -934,7 +934,7 @@ class MosaicPanel(FigureCanvas):
         }
         ssh_opts = dict(self.cfg['SSH'])
         ssh_opts['mount_point']=self.lookup_mountpoint(outdir)
-        self.saveProcess =  mp.Process(target=file_save_process,args=(self.dataQueue, self.messageQueue,STOP_TOKEN, metadata_dictionary, ssh_opts))
+        self.saveProcess =  mp.Process(target=file_save_process,args=(self.dataQueue, self.messageQueue, metadata_dictionary, ssh_opts))
         self.saveProcess.start()
 
 
@@ -998,7 +998,7 @@ class MosaicPanel(FigureCanvas):
                             self.slack_notify('HELP! save process failed: %s'%message)
                             if (token == STOP_TOKEN):
                                 goahead = False
-                            break
+                                break
                         if pos.frameList.slicePositions[j].activated:
                             self.multiDacq(success,outdir,chrom_correction,triggerflag,fpos.x,fpos.y,current_z,i,j,hold_focus)
                         else:
@@ -1630,7 +1630,7 @@ class MosaicPanel(FigureCanvas):
                 }
                 ssh_opts = dict(self.cfg['SSH'])
                 ssh_opts['mount_point']=self.lookup_mountpoint(outdirlist[rib])
-                self.saveProcess =  mp.Process(target=file_save_process,args=(self.dataQueue, STOP_TOKEN, metadata_dictionary, ssh_opts))
+                self.saveProcess =  mp.Process(target=file_save_process,args=(self.dataQueue, metadata_dictionary, ssh_opts))
                 self.saveProcess.start()
 
                 numFrames,numSections = self.setup_progress_bar()

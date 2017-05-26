@@ -7,7 +7,8 @@ import cv2
 import numpy as np
 import sys
 import traceback
-def file_save_process(queue,message_queue,stop_token, metadata_dictionary,ssh_opts):
+from Tokens import STOP_TOKEN,BUBBLE_TOKEN
+def file_save_process(queue,message_queue, metadata_dictionary,ssh_opts):
 
     while True:
         token = queue.get()
@@ -24,7 +25,7 @@ def file_save_process(queue,message_queue,stop_token, metadata_dictionary,ssh_op
                     focus_filepath = os.path.join(path, prot_name + "_S%04d_F%04d_Z%02d_focus.csv"%(slice_index, frame_index, z_index))
                     write_focus_score(focus_filepath, data,ch,x,y,slice_index,frame_index,prot_name)
             except:
-                message_queue.put((stop_token,traceback.print_exc()))
+                message_queue.put((STOP_TOKEN,traceback.print_exc()))
 
 
 def write_focus_score(filename, data, ch,xpos,ypos,slide_index,frame_index,prot_name):
