@@ -449,7 +449,7 @@ class RetakeView(QtGui.QWidget):
         self.retakesScatterPlot.addPoints([d])
 
         self.teardownAcq()
-        self.loadReviewData()
+        self.reviewFrame()
     def archiveFrame(self,section=None,frame=None):
         if section is None:
             section = self.section
