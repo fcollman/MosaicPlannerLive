@@ -470,14 +470,14 @@ class RetakeView(QtGui.QWidget):
                 if not os.path.exists(os.path.join(out_ch_dir,tif_file)):
                     shutil.move(os.path.join(ch_dir,tif_file),os.path.join(out_ch_dir,tif_file))
                     shutil.move(os.path.join(ch_dir,metadata_file),os.path.join(out_ch_dir,metadata_file))
-                    if os.path.exists(os.path.join(out_ch_dir,focus_file)):
+                    if os.path.exists(os.path.join(ch_dir,focus_file)):
                         shutil.move(os.path.join(ch_dir,focus_file),os.path.join(out_ch_dir,focus_file))
                 else:
 
                     try:
                         os.remove(os.path.join(ch_dir, tif_file))
                         os.remove(os.path.join(ch_dir, metadata_file))
-                        if os.path.exists(os.path.join(out_ch_dir,focus_file)):
+                        if os.path.exists(os.path.join(ch_dir,focus_file)):
                             os.remove(os.path.join(ch_dir, focus_file))
                     except:
                         print "no data to remove"
