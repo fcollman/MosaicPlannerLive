@@ -12,7 +12,7 @@ from functools import partial
 import shutil
 import multiprocessing as mp
 from SaveThread import file_save_process
-STOP_TOKEN = 'STOP!!!'
+from Tokens import STOP_TOKEN
 
 
 # class myHistographLUTItem(pg.HistogramLUTItem):
