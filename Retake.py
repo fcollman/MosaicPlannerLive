@@ -449,7 +449,7 @@ class RetakeView(QtGui.QWidget):
         self.retakesScatterPlot.addPoints([d])
 
         self.teardownAcq()
-
+        self.loadReviewData()
     def archiveFrame(self,section=None,frame=None):
         if section is None:
             section = self.section
@@ -518,7 +518,7 @@ class RetakeView(QtGui.QWidget):
         self.sp.setData(x=df.xpos, y=df.ypos, pxMode=False,brush=brushes,data=df.to_dict('records'))
         self.currPosScatterPlot = pg.ScatterPlotItem()
         self.currPointScatterPlot = pg.ScatterPlotItem()
-        self.retakesScatterPlot = pg.ScatterPlotItem(size=150,pxMode=False)
+        self.retakesScatterPlot = pg.ScatterPlotItem(size=75,pxMode=False)
 
         self.dataplot.addItem(self.sp)
         self.dataplot.addItem(self.retakesScatterPlot)
