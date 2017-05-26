@@ -410,7 +410,6 @@ class RetakeView(QtGui.QWidget):
         self.mp.saveProcess = mp.Process(target=file_save_process,
                                         args=(self.mp.dataQueue,
                                               self.mp.messageQueue,
-                                              STOP_TOKEN,
                                               metadata_dictionary,
                                               ssh_opts))
         self.mp.saveProcess.start()
