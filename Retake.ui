@@ -16,6 +16,9 @@
     <verstretch>0</verstretch>
    </sizepolicy>
   </property>
+  <property name="focusPolicy">
+   <enum>Qt::NoFocus</enum>
+  </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
@@ -114,6 +117,9 @@
            <width>16777215</width>
            <height>400</height>
           </size>
+         </property>
+         <property name="focusPolicy">
+          <enum>Qt::StrongFocus</enum>
          </property>
         </widget>
        </item>
@@ -246,6 +252,9 @@
        </item>
        <item>
         <widget class="QPushButton" name="review_pushButton">
+         <property name="focusPolicy">
+          <enum>Qt::ClickFocus</enum>
+         </property>
          <property name="text">
           <string>Review</string>
          </property>
@@ -253,6 +262,9 @@
        </item>
        <item>
         <widget class="QPushButton" name="move_pushButton">
+         <property name="focusPolicy">
+          <enum>Qt::ClickFocus</enum>
+         </property>
          <property name="text">
           <string>Move</string>
          </property>
@@ -260,6 +272,9 @@
        </item>
        <item>
         <widget class="QPushButton" name="livereview_pushButton">
+         <property name="focusPolicy">
+          <enum>Qt::ClickFocus</enum>
+         </property>
          <property name="text">
           <string>Showing Review</string>
          </property>
@@ -270,6 +285,9 @@
        </item>
        <item>
         <widget class="QPushButton" name="softwareaf_pushButton">
+         <property name="focusPolicy">
+          <enum>Qt::ClickFocus</enum>
+         </property>
          <property name="text">
           <string>SoftwareAutoFocus</string>
          </property>
@@ -277,6 +295,9 @@
        </item>
        <item>
         <widget class="QPushButton" name="snap_pushButton">
+         <property name="focusPolicy">
+          <enum>Qt::ClickFocus</enum>
+         </property>
          <property name="text">
           <string>Snap</string>
          </property>
@@ -284,6 +305,9 @@
        </item>
        <item>
         <widget class="QPushButton" name="hold_pushButton">
+         <property name="focusPolicy">
+          <enum>Qt::ClickFocus</enum>
+         </property>
          <property name="text">
           <string>Hold</string>
          </property>
@@ -306,13 +330,38 @@
            <height>64</height>
           </size>
          </property>
+         <property name="focusPolicy">
+          <enum>Qt::ClickFocus</enum>
+         </property>
+         <property name="toolTip">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Retake the current frame and section (the frame indicated in the section,frame)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
          <property name="text">
-          <string>ReTake</string>
+          <string>ReTake Single</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="retakeSelected_pushButton">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>64</height>
+          </size>
+         </property>
+         <property name="toolTip">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Retake all the selected frames, use shift to toggle selected frames, alt to unselect frames.  Note it will take frames in the order that you selected them.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
+         <property name="text">
+          <string>ReTake Selected</string>
          </property>
         </widget>
        </item>
        <item>
         <widget class="QPushButton" name="exit_pushButton">
+         <property name="focusPolicy">
+          <enum>Qt::ClickFocus</enum>
+         </property>
          <property name="text">
           <string>Exit</string>
          </property>

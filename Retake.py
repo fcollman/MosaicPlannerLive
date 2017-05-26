@@ -286,6 +286,7 @@ class RetakeView(QtGui.QWidget):
         self.mp.imgSrc.set_binning(1)
         self.initial_offset = self.mp.imgSrc.get_autofocus_offset()
         self.initUI()
+
         #setup dummy variables of blanks for live and review data
         self.live_data = np.zeros((5,5))
         self.review_data = np.zeros((5,5))
@@ -304,7 +305,17 @@ class RetakeView(QtGui.QWidget):
         self.archiveDir = self.outdir.replace('raw\\data','raw\\bad_data')
         if not os.path.isdir(self.archiveDir):
             os.makedirs(self.archiveDir)
+        self.selectedFrames=[]
 
+    def keyPressEvent(self, event):
+        if event.key() == QtCore.Qt.Key_A:
+            self.frame_spinBox.setValue(self.frame - 1)
+        if event.key() == QtCore.Qt.Key_D:
+            self.frame_spinBox.setValue(self.frame + 1)
+        if event.key() == QtCore.Qt.Key_W:
+            self.section_spinBox.setValue(self.section + 1)
+        if event.key() == QtCore.Qt.Key_S:
+            self.section_spinBox.setValue(self.section - 1)
 
     def initUI(self):
         #load the UI from layout file
@@ -353,16 +364,19 @@ class RetakeView(QtGui.QWidget):
         self.resetOffset_pushButton.clicked.connect(self.resetOffset)
 
         #connect various UI slots to their change functions
+        self.section_spinBox.setMaximum(len(self.mp.posList.slicePositions)-1)
         self.section_spinBox.valueChanged[int].connect(self.changeSection)
 
+        self.frame_spinBox.setMaximum(len(self.mp.posList.slicePositions[0].frameList.slicePositions)-1)
         self.frame_spinBox.valueChanged[int].connect(self.changeFrame)
         
         self.move_pushButton.clicked.connect(self.moveToFrame)
         
         self.review_pushButton.clicked.connect(self.reviewFrame)
         self.retake_pushButton.clicked.connect(self.retakeFrame)
+        self.retakeSelected_pushButton.clicked.connect(self.retakeMultipleFrame)
         self.hold_pushButton.clicked.connect(self.holdHere)
-        self.softwareaf_pushButton.clicked.connect(self.mp.on_software_af_tool)
+        self.softwareaf_pushButton.clicked.connect(self.mp.software_autofocus)
         self.snap_pushButton.clicked.connect(self.doSnap)
         self.livereview_pushButton.clicked[bool].connect(self.changeLiveReview)
         
@@ -372,13 +386,7 @@ class RetakeView(QtGui.QWidget):
         self.mp.imgSrc.set_autofocus_offset(-1)
         self.mp.imgSrc.set_hardware_autofocus_state(True)
 
-    def retakeFrame(self,evt=None):
-        currx, curry = self.mp.imgSrc.get_xy()
-        currz = self.mp.imgSrc.get_z()
-        x,y = self.getFramePos()
-        assert(np.abs(x-currx)<2)
-        assert(np.abs(y-curry)<2)
-        self.archiveFrame()
+    def setupAcq(self):
 
         self.mp.imgSrc.set_binning(1)
         numchan, chrom_correction = self.mp.summarize_channel_settings()
@@ -406,20 +414,47 @@ class RetakeView(QtGui.QWidget):
                                               metadata_dictionary,
                                               ssh_opts))
         self.mp.saveProcess.start()
+        return success,chrom_correction
 
-        self.mp.multiDacq(success, self.outdir, chrom_correction,
-                          False, currx, curry, currz, self.section,
-                          self.frame, hold_focus=True)
-
+    def teardownAcq(self):
         self.mp.dataQueue.put(STOP_TOKEN)
         self.mp.saveProcess.join()
         if self.mp.cfg['MosaicPlanner']['hardware_trigger']:
             self.mp.imgSrc.stop_hardware_triggering()
+
+    def retakeMultipleFrame(self,evt=None):
+        success, chrom_correction = self.setupAcq()
+        currz = self.mp.imgSrc.get_z()
+        for frame,section,spot in self.selectedFrames:
+            x,y = self.getFramePos(section=section,frame=frame)
+            self.archiveFrame(section=section,frame=frame)
+            self.mp.multiDacq(success, self.outdir, chrom_correction,
+                              False, x, y, currz, section,
+                              frame, hold_focus=True)
+            d = {'pos': (x, y), 'symbol': '+', 'pen': pg.mkPen('w', width=5)}
+            self.retakesScatterPlot.addPoints([d])
+
+    def retakeFrame(self,evt=None):
+        currx, curry = self.mp.imgSrc.get_xy()
+        currz = self.mp.imgSrc.get_z()
+        x,y = self.getFramePos()
+
+        self.archiveFrame()
+
+        success, chrom_correction = self.setupAcq()
+        self.mp.multiDacq(success, self.outdir, chrom_correction,
+                          False, currx, curry, currz, self.section,
+                          self.frame, hold_focus=True)
         d = {'pos': (currx, curry), 'symbol': '+','pen': pg.mkPen('w', width=5)}
         self.retakesScatterPlot.addPoints([d])
 
+        self.teardownAcq()
 
-    def archiveFrame(self):
+    def archiveFrame(self,section=None,frame=None):
+        if section is None:
+            section = self.section
+        if frame is None:
+            frame = self.frame
         for ch in self.mp.channel_settings.channels:
            if self.mp.channel_settings.usechannels[ch]:
                 prot_name = self.mp.channel_settings.prot_names[ch]
@@ -428,9 +463,9 @@ class RetakeView(QtGui.QWidget):
                 if not os.path.isdir(out_ch_dir):
                     os.makedirs(out_ch_dir)
 
-                tif_file = prot_name + "_S%04d_F%04d_Z%02d.tif" % (self.section, self.frame, 0)
-                metadata_file =  prot_name + "_S%04d_F%04d_Z%02d_metadata.txt"%(self.section, self.frame, 0)
-                focus_file = prot_name + "_S%04d_F%04d_Z%02d_focus.csv" %(self.section, self.frame, 0)
+                tif_file = prot_name + "_S%04d_F%04d_Z%02d.tif" % (section, frame, 0)
+                metadata_file =  prot_name + "_S%04d_F%04d_Z%02d_metadata.txt"%(section, frame, 0)
+                focus_file = prot_name + "_S%04d_F%04d_Z%02d_focus.csv" %(section, frame, 0)
 
                 if not os.path.exists(os.path.join(out_ch_dir,tif_file)):
                     shutil.move(os.path.join(ch_dir,tif_file),os.path.join(out_ch_dir,tif_file))
@@ -503,6 +538,20 @@ class RetakeView(QtGui.QWidget):
                 self.frame_spinBox.setValue(d['frame_index'])
             if 'Move' in mode:
                 self.moveToFrame()
+            modifiers = QtGui.QApplication.keyboardModifiers()
+            mytuple = (d['frame_index'], d['slide_index'], points[0])
+            if modifiers == QtCore.Qt.AltModifier:
+                for frame,section,pt in self.selectedFrames:
+                    pt.resetPen()
+                self.selectedFrames =[]
+            if modifiers == QtCore.Qt.ShiftModifier:
+                if mytuple in self.selectedFrames:
+                    self.selectedFrames.remove(mytuple)
+                    points[0].resetPen()
+                else:
+                    self.selectedFrames.append(mytuple)
+                    points[0].setPen('r',width=2)
+
 
     def reviewFrame(self,evt=None):
         self.changeReviewData()
@@ -544,7 +593,16 @@ class RetakeView(QtGui.QWidget):
         self.reviewFrame()
 
     def changeFrame(self,frame):
+        oldframe = self.frame
+        isdown = frame<oldframe
+        isup = frame>oldframe
         self.frame = frame
+        if not self.mp.posList.slicePositions[self.section].frameList.slicePositions[self.frame].activated:
+            if isdown:
+                self.frame_spinBox.setValue(frame-1)
+            if isup:
+                self.frame_spinBox.setValue(frame+1)
+            return
         self.reviewFrame()
 
     def exitClicked(self,evt):
@@ -555,6 +613,7 @@ class RetakeView(QtGui.QWidget):
         self.img1.setLevels((0, self.mp.imgSrc.get_max_pixel_value()))
         self.img2.setImage(np.rot90(self.live_data,k=3))
         self.img2.setLevels((0, self.mp.imgSrc.get_max_pixel_value()))
+
     def loadReviewData(self,evt=None):
         self.img1.setImage(np.rot90(self.review_data,k=3))
         self.img1.setLevels((0, self.mp.imgSrc.get_max_pixel_value()))
@@ -575,9 +634,13 @@ class RetakeView(QtGui.QWidget):
         d={'pos':(x,y),'symbol':'+','pen':pg.mkPen('m',width=2)}
         self.currPosScatterPlot.addPoints([d])
 
-    def getFramePos(self):
-        pos=self.mp.posList.slicePositions[self.section]
-        frame=pos.frameList.slicePositions[self.frame]
+    def getFramePos(self,section=None,frame=None):
+        if section is None:
+            section = self.section
+        if frame is None:
+            frame = self.frame
+        pos=self.mp.posList.slicePositions[section]
+        frame=pos.frameList.slicePositions[frame]
         return (frame.x,frame.y)
         # issection = self.focus_df['slide_index'] == self.section
         # isframe = self.focus_df['frame_index'] == self.frame

@@ -38,7 +38,7 @@ from PositionList import posList
 from MyLasso import MyLasso
 from MosaicImage import MosaicImage
 from Transform import Transform,ChangeTransform
-from imageSourceMM import imageSource
+from imageSourceDemo import imageSource
 from MMPropertyBrowser import MMPropertyBrowser
 from ASI_Control import ASI_AutoFocus
 from FocusCorrectionPlaneWindow import FocusCorrectionPlaneWindow
