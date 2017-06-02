@@ -38,7 +38,7 @@ from PositionList import posList
 from MyLasso import MyLasso
 from MosaicImage import MosaicImage
 from Transform import Transform,ChangeTransform
-from imageSourceMM import imageSource
+
 from MMPropertyBrowser import MMPropertyBrowser
 from ASI_Control import ASI_AutoFocus
 from FocusCorrectionPlaneWindow import FocusCorrectionPlaneWindow
@@ -372,6 +372,11 @@ class MosaicPanel(FigureCanvas):
         self.imgSrc=None
         while self.imgSrc is None:
             try:
+                if self.cfg['MosaicPlanner']['demoMode']:
+                    from imageSourceDemo import imageSource
+                else:
+                    from imageSourceMM import imageSource
+
                 self.imgSrc=imageSource(self.MM_config_file,
                                         MasterArduinoPort=self.cfg['MMArduino']['port'],
                                         interframe_time=self.cfg['MMArduino']['interframe_time'],
