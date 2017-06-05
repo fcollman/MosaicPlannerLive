@@ -13,7 +13,7 @@ import shutil
 import multiprocessing as mp
 from SaveThread import file_save_process
 from Tokens import STOP_TOKEN
-
+from LeicaDMI import LeicaDMI
 
 # class myHistographLUTItem(pg.HistogramLUTItem):
 #     def __init__(self,*kargs,**kwargs):
@@ -282,7 +282,13 @@ class RetakeView(QtGui.QWidget):
     def __init__(self,mp):
         super(RetakeView,self).__init__()
 
+
         self.mp = mp
+        if len(self.mp.cfg['LeicaDMI']['port'])>0:
+            self.dmi = LeicaDMI(self.mp.cfg['LeicaDMI']['port'])
+        else:
+            self.dmi = None
+
         self.mp.imgSrc.set_binning(1)
         self.initial_offset = self.mp.imgSrc.get_autofocus_offset()
         self.initUI()
@@ -358,6 +364,11 @@ class RetakeView(QtGui.QWidget):
                 btn.setChecked(True)
             btn.clicked.connect(partial(self.changeChannel,ch))
 
+        if self.dmi is not None:
+            self.dmi_button = QtGui.QPushButton("AFC Image")
+            self.verticalLayout.addWidget(self.dmi_button)
+            self.dmi_button.clicked.connect(self.afcImage)
+
         #initialize AFCoffset UI, and connect valueChanged to setting it
         self.AFCoffset_doubleSpinBox.setValue(self.initial_offset)
         self.AFCoffset_doubleSpinBox.valueChanged[float].connect(self.mp.imgSrc.set_autofocus_offset)
@@ -381,6 +392,17 @@ class RetakeView(QtGui.QWidget):
         self.livereview_pushButton.clicked[bool].connect(self.changeLiveReview)
         
         self.exit_pushButton.clicked.connect(self.exitClicked)
+
+    def afcImage(self,evt=None):
+        if self.dmi is not None:
+            image = self.dmi.get_AFC_image()
+            for key,value in self.mp.outdirdict.iteritems():
+                outdir = self.mp.outdirdict[key]
+            AFCname = str(QtGui.QFileDialog.getSaveFileName(self, 'Save AFC File',outdir,"csv file (*.csv)"))
+            ImageName = str(QtGui.QFileDialog.getSaveFileName(self, 'Save Snap Image',outdir,"tiff file (*.tiff)"))
+            tifffile.imsave(ImageName,self.live_data)
+            np.savetxt(AFCname,image)
+
 
     def holdHere(self,evt=None):
         self.mp.imgSrc.set_autofocus_offset(-1)
