@@ -54,6 +54,8 @@ import cv2 #MultiRibbons
 from skimage.measure import block_reduce #MultiRibbons
 from Snap import SnapView
 from Retake import RetakeView
+from LeicaAFCView import LeicaAFCView
+
 from slacker import Slacker
 from SaveThread import file_save_process
 import scipy.optimize as opt #softwarea-autofocus
@@ -425,6 +427,7 @@ class MosaicPanel(FigureCanvas):
                     if dictvalue != None:
                         goahead = True
 
+            print 'Sample_ID:', self.directory_settings.Sample_ID
             print 'Sample_ID:', self.directory_settings.Sample_ID
             print 'Ribbon_ID:', self.directory_settings.Ribbon_ID
             print 'Session_ID:', self.directory_settings.Session_ID
@@ -1131,6 +1134,9 @@ class MosaicPanel(FigureCanvas):
             self.retakeView = RetakeView(self)
         self.retakeView.show()
 
+    def launch_LeicaAFC(self,event=None):
+        if self.LeicaAFCView is None:
+            self.LeicaAFCView = LeicaAFCView(self.imgSrc,self.cfg['LeicaDMI']['port'])
     def launch_snap(self, event=None):
         if self.snapView is None:
             print 'Binning is', self.imgSrc.get_binning()
@@ -1822,6 +1828,7 @@ class ZVISelectFrame(wx.Frame):
     ID_ASIAUTOFOCUS = wx.NewId()
     ID_SNAPCONTROL = wx.NewId()
     ID_RETAKECONTROL = wx.NewId()
+    ID_LEICAAFC = wx.NewId()
 
     # ID_Alfred = wx.NewId()
 
@@ -1915,6 +1922,8 @@ class ZVISelectFrame(wx.Frame):
         self.launch_ASIControl = Imaging_Menu.Append(self.ID_ASIAUTOFOCUS, 'Allen ASI AutoFocus Control', kind= wx.ITEM_NORMAL)
         self.launch_Snap = Imaging_Menu.Append(self.ID_SNAPCONTROL,'Snap single channel images',kind = wx.ITEM_NORMAL)
         self.launch_Retake = Imaging_Menu.Append(self.ID_RETAKECONTROL,'Retake dialog',kind = wx.ITEM_NORMAL)
+        if len(self.cfg['LeicaDMI']['port'])>0:
+            self.launch_Leica = Imaging_Menu.Append(self.ID_LEICAAFC,'Leica AFC dialog',kind= wx.ITEM_NORMAL)
 
         self.Bind(wx.EVT_MENU, self.toggle_use_focus_correction,id=self.ID_USE_FOCUS_CORRECTION)
         self.Bind(wx.EVT_MENU, self.mosaicCanvas.edit_Zstack_settings,id=self.ID_EDIT_ZSTACK)
@@ -1927,6 +1936,8 @@ class ZVISelectFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.mosaicCanvas.launch_ASI,id = self.ID_ASIAUTOFOCUS)
         self.Bind(wx.EVT_MENU, self.mosaicCanvas.launch_snap,id = self.ID_SNAPCONTROL)
         self.Bind(wx.EVT_MENU, self.mosaicCanvas.launch_retake,id = self.ID_RETAKECONTROL)
+        self.Bind(wx.EVT_MENU, self.mosaicCanvas.launch_LeicaAFC, id= self.ID_LEICAAFC)
+
 
         Imaging_Menu.Check(self.ID_USE_FOCUS_CORRECTION,self.cfg['MosaicPlanner']['use_focus_correction'])
 

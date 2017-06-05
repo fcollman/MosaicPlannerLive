@@ -390,8 +390,13 @@ class RetakeView(QtGui.QWidget):
         self.softwareaf_pushButton.clicked.connect(self.mp.software_autofocus)
         self.snap_pushButton.clicked.connect(self.doSnap)
         self.livereview_pushButton.clicked[bool].connect(self.changeLiveReview)
+        self.reloadDataPushButton.clicked.connect(self.reloadData)
         
         self.exit_pushButton.clicked.connect(self.exitClicked)
+
+    def reloadData(self,evt=None):
+        self.dataplot.clear()
+        self.loadFocusScoreData()
 
     def afcImage(self,evt=None):
         if self.dmi is not None:
@@ -511,7 +516,7 @@ class RetakeView(QtGui.QWidget):
         self.AFCoffset_doubleSpinBox.setValue(self.initial_offset)
         self.mp.imgSrc.set_autofocus_offset(self.initial_offset)
 
-    def loadFocusScoreData(self):
+    def loadFocusScoreData(self,evt=None):
         score_ch=self.mp.cfg['ChannelSettings']['focusscore_chan']
         protName = self.mp.channel_settings.prot_names[score_ch]
         ch_dir = os.path.join(self.outdir,protName)
