@@ -55,7 +55,7 @@ from skimage.measure import block_reduce #MultiRibbons
 from Snap import SnapView
 from Retake import RetakeView
 from LeicaAFCView import LeicaAFCView
-
+from LeicaDMI import LeicaDMI
 from slacker import Slacker
 from SaveThread import file_save_process
 import scipy.optimize as opt #softwarea-autofocus
@@ -500,6 +500,11 @@ class MosaicPanel(FigureCanvas):
         if self.cfg['Slack']['slack_token'] is not None:
             self.slacker = Slacker(self.cfg['Slack']['slack_token'])
 
+        if len(self.cfg['LeicaDMI']['port']) > 0:
+            self.dmi = LeicaDMI(self.cfg['LeicaDMI']['port'])
+        else:
+            self.dmi = None
+
     def _check_sock(self, event):
         self.interface._check_rep()
 
@@ -597,6 +602,9 @@ class MosaicPanel(FigureCanvas):
         if self.cfg['MosaicPlanner']['do_second_autofocus_wait']:
             self.autofocus_loop(hold_focus,self.cfg['MosaicPlanner']['second_autofocus_wait'],self.cfg['MosaicPlanner']['autofocus_sleep'])
 
+        if self.dmi is not None:
+            afc_image = self.dmi.get_AFC_image()
+
         #print datetime.datetime.now().time()," starting multichannel acq"
         current_z = self.imgSrc.get_z()
         presentZ = current_z
@@ -646,9 +654,9 @@ class MosaicPanel(FigureCanvas):
                         else:
                             calcFocus = False
                         if ch is not last_channel:
-                            self.dataQueue.put((slice_index,frame_index, z_index, prot_name,path,data,ch,stagexy[0],stagexy[1],z,False,calcFocus))
+                            self.dataQueue.put((slice_index,frame_index, z_index, prot_name,path,data,ch,stagexy[0],stagexy[1],z,False,calcFocus,None))
                         else:
-                            self.dataQueue.put((slice_index,frame_index, z_index, prot_name,path,data,ch,stagexy[0],stagexy[1],z,triggerflag,calcFocus))
+                            self.dataQueue.put((slice_index,frame_index, z_index, prot_name,path,data,ch,stagexy[0],stagexy[1],z,triggerflag,calcFocus,afc_image))
 
         def hardware_acquire(z=presentZ):
             # currZ=self.imgSrc.get_z()
@@ -672,9 +680,9 @@ class MosaicPanel(FigureCanvas):
                         else:
                             calcFocus = False
                         if ch is not last_channel:
-                            self.dataQueue.put((slice_index,frame_index, z_index, prot_name,path,data,ch,stagexy[0],stagexy[1],z,False,calcFocus))
+                            self.dataQueue.put((slice_index,frame_index, z_index, prot_name,path,data,ch,stagexy[0],stagexy[1],z,False,calcFocus,None))
                         else:
-                            self.dataQueue.put((slice_index,frame_index, z_index, prot_name,path,data,ch,stagexy[0],stagexy[1],z,triggerflag,calcFocus))
+                            self.dataQueue.put((slice_index,frame_index, z_index, prot_name,path,data,ch,stagexy[0],stagexy[1],z,triggerflag,calcFocus,afc_image))
 
 
         if (self.cfg['MosaicPlanner']['hardware_trigger'] == True) and (chrome_correction == False) and (success != False):

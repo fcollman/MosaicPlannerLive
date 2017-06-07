@@ -8,6 +8,7 @@ import numpy as np
 import sys
 import traceback
 from Tokens import STOP_TOKEN,BUBBLE_TOKEN
+import json
 def file_save_process(queue,message_queue, metadata_dictionary,ssh_opts):
 
     while True:
@@ -16,7 +17,7 @@ def file_save_process(queue,message_queue, metadata_dictionary,ssh_opts):
             return
         else:
             try:
-                (slice_index,frame_index, z_index, prot_name, path, data, ch, x, y, z,triggerflag,calcfocus) = token
+                (slice_index,frame_index, z_index, prot_name, path, data, ch, x, y, z,triggerflag,calcfocus,afc_image) = token
                 tif_filepath = os.path.join(path, prot_name + "_S%04d_F%04d_Z%02d.tif" % (slice_index, frame_index, z_index))
                 metadata_filepath = os.path.join(path, prot_name + "_S%04d_F%04d_Z%02d_metadata.txt"%(slice_index, frame_index, z_index))
                 imsave(tif_filepath,data)
@@ -24,6 +25,10 @@ def file_save_process(queue,message_queue, metadata_dictionary,ssh_opts):
                 if calcfocus:
                     focus_filepath = os.path.join(path, prot_name + "_S%04d_F%04d_Z%02d_focus.csv"%(slice_index, frame_index, z_index))
                     write_focus_score(focus_filepath, data,ch,x,y,slice_index,frame_index,prot_name)
+                if afc_image is not None:
+                    afc_image_filepath = os.path.join(path, prot_name + "_S%04d_F%04d_Z%02d_afc.csv"%(slice_index, frame_index, z_index))
+                    #np.savetxt(afc_image_filepath, afc_image)
+                    write_afc_image(afc_image_filepath, afc_image,x,y,slice_index,frame_index)
             except:
                 message_queue.put((STOP_TOKEN,traceback.print_exc()))
 
@@ -52,6 +57,13 @@ def get_score(img):
     score1_std = np.std(score1)
     score1_mean = np.mean(score1)
     return (score1_mean, score1_median, score1_std)
+
+def write_afc_image(filename, afc_image, xpos, ypos, slice_index, frame_index):
+    dict = {'afc_image': afc_image,'xpos': xpos,'ypos': ypos, 'slice_index': slice_index, 'frame_index': frame_index}
+    thestring = json.JSONEncoder().encode(dict)
+    file = open(filename, 'w')
+    file.write(thestring)
+    file.close()
 
 def write_slice_metadata(filename, ch, xpos, ypos, zpos, slice_index,triggerflag, meta_dict,ssh_opts):
     channelname    = meta_dict['channelname'][ch]
