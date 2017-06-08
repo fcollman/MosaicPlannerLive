@@ -1,4 +1,4 @@
-#MosaicPlannerLive 
+# MosaicPlannerLive 
 =================
 MosaicPlannerLive is a python based GUI program for acquiring array tomography data using MicroManager as an interface.
 
@@ -13,7 +13,7 @@ It's development is ongoing, but it's goal is to streamline the acquisition of A
 #Instructions
 
 
-##Navigating around the image
+## Navigating around the image
 You can use the first 4 buttons of the toolbar to navigate around the large mosaic.
 
 The home button: Will return the main plot to its default zoom position where the entire image is visible.
@@ -24,7 +24,7 @@ The pan button (4 arrows): Allows you to click and drag the center of the plot a
 
 The zoom button (magnifying glass): Clicking and dragging will define a rectangle to zoom the plot to.
 
-##Creating a position list
+## Creating a position list
 You can create and edit a position list from scratch if you do not have one preloaded.
 
 To do so, start by adding a point to you list with the add tool (The pointer with a plus arrow).  You can zoom in to position it precisely on a section.  Add a second point in an adjacent section at approximately the same position.
@@ -39,7 +39,7 @@ Next, use the step tool (The green play button) to find the next section.  The s
 
 You can also use use the fast forward tool (the blue double arrow to the right) which will continually run the step tool over and over, and only stop when the correlation of the maximal shift drops below .3. At that point the program will popup a dialog and make a bing, prompting the user to help.  You can look at the fit by eye, and decided to continue by clicking the fast forward button again, or reposition some of the points before trying to continue.  We will discuss the ways to do this below.
 
-##Moving and editing positions
+## Moving and editing positions
 The program has a few functions for repositioning points.  
 
 The most common thing you might want to do is manually reposition a point, based upon what you see in the Point1/Point2 preview boxes during the correlation analysis.  If you simply left click in the Point1 or Point2 preview boxes, the position of that point will be moved to where you clicked.  This makes it easy to manually fine tune the location of points if the correlation tool makes a mistake for some reason.  Note each time you select a new point as point 1 or 2, it will update that preview box, allowing you to do this adjustment.
@@ -58,7 +58,7 @@ Once points are selected you can either delete them, by clicking on the trash ic
 
 Note, the arrow keys will move the points a small amount based upon the current zoom level.  So if you zoom in, the absolute movement of the points will be smaller.   Note also that by default the points do not move in absolute coordinates, but rather the program uses the current selection to estimate the curvature of the ribbon, and moves the points in such a way that "up" is actually perpendicular to the tangent of the curvature of the ribbon.  You can deselect this option in the Options menu, by unchecking "Relative motion?" in which case the points will all move the same relative amount in absolute coordinates.
 
-##Previewing a mosaic
+## Previewing a mosaic
 The Mosaic Planner provides visual feedback on planning the acquisition of a mosaic centered around the current set of positions.  The program needs to know both the size of your camera, the magnification of your objective, the size of the grid you wish to acquire (in x and y), and the amount of overlap you want to have between individual frames of your mosaic.
 
 To enter the information about your camera, click the Options menu, and click "edit camera settings".  This will prompt you to enter information about the number and size of the pixels on your camera.
@@ -75,7 +75,7 @@ Now you might want to select all the points on your ribbon, and then zoom in on 
 
 You can of course go back and use the CorrTool to align the points more finely.  Future versions will contain a tool to automate this fine tune alignment. 
 
-##Saving position lists
+## Saving position lists
 When you are done and happy with your position list, enter a filename for the position list (the program will suggest one based upon the name and location of the image you loaded) and click the Save button to the right of the "array file" field.  (Note not the disk icon on the toolbar, which will simply save an image of the current workspace).
 You can now also choose which kind of file format you want to save the position list in.  It should be fairly straight forward for someone to add a new file format to these options if they were interested, feel free to contact Forrest Collman in the Smith Lab if you want help in doing this.
 
@@ -83,7 +83,7 @@ You can also save a position list of individual frames.  This will produce a lin
 
 We have a Beta version of some software which allows semi-automated checking of the focus of individual ZVI files called ReFocus, so that when a single frame of a mosaic is out of focus, one can go more easily find that frame and go back and retake only that frame.  You can find it in the SVN.  This program is designed to work with mosaics in which were created using this "freeframe" option.  We also have python scripts in FIJI for exporting and stitching these types of "freeframe" mosaics. 
 
-##*BETA* Saving transformed position lists===
+## *BETA* Saving transformed position lists===
 The software now contains a primitive ability to save transformed position lists that we are currently developing.  This allows you to tell the software about sets of corresponding points between the coordinate system that the 10X image was acquired in, and the coordinate system of the microscope that you want the position list to be saved into.  With those points, the software can fit a transformation to the correspondences, and thus be able to transform the position list you setup in the original coordinate system into the new coordinate system.
 
 To setup and edit this transform, currently you need to have a .csv file which contains the corresponding points formatted as follow.
@@ -103,17 +103,17 @@ In the Transform Menu at the top of the program, you can click Edit Transform...
 
 Specify the csv file using the file picker and hit load, choose the transform type you want and then close the dialog.  After you close the dialog in python terminal, you will see a text output that shows how the transform mapped each of the individual from points, as well as their specified locations in parentheses, so you can evaluate the precision of the fit.
 
-#Development Plan
-##Partially done features
+# Development Plan
+## Partially done features
 
   * Create a preview image stack)  I have some code written, but the Python Imaging Library is not that efficent at cropping large images and so its slow.  I think I might want to move over to another Imaging Library that is smarter at allocating memory and reading just the pixels necessary to produce the cropped image.
 
   * Some kind of refinement tool which will readjust by cross correlation all of the points, but make an assumption that all of the points are basically close to correct.  For instance if you use the arrow keys to fine tune the placement of the mosaic, the exact locations might no longer be optimal.  Also, currently the program does not sample every offset on a integer pixel level, but rather samples offsets skipping every X pixels.  This saves computational time, but when moving from 10x to 63x a single pixel can be significant, so one should do a coarse alignment first using skipping in order to efficiently search a large area, but then follow that up with a smaller more precise alignment.
 
-##Known/suspected bugs
+## Known/suspected bugs
   * Only 16-bit tiff images have been used in testing this program
 
-##Requirements
+## Requirements
 To run this program you must have python installed (http://www.python.org/) I have developed this on both 2.6 and 2.7 and had no issues with compatibility, but I am unsure as to either forward or backward compatibility from there.
 
 You also need your python instance to have the following python packages installed
@@ -139,7 +139,7 @@ for 64-bit machines
 
 I have tried a little bit to get py2exe working with this package but haven't made it very far.  If someone wanted to help out with that it make it easier for many people to use as we could just link to a download button.
 
-##Configuration Instructions
+## Configuration Instructions
 The Micromanager installation directory should be added to the pythonpath environment variable, so that MosaicPlanner can access the Micro-Manager C++ Core. (To do this on Windows go to System Properties, Advanced, System Variables and add or edit the PYTHONPATH directory)
 
 You should setup a Micromanager configuration file that has all your devices loaded, and you should make a few Configu groups.
