@@ -1728,61 +1728,65 @@ class MosaicPanel(FigureCanvas):
     def software_autofocus(self, buttonpress = False): #MultiRibbons
         if buttonpress:
             self.imgSrc.set_binning(1)
-        print "software autofocus"
-        self.imgSrc.set_hardware_autofocus_state(False) #turn off autofocus
-        ch = self.channel_settings.map_chan
-        self.imgSrc.set_exposure(self.channel_settings.exposure_times[ch])
-        self.imgSrc.set_channel(ch)
-        (height,width) = self.imgSrc.get_sensor_size()
-        zstack_step = 0.3 #z step between images(microns)
-        zstack_number = 35 #number of images to take
-        stack = np.zeros((height,width,zstack_number))
-        offsets = []
-        current_z = self.imgSrc.get_z()
-        print "current_z: ", current_z
-        print "autofocus offset: ", self.imgSrc.get_autofocus_offset()
-        furthest_distance = zstack_step * (zstack_number-1)/2
-        zplanes_to_visit = [(current_z-furthest_distance) + i*zstack_step for i in range(zstack_number)]
-        print "z_planes:", zplanes_to_visit
+        try:
+            print "software autofocus"
+            self.imgSrc.set_hardware_autofocus_state(False) #turn off autofocus
+            ch = self.channel_settings.map_chan
+            self.imgSrc.set_exposure(self.channel_settings.exposure_times[ch])
+            self.imgSrc.set_channel(ch)
+            (height,width) = self.imgSrc.get_sensor_size()
+            zstack_step = 0.3 #z step between images(microns)
+            zstack_number = 35 #number of images to take
+            stack = np.zeros((height,width,zstack_number))
+            offsets = []
+            current_z = self.imgSrc.get_z()
+            print "current_z: ", current_z
+            print "autofocus offset: ", self.imgSrc.get_autofocus_offset()
+            furthest_distance = zstack_step * (zstack_number-1)/2
+            zplanes_to_visit = [(current_z-furthest_distance) + i*zstack_step for i in range(zstack_number)]
+            print "z_planes:", zplanes_to_visit
 
-        for z_index, zplane in enumerate(zplanes_to_visit):
-            self.imgSrc.set_z(zplane)
-            stack[:,:,z_index]=self.imgSrc.snap_image()
-            self.imgSrc.set_autofocus_offset(-1)
+            for z_index, zplane in enumerate(zplanes_to_visit):
+                self.imgSrc.set_z(zplane)
+                stack[:,:,z_index]=self.imgSrc.snap_image()
+                self.imgSrc.set_autofocus_offset(-1)
+                time.sleep(2*self.cfg['MosaicPlanner']['autofocus_wait'])
+                offsets.append(self.imgSrc.get_autofocus_offset())
+
+            #calculate best z
+            print "calculating focus"
+            print "offsets: ", offsets
+            #using Laplacian
+            score_med = np.zeros(zstack_number)
+            score_std = np.zeros(zstack_number)
+            for i in range(len(zplanes_to_visit)):
+                score = cv2.Laplacian(stack[:,:,i],cv2.CV_16U, ksize = 5)
+                score_med[i] = np.median(score)
+                score_std[i] = np.std(score)
+            zscore = (score_med - np.median(score_med))/np.median(score_std)
+            select = np.ones(len(offsets))
+            for i in range(len(offsets)-1):
+                if offsets[i]>=offsets[i+1] or offsets[i]==0:
+                    select[i] = 0
+            idx = np.nonzero(select)
+            zscore = zscore[idx]
+            offsets1 = np.array(offsets)
+            offsets1 = offsets1[idx]
+            par_init = np.max(zscore)-np.min(zscore), np.min(zscore), offsets1[np.argmax(zscore)],\
+                       offsets1[int((zstack_number-1)/2)+1]-offsets1[int((zstack_number-1)/2)-1]
+            def gauss_1d(x, amp, offset, x0, sigma_x):
+                z = offset + amp*np.exp(-((x-x0)/sigma_x)**2)
+                return z
+            print "zscore", zscore
+            popt, pcov = opt.curve_fit(gauss_1d, offsets1, zscore, p0=par_init)
+            best_offset = popt[2]
+            print "best_offset: ", best_offset
+            self.imgSrc.set_autofocus_offset(best_offset) #reset autofocus offset
             time.sleep(2*self.cfg['MosaicPlanner']['autofocus_wait'])
-            offsets.append(self.imgSrc.get_autofocus_offset())
+            self.imgSrc.set_hardware_autofocus_state(True) #turn on autofocus
+        except:
+            pass
 
-        #calculate best z
-        print "calculating focus"
-        print "offsets: ", offsets
-        #using Laplacian
-        score_med = np.zeros(zstack_number)
-        score_std = np.zeros(zstack_number)
-        for i in range(len(zplanes_to_visit)):
-            score = cv2.Laplacian(stack[:,:,i],cv2.CV_16U, ksize = 5)
-            score_med[i] = np.median(score)
-            score_std[i] = np.std(score)
-        zscore = (score_med - np.median(score_med))/np.median(score_std)
-        select = np.ones(len(offsets))
-        for i in range(len(offsets)-1):
-            if offsets[i]>=offsets[i+1] or offsets[i]==0:
-                select[i] = 0
-        idx = np.nonzero(select)
-        zscore = zscore[idx]
-        offsets1 = np.array(offsets)
-        offsets1 = offsets1[idx]
-        par_init = np.max(zscore)-np.min(zscore), np.min(zscore), offsets1[np.argmax(zscore)],\
-                   offsets1[int((zstack_number-1)/2)+1]-offsets1[int((zstack_number-1)/2)-1]
-        def gauss_1d(x, amp, offset, x0, sigma_x):
-            z = offset + amp*np.exp(-((x-x0)/sigma_x)**2)
-            return z
-        print "zscore", zscore
-        popt, pcov = opt.curve_fit(gauss_1d, offsets1, zscore, p0=par_init)
-        best_offset = popt[2]
-        print "best_offset: ", best_offset
-        self.imgSrc.set_autofocus_offset(best_offset) #reset autofocus offset
-        time.sleep(2*self.cfg['MosaicPlanner']['autofocus_wait'])
-        self.imgSrc.set_hardware_autofocus_state(True) #turn on autofocus
         if buttonpress:
             self.imgSrc.set_binning(2)
 

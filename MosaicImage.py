@@ -462,8 +462,8 @@ class MosaicImage():
         '''
         cut_height = cutout.shape[0]-dim
         cut_width = cutout.shape[1]-dim
-        top_pix = np.floor(cut_height/2.0)
-        left_pix = np.floor(cut_width/2.0)
+        top_pix = np.int(np.floor(cut_height/2.0))
+        left_pix = np.int(np.floor(cut_width/2.0))
         cutout_central = cutout[top_pix:top_pix+dim,left_pix:left_pix+dim]
         return  cutout_central
 
