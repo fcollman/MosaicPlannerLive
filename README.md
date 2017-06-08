@@ -143,20 +143,21 @@ I have tried a little bit to get py2exe working with this package but haven't ma
 The Micromanager installation directory should be added to the pythonpath environment variable, so that MosaicPlanner can access the Micro-Manager C++ Core. (To do this on Windows go to System Properties, Advanced, System Variables and add or edit the PYTHONPATH directory)
 
 You should setup a Micromanager configuration file that has all your devices loaded, and you should make a few Configu groups.
-Group: System
-Preset: Startup
+
+### Group: System
+### Preset: Startup
 This should contain all the settings you want your devices to have set when you start your program.  Importantly, this includes Camera flips/transpose, stage flips and transposes, so that the stage coordinates read out in a way that is consistent with the way the camera lays out it's pixels, and follows the matrix access convention... meaning positive Y is down, and positive X is to the right, and images have their first pixel at 0,0 in the upper left.
 
-Group: Channels
-Presets: All the different channels you want to snap images in
+### Group: Channels
+### Presets: All the different channels you want to snap images in
 This should contain all the settings that are needed to make the microscope snap a picture in a specific channel
 They should have names that reflect the fluorophore they are designed to excite and the state of the scope.
 
-Group: Triggering
-Preset: Software
+### Group: Triggering
+### Preset: Software
 These are settings of various devices that are needed to make normal software triggering work. Most importantly, the triggering properity of your camrea, but maybe also the sequencing mode of Arduino's, etc etc.
 
-Preset: Hardware
+### Preset: Hardware
 These are the settings for devices that are needed to make hardware triggering work.  Note hardware triggering will only run successfully if for all the properties in the Channel Groups you select to image the properties are either "sequencable" after these hardware triggering properties are applied OR they are constant across all the channels.
 
 You can find many more configuration properties in the MosaicPlannerSettings.cfg	file which should be created the first time you run MosaicPlanner.  It will ask you the first time what Microamanger configuration file you would like to access the first time you run the program and this will be stored in the configuration.
