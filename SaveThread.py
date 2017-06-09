@@ -26,7 +26,7 @@ def file_save_process(queue,message_queue, metadata_dictionary,ssh_opts):
                     focus_filepath = os.path.join(path, prot_name + "_S%04d_F%04d_Z%02d_focus.csv"%(slice_index, frame_index, z_index))
                     write_focus_score(focus_filepath, data,ch,x,y,slice_index,frame_index,prot_name)
                 if afc_image is not None:
-                    afc_image_filepath = os.path.join(path, prot_name + "_S%04d_F%04d_Z%02d_afc.csv"%(slice_index, frame_index, z_index))
+                    afc_image_filepath = os.path.join(path, prot_name + "_S%04d_F%04d_Z%02d_afc.json"%(slice_index, frame_index, z_index))
                     #np.savetxt(afc_image_filepath, afc_image)
                     write_afc_image(afc_image_filepath, afc_image,x,y,slice_index,frame_index)
             except:
@@ -59,7 +59,7 @@ def get_score(img):
     return (score1_mean, score1_median, score1_std)
 
 def write_afc_image(filename, afc_image, xpos, ypos, slice_index, frame_index):
-    dict = {'afc_image': afc_image,'xpos': xpos,'ypos': ypos, 'slice_index': slice_index, 'frame_index': frame_index}
+    dict = {'afc_image': afc_image.tolist(),'xpos': xpos,'ypos': ypos, 'slice_index': slice_index, 'frame_index': frame_index}
     thestring = json.JSONEncoder().encode(dict)
     file = open(filename, 'w')
     file.write(thestring)
