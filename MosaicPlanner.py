@@ -910,12 +910,13 @@ class MosaicPanel(FigureCanvas):
             else:
                 pass
 
-    def move_to_initial_and_focus(self,x,y):
+    def move_to_initial_and_focus(self,x,y,channels,exp_times):
         self.imgSrc.move_stage(x,y)
         stg = self.imgSrc.mmc.getXYStageDevice()
         self.imgSrc.mmc.waitForDevice(stg)
-        self.software_autofocus(buttonpress=True)
-
+        # self.imgSrc.stop_hardware_triggering()
+        self.software_autofocus(acquisition_boolean= True)
+        # self.imgSrc.setup_hardware_triggering(channels,exp_times)
     
 
     def on_run_acq(self,event="none"):
@@ -1031,7 +1032,7 @@ class MosaicPanel(FigureCanvas):
                         print 'moving to initial position to focus'
                         initx = initial_position[0]
                         inity = initial_position[1]
-                        self.move_to_initial_and_focus(initx,inity)
+                        self.move_to_initial_and_focus(initx,inity,channels,exp_times)
 
                         #move to initial position and focus function goes here
                     for j,fpos in enumerate(pos.frameList.slicePositions):
@@ -1815,10 +1816,12 @@ class MosaicPanel(FigureCanvas):
         self.imgSrc.set_binning(2)
 
 
-    def software_autofocus(self, buttonpress = False): #MultiRibbons
+    def software_autofocus(self,acquisition_boolean = False, buttonpress = False): #MultiRibbons
         if buttonpress:
             self.imgSrc.set_binning(1)
         print "software autofocus"
+        if acquisition_boolean:
+            self.imgSrc.stop_hardware_triggering()
         self.imgSrc.set_hardware_autofocus_state(False) #turn off autofocus
         ch = self.channel_settings.map_chan
         self.imgSrc.set_exposure(self.channel_settings.exposure_times[ch])
@@ -1873,6 +1876,10 @@ class MosaicPanel(FigureCanvas):
         self.imgSrc.set_autofocus_offset(best_offset) #reset autofocus offset
         time.sleep(2*self.cfg['MosaicPlanner']['autofocus_wait'])
         self.imgSrc.set_hardware_autofocus_state(True) #turn on autofocus
+        if acquisition_boolean:
+            channels = [ch for ch in self.channel_settings.channels if self.channel_settings.usechannels[ch]]
+            exp_times = [self.channel_settings.exposure_times[ch] for ch in self.channel_settings.channels if self.channel_settings.usechannels[ch]]
+            self.imgSrc.setup_hardware_triggering(channels,exp_times)
         if buttonpress:
             self.imgSrc.set_binning(2)
 

@@ -1401,8 +1401,8 @@ class slicePosition():
             self.initial_trigger = trigger
             if self.initial_trigger == True:
                 self.autofocus_trigger = False
-            print 'Initial:', self.initial_trigger
-            print 'Normal:', self.autofocus_trigger
+            # print 'Initial:', self.initial_trigger
+            # print 'Normal:', self.autofocus_trigger
             self.__updatePointActivated('frame')
 
     def select_if_inside(self,verts):
