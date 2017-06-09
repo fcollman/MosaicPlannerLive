@@ -20,6 +20,7 @@ class imageSource():
       self.channels = []
       self.exposure_times = []
       self.offset = 0
+      self.use_focus_plane = False
 
     def define_focal_plane(self,points):
         if points.shape[1]>3:
@@ -222,10 +223,11 @@ class imageSource():
         
     def get_pixel_size(self):
         #NEED TO IMPLEMENT IF NOT MICROMANAGER
-        return 6.5
+        return .1
 
     def make_random_image(self):
-        return np.random.random(self.get_sensor_size())
+        #return np.random.random(self.get_sensor_size())
+        return np.random.randint(0,2**16 - 1,self.get_sensor_size(),np.uint16)
     def get_image(self,wait=True):
         return self.make_random_image()
 

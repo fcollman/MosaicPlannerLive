@@ -588,7 +588,7 @@ class MosaicPanel(FigureCanvas):
             score=self.imgSrc.image_based_autofocus(chan=self.channel_settings.map_chan)
             print score
 
-    def multiDacq(self,success,outdir,chrome_correction,triggerflag,x,y,current_z,slice_index,frame_index=0,hold_focus = False):
+    def multiDacq(self,success,outdir,chrome_correction,autofocus_trigger,triggerflag,x,y,current_z,slice_index,frame_index=0,hold_focus = False):
 
         #print datetime.datetime.now().time()," starting multiDAcq, autofocus on"
         if not hold_focus:
@@ -596,6 +596,8 @@ class MosaicPanel(FigureCanvas):
                 self.imgSrc.set_hardware_autofocus_state(True)
         #print datetime.datetime.now().time()," starting stage move"
         self.imgSrc.move_stage(x,y)
+        if autofocus_trigger:
+            self.software_autofocus()
         stagexy = self.imgSrc.get_xy()
         wx.Yield()
         self.autofocus_loop(hold_focus,self.cfg['MosaicPlanner']['autofocus_wait'],self.cfg['MosaicPlanner']['autofocus_sleep'])
@@ -969,6 +971,8 @@ class MosaicPanel(FigureCanvas):
             print channels
             print exp_times
             success=self.imgSrc.setup_hardware_triggering(channels,exp_times)
+        else:
+            success = False
 
 
 
@@ -997,7 +1001,8 @@ class MosaicPanel(FigureCanvas):
                 current_z = self.imgSrc.get_z()
                 if pos.frameList is None:
                     triggerflag = False
-                    self.multiDacq(success,outdir,chrom_correction,triggerflag,pos.x,pos.y,current_z,i,hold_focus=hold_focus)
+                    autofocus_trigger = False
+                    self.multiDacq(success,outdir,chrom_correction,autofocus_trigger,triggerflag,pos.x,pos.y,current_z,i,hold_focus=hold_focus)
                 else:
                     triggerflag = False
                     for j,fpos in enumerate(pos.frameList.slicePositions):
@@ -1019,7 +1024,9 @@ class MosaicPanel(FigureCanvas):
                                 goahead = False
                                 break
                         if pos.frameList.slicePositions[j].activated:
-                            self.multiDacq(success,outdir,chrom_correction,triggerflag,fpos.x,fpos.y,current_z,i,j,hold_focus)
+                            autofocus_trigger = pos.frameList.slicePositions[j].autofocus_trigger
+                            print autofocus_trigger
+                            self.multiDacq(success,outdir,chrom_correction,autofocus_trigger,triggerflag,fpos.x,fpos.y,current_z,i,j,hold_focus)
                         else:
                             # print 'moving on'
                             pass
@@ -1252,9 +1259,9 @@ class MosaicPanel(FigureCanvas):
                                     framepos.set_activated((not framepos.activated),'frame')
 
                         elif evt.key == 'f':
-                            framepos = pos.framelist.get_position_nearest(evt.xdata,evt.ydata)
-                            
-                            framepos.set_autofocus_trigger(True)
+                            framepos = pos.frameList.get_position_nearest(evt.xdata,evt.ydata)
+
+                            framepos.set_autofocus_trigger((not framepos.autofocus_trigger))
 
 
 
@@ -1601,6 +1608,21 @@ class MosaicPanel(FigureCanvas):
         numchan,chrom_correction = self.summarize_channel_settings()
         self.slack_notify("about to image %d Ribbons"%len(self.Ribbon_Num))
 
+        if self.cfg['MosaicPlanner']['hardware_trigger']:
+            # iterates over channels/exposure times in appropriate order
+            channels = [ch for ch in self.channel_settings.channels if self.channel_settings.usechannels[ch]]
+            exp_times = [self.channel_settings.exposure_times[ch] for ch in self.channel_settings.channels if
+                         self.channel_settings.usechannels[ch]]
+            for k, ch in enumerate(self.channel_settings.channels):
+                print 'Channel:', ch
+                print 'Exposure:', self.channel_settings.exposure_times[ch]
+            for k in range(len(channels)):
+                print 'Exposure in order:', exp_times[k]
+                print 'Channel in order:', channels[k]
+            success = self.imgSrc.setup_hardware_triggering(channels, exp_times)
+        else:
+            success = False
+
         #pick output directories
 
         # for rib in range(self.Ribbon_Num):
@@ -1666,17 +1688,7 @@ class MosaicPanel(FigureCanvas):
 
                 hold_focus = not (self.zstack_settings.zstack_flag or chrom_correction)
 
-                if self.cfg['MosaicPlanner']['hardware_trigger']:
-                    #iterates over channels/exposure times in appropriate order
-                    channels = [ch for ch in self.channel_settings.channels if self.channel_settings.usechannels[ch]]
-                    exp_times = [self.channel_settings.exposure_times[ch] for ch in self.channel_settings.channels if self.channel_settings.usechannels[ch]]
-                    for k,ch in enumerate(self.channel_settings.channels):
-                        print 'Channel:', ch
-                        print 'Exposure:', self.channel_settings.exposure_times[ch]
-                    for k in range(len(channels)):
-                        print 'Exposure in order:', exp_times[k]
-                        print 'Channel in order:', channels[k]
-                    success=self.imgSrc.setup_hardware_triggering(channels,exp_times)
+
 
                 goahead = True
                 #loop over positions
@@ -1694,7 +1706,9 @@ class MosaicPanel(FigureCanvas):
                         self.ResetPiezo()
                         current_z = self.imgSrc.get_z()
                         if pos.frameList is None:
-                            self.multiDacq(success,outdirlist[rib],chrom_correction,triggerflag,pos.x,pos.y,current_z,i,hold_focus=hold_focus)
+                            triggerflag = False
+                            autofocus_trigger = False
+                            self.multiDacq(success,outdirlist[rib],chrom_correction,autofocus_trigger,triggerflag,pos.x,pos.y,current_z,i,hold_focus=hold_focus)
                         else:
                             triggerflag = False
                             for j,fpos in enumerate(pos.frameList.slicePositions):
@@ -1709,8 +1723,8 @@ class MosaicPanel(FigureCanvas):
                                     goahead = False
                                     break
                                 if pos.frameList.slicePositions[j].activated:
-
-                                    self.multiDacq(success,outdirlist[rib],chrom_correction,triggerflag,fpos.x,fpos.y,current_z,i,j,hold_focus)
+                                    autofocus_trigger = pos.frameList.slicePositions[j].autofocus_trigger
+                                    self.multiDacq(success,outdirlist[rib],chrom_correction,autofocus_trigger,triggerflag,fpos.x,fpos.y,current_z,i,j,hold_focus)
                                 else:
                                     pass
                                 self.ResetPiezo()
@@ -1862,7 +1876,7 @@ class ZVISelectFrame(wx.Frame):
         #default_image=""
 
         #recursively call old init function
-        wx.Frame.__init__(self, parent, title=title, size=(1750,885),pos=(5,5))
+        wx.Frame.__init__(self, parent, title=title, size=(2000,885),pos=(5,5))
         #self.cfg = wx.Config('settings')
         if not os.path.isfile(SETTINGS_FILE):
             from shutil import copyfile
