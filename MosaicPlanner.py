@@ -596,7 +596,7 @@ class MosaicPanel(FigureCanvas):
         #print datetime.datetime.now().time()," starting stage move"
         self.imgSrc.move_stage(x,y)
         if autofocus_trigger:
-            self.software_autofocus()
+            self.software_autofocus(acquisition_boolean=True)
         stagexy = self.imgSrc.get_xy()
         wx.Yield()
         self.autofocus_loop(hold_focus,self.cfg['MosaicPlanner']['autofocus_wait'],self.cfg['MosaicPlanner']['autofocus_sleep'])
@@ -910,7 +910,7 @@ class MosaicPanel(FigureCanvas):
             else:
                 pass
 
-    def move_to_initial_and_focus(self,x,y,channels,exp_times):
+    def move_to_initial_and_focus(self,x,y):
         self.imgSrc.move_stage(x,y)
         stg = self.imgSrc.mmc.getXYStageDevice()
         self.imgSrc.mmc.waitForDevice(stg)
@@ -1032,7 +1032,7 @@ class MosaicPanel(FigureCanvas):
                         print 'moving to initial position to focus'
                         initx = initial_position[0]
                         inity = initial_position[1]
-                        self.move_to_initial_and_focus(initx,inity,channels,exp_times)
+                        self.move_to_initial_and_focus(initx,inity)
 
                         #move to initial position and focus function goes here
                     for j,fpos in enumerate(pos.frameList.slicePositions):
@@ -1769,6 +1769,12 @@ class MosaicPanel(FigureCanvas):
                             self.multiDacq(success,outdirlist[rib],chrom_correction,autofocus_trigger,triggerflag,pos.x,pos.y,current_z,i,hold_focus=hold_focus)
                         else:
                             triggerflag = False
+                            initial_position = self.get_initial_position(pos)
+                            if initial_position is not None:
+                                print 'moving to initial position to focus'
+                                initx = initial_position[0]
+                                inity = initial_position[1]
+                                self.move_to_initial_and_focus(initx,inity)
                             for j,fpos in enumerate(pos.frameList.slicePositions):
                                 if j == (len(pos.frameList.slicePositions) - 1):
                                     triggerflag = True
@@ -1833,11 +1839,15 @@ class MosaicPanel(FigureCanvas):
             self.imgSrc.stop_hardware_triggering()
         self.imgSrc.set_hardware_autofocus_state(False) #turn off autofocus
         ch = self.channel_settings.map_chan
-        self.imgSrc.set_exposure(self.channel_settings.exposure_times[ch])
+        self.imgSrc.set_exposure(self.cfg['Software Autofocus']['focus_exp_time'])
         self.imgSrc.set_channel(ch)
         (height,width) = self.imgSrc.get_sensor_size()
-        zstack_step = 0.3 #z step between images(microns)
-        zstack_number = 35 #number of images to take
+        zstack_step = self.cfg['Software Autofocus']['stepsize'] #z step between images(microns)
+        if acquisition_boolean:
+            zstack_number = self.cfg['Software Autofocus']['acquisition']
+        else:
+            zstack_number = self.cfg['Software Autofocus']['nonacquisition'] #number of images to take
+        print zstack_step, zstack_number
         stack = np.zeros((height,width,zstack_number))
         offsets = []
         current_z = self.imgSrc.get_z()
@@ -1885,6 +1895,7 @@ class MosaicPanel(FigureCanvas):
         self.imgSrc.set_autofocus_offset(best_offset) #reset autofocus offset
         time.sleep(2*self.cfg['MosaicPlanner']['autofocus_wait'])
         self.imgSrc.set_hardware_autofocus_state(True) #turn on autofocus
+        self.imgSrc.set_exposure(self.channel_settings.exposure_times[ch])
         if acquisition_boolean:
             channels = [ch for ch in self.channel_settings.channels if self.channel_settings.usechannels[ch]]
             exp_times = [self.channel_settings.exposure_times[ch] for ch in self.channel_settings.channels if self.channel_settings.usechannels[ch]]
