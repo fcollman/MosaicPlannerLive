@@ -1294,6 +1294,16 @@ class MosaicPanel(FigureCanvas):
 
                             framepos.set_autofocus_trigger((not framepos.autofocus_trigger))
 
+                        elif evt.key == 'l':
+                            frameindex = pos.frameList.get_nearest_position_index(evt.xdata,evt.ydata)
+                            for i,frame in enumerate(pos.frameList.slicePositions):
+                                if i != frameindex:
+                                    frame.set_autofocus_trigger(False, 'Initial')
+                                else:
+                                    frame.set_autofocus_trigger((not frame.initial_trigger),'Initial')
+
+
+
                         elif evt.key == 'i':
                             frameindex = pos.frameList.get_nearest_position_index(evt.xdata,evt.ydata)
                             for position in self.posList.slicePositions:
@@ -1303,11 +1313,10 @@ class MosaicPanel(FigureCanvas):
                                         framepos.set_autofocus_trigger(False,'Initial')
                                     else:
                                         framepos = position.frameList.slicePositions[i]
-                                        if not framepos.initial_trigger:
-                                            framepos.set_autofocus_trigger(True,'Initial')
-
-                                        else:
-                                            framepos.set_autofocus_trigger(False,'Initial')
+                                        framepos.set_autofocus_trigger((not framepos.initial_trigger),'Initial')
+                                        #
+                                        # else:
+                                        #     framepos.set_autofocus_trigger(False,'Initial')
 
 
 
