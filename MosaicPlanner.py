@@ -898,6 +898,19 @@ class MosaicPanel(FigureCanvas):
             d=json.load(fp)
         return d['mountpoint']
 
+    def get_initial_position(self,position):
+        for i in range(len(position.frameList.slicePositions)):
+            framepos = position.frameList.slicePositions[i]
+            if framepos.initial_trigger == True:
+                frameposx = framepos.x
+                frameposy = framepos.y
+                return [frameposx, frameposy]
+
+            elif i == (len(position.frameList.slicePositions)-1):
+                return None
+
+    
+
     def on_run_acq(self,event="none"):
         print "running"
         from SetupAlerts import SetupAlertDialog
@@ -1004,7 +1017,12 @@ class MosaicPanel(FigureCanvas):
                     autofocus_trigger = False
                     self.multiDacq(success,outdir,chrom_correction,autofocus_trigger,triggerflag,pos.x,pos.y,current_z,i,hold_focus=hold_focus)
                 else:
+
                     triggerflag = False
+                    initial_position = self.get_initial_position(pos)
+                    if initial_position is not None:
+                        print 'moving to initial position to focus'
+                        #move to initial position and focus function goes here
                     for j,fpos in enumerate(pos.frameList.slicePositions):
                         if j == (len(pos.frameList.slicePositions) - 1):
                             triggerflag = True
