@@ -1251,6 +1251,12 @@ class MosaicPanel(FigureCanvas):
                                     framepos = position.frameList.slicePositions[i]
                                     framepos.set_activated((not framepos.activated),'frame')
 
+                        elif evt.key == 'f':
+                            framepos = pos.framelist.get_position_nearest(evt.xdata,evt.ydata)
+                            
+                            framepos.set_autofocus_trigger(True)
+
+
 
 
                     elif (mode == 'add'):

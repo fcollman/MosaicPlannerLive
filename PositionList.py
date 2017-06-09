@@ -976,7 +976,7 @@ class posList():
 class slicePosition():
     """class which contains information about a single position in the position list, and is responsible for keeping 
     its matplotlib representation up to date via function calls which are mostly managed by its posList"""
-    def __init__(self,axis,pos_list,x,y,withpoint=True,selected=False, activated = True,
+    def __init__(self,axis,pos_list,x,y,withpoint=True,selected=False, activated = True, autofocus_trigger = False,
                  edgecolor='g',number=-1,numberDisplaySettings=NumberDisplaySettings(),z=None,angle = 0,showAngle=True):
         """constructor function
         
@@ -998,6 +998,7 @@ class slicePosition():
         self.angle = angle
         self.selected=selected
         self.activated=activated
+        self.autofocus_trigger = autofocus_trigger
         self.withpoint=withpoint
         self.number = number
         self.numberDisplaySettings = numberDisplaySettings
@@ -1390,7 +1391,11 @@ class slicePosition():
         """
         self.selected=selected
         self.__updatePointSelect()
-        
+
+    def set_autofocus_trigger(self,trigger):
+        self.autofocus_trigger = trigger
+        self.__updatePointActivated('frame')
+
     def select_if_inside(self,verts):
         """select this point if it is inside the list of vertices given (created by Lasso tool)
         as determined by matplotlib.nxutils.points_inside_poly
@@ -1422,7 +1427,9 @@ class slicePosition():
             self.pointLine2D.set_markeredgecolor(color)
         if type == 'frame':
             # print 'made it to update point activated'
-            if self.activated:
+            if (self.activated) and (self.autofocus_trigger):
+                color = 'b'
+            elif self.activated:
                 color = 'c'
             else:
                 color = 'r'
