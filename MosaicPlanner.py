@@ -602,8 +602,11 @@ class MosaicPanel(FigureCanvas):
         if self.cfg['MosaicPlanner']['do_second_autofocus_wait']:
             self.autofocus_loop(hold_focus,self.cfg['MosaicPlanner']['second_autofocus_wait'],self.cfg['MosaicPlanner']['autofocus_sleep'])
 
-        if self.dmi is not None:
+        if (self.dmi is not None) & (self.cfg['LeicaDMI']['take_afc_image']):
             afc_image = self.dmi.get_AFC_image()
+            self.dmi.set_AFC_hold(True)
+        else:
+            afc_image = None
 
         #print datetime.datetime.now().time()," starting multichannel acq"
         current_z = self.imgSrc.get_z()

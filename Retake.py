@@ -284,10 +284,7 @@ class RetakeView(QtGui.QWidget):
 
 
         self.mp = mp
-        if len(self.mp.cfg['LeicaDMI']['port'])>0:
-            self.dmi = LeicaDMI(self.mp.cfg['LeicaDMI']['port'])
-        else:
-            self.dmi = None
+
 
         self.mp.imgSrc.set_binning(1)
         self.initial_offset = self.mp.imgSrc.get_autofocus_offset()
@@ -364,7 +361,7 @@ class RetakeView(QtGui.QWidget):
                 btn.setChecked(True)
             btn.clicked.connect(partial(self.changeChannel,ch))
 
-        if self.dmi is not None:
+        if self.mp.dmi is not None:
             self.dmi_button = QtGui.QPushButton("AFC Image")
             self.verticalLayout.addWidget(self.dmi_button)
             self.dmi_button.clicked.connect(self.afcImage)
@@ -399,8 +396,8 @@ class RetakeView(QtGui.QWidget):
         self.loadFocusScoreData()
 
     def afcImage(self,evt=None):
-        if self.dmi is not None:
-            image = self.dmi.get_AFC_image()
+        if self.mp.dmi is not None:
+            image = self.mp.dmi.get_AFC_image()
             for key,value in self.mp.outdirdict.iteritems():
                 outdir = self.mp.outdirdict[key]
             AFCname = str(QtGui.QFileDialog.getSaveFileName(self, 'Save AFC File',outdir,"csv file (*.csv)"))
