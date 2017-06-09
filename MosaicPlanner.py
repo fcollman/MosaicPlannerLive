@@ -428,7 +428,6 @@ class MosaicPanel(FigureCanvas):
                         goahead = True
 
             print 'Sample_ID:', self.directory_settings.Sample_ID
-            print 'Sample_ID:', self.directory_settings.Sample_ID
             print 'Ribbon_ID:', self.directory_settings.Ribbon_ID
             print 'Session_ID:', self.directory_settings.Session_ID
             print 'Map Number:', self.directory_settings.Map_num
@@ -908,6 +907,14 @@ class MosaicPanel(FigureCanvas):
 
             elif i == (len(position.frameList.slicePositions)-1):
                 return None
+            else:
+                pass
+
+    def move_to_initial_and_focus(self,x,y):
+        self.imgSrc.move_stage(x,y)
+        stg = self.imgSrc.mmc.getXYStageDevice()
+        self.imgSrc.mmc.waitForDevice(stg)
+        self.software_autofocus(buttonpress=True)
 
     
 
@@ -1022,6 +1029,10 @@ class MosaicPanel(FigureCanvas):
                     initial_position = self.get_initial_position(pos)
                     if initial_position is not None:
                         print 'moving to initial position to focus'
+                        initx = initial_position[0]
+                        inity = initial_position[1]
+                        self.move_to_initial_and_focus(initx,inity)
+
                         #move to initial position and focus function goes here
                     for j,fpos in enumerate(pos.frameList.slicePositions):
                         if j == (len(pos.frameList.slicePositions) - 1):
