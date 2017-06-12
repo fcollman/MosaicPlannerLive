@@ -380,8 +380,7 @@ class MosaicPanel(FigureCanvas):
                     from imageSourceMM import imageSource
 
                 self.imgSrc=imageSource(self.MM_config_file,
-                                        MasterArduinoPort=self.cfg['MMArduino']['port'],
-                                        interframe_time=self.cfg['MMArduino']['interframe_time'],
+                                        MMArduino_settings=self.cfg['MMArduino'],
                                         filtswitch = self.cfg['MosaicPlanner']['filter_switch'])
             except:
                 traceback.print_exc(file=sys.stdout)
@@ -583,6 +582,29 @@ class MosaicPanel(FigureCanvas):
             score=self.imgSrc.image_based_autofocus(chan=self.channel_settings.map_chan)
             print score
 
+    def writeScoreMetadata(self,outdir,before_scores,after_scores,slice_index,frame_index,x,y,z):
+        i = 0;
+
+        for k,ch in enumerate(self.channel_settings.channels):
+            prot_name=self.channel_settings.prot_names[ch]
+            path=os.path.join(outdir,prot_name)
+            if self.channel_settings.usechannels[ch]:
+                d={
+                    'before_score':before_scores[i],
+                    'after_score':after_scores[i],
+                    'x':x,
+                    'y':y,
+                    'z':z,
+                    'frame_index':frame_index,
+                    'slice_index':slice_index,
+                    'ch':ch,
+                    'prot_name':prot_name
+                }
+                filename = os.path.join(outdir, prot_name,prot_name + "_S%04d_F%04d_afcscore.json"%(slice_index, frame_index))
+                with open(filename,'w') as fp:
+                    json.dump(d,fp,indent=4)
+                i+=1
+
     def multiDacq(self,success,outdir,chrome_correction,triggerflag,x,y,current_z,slice_index,frame_index=0,hold_focus = False):
 
         #print datetime.datetime.now().time()," starting multiDAcq, autofocus on"
@@ -675,6 +697,10 @@ class MosaicPanel(FigureCanvas):
                             self.dataQueue.put((slice_index,frame_index, z_index, prot_name,path,data,ch,stagexy[0],stagexy[1],z,False,calcFocus))
                         else:
                             self.dataQueue.put((slice_index,frame_index, z_index, prot_name,path,data,ch,stagexy[0],stagexy[1],z,triggerflag,calcFocus))
+                scores = self.imgSrc.get_autofocus_scores()
+                if scores is not None:
+                    before_scores,after_scores = scores
+                    self.writeScoreMetadata(outdir,before_scores,after_scores,slice_index,frame_index,x,y,current_z)
 
 
         if (self.cfg['MosaicPlanner']['hardware_trigger'] == True) and (chrome_correction == False) and (success != False):

@@ -13,7 +13,7 @@ class imageSource():
     def __init__(self,configFile,channelGroupName='Channels',
                  use_focus_plane  = False, focus_points=None,
                  transpose_xy = False, logfile='MP_MM.txt',
-                 MasterArduinoPort = None, interframe_time= 10, filtswitch = None):
+                 MMArduino_settings = None, filtswitch = None):
       #NEED TO IMPLEMENT IF NOT MICROMANAGER
      
         self.configFile=configFile
@@ -49,11 +49,11 @@ class imageSource():
             assert (focus_points is not None)
             self.define_focal_plane(focus_points)
 
-        if MasterArduinoPort is not None:
-            self.masterArduino = MMArduino(port=MasterArduinoPort)
+        if len(MMArduino_settings['port'])>0:
+            self.masterArduino = MMArduino(**MMArduino_settings)
         else:
             self.masterArduino = None
-        self.interframe_time = interframe_time
+
         self.filtswitch = filtswitch
 
         if self.filtswitch is not None:
@@ -177,7 +177,7 @@ class imageSource():
                 #set it to that constant state
                 self.mmc.setProperty(dev,prop,valuefirst)
                 self.mmc.waitForDevice(dev)
-        self.masterArduino.setupExposure(exposure_times,self.interframe_time)
+        self.masterArduino.setupExposure(exposure_times)
         self.numberHardwareChannels = len(exposure_times)
         self.mmc.startContinuousSequenceAcquisition(0)
 
@@ -566,6 +566,12 @@ class imageSource():
     def get_autofocus_offset(self): #MultiRibbons
         if self.has_hardware_autofocus():
             return self.mmc.getAutoFocusOffset()
+
+    def get_autofocus_scores(self):
+        if self.masterArduino is not None:
+            return self.masterArduino.getExposureScores()
+        else:
+            return None
     
     def shutdown(self):
         self.mmc.unloadAllDevices()

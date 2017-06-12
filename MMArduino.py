@@ -4,7 +4,7 @@ import time
 import numpy as np
 
 class MMArduino(object):
-    def __init__(self,port = 'COM8',baudrate = '57600'):
+    def __init__(self,port = 'COM8',baudrate = '57600',log_scores = False,interframe_time=10):
         self.ser = serial.Serial()
         self.ser.port = port
         self.ser.baudrate = baudrate
@@ -12,11 +12,12 @@ class MMArduino(object):
         self.ser.timeout =.5
         self.ser.open()
         time.sleep(2)
-        self.ser.readlines()
-        self.sendCmd(chr(27))
-        self.sendCmd(chr(27))
-        self.sendCmd(chr(27))
-        self.sendCmd(chr(27))
+        self.interframe_time = interframe_time
+        if log_scores:
+            self.startScoreBufferMode()
+        else:
+            self.stopScoreBufferMode()
+
     def sendMessage(self,message,debug=False):
         cmd = bytearray(message)
         answer = self.sendDirect(message,len(message))
@@ -82,6 +83,26 @@ class MMArduino(object):
         return self.sendMessage([20])
     def stopBlankingMode(self):
         return self.sendMessage([21])
+    
+    def startScoreBufferMode(self):
+        return self.sendMessage([25,1]);
+    
+    def stopScoreBufferMode(self):
+        return self.sendMessage([25,0]);
+    
+    def getScoreBuffer(self):
+        self.ser.write(chr(26))
+        cmd_num= ord(self.ser.read(1))
+        n= ord(self.ser.read(1))
+        nums= self.ser.read(2*n)
+        return np.array(struct.unpack("<%dh"%n,nums))
+    
+    def getExposureScores(self):
+        raw_scores = self.getScoreBuffer()
+        begin_scores= 3.0*(raw_scores[0::3]-511)/512
+        end_scores = 3.0*(raw_scores[1::3]-511)/512
+        return begin_scores,end_scores
+        
     def setBlankingDirection(self,blankHigh=True):
         if blankHigh:
             answer = self.sendDirect([22,0])
@@ -94,8 +115,10 @@ class MMArduino(object):
         else:
             return self.sendMessage([23,1])
     
-    def setupExposure(self,exposures,interframe=10,exp_pattern=[0,0,0,0,0,0,0,1]):
+    def setupExposure(self,exposures,interframe=None,exp_pattern=[0,0,0,0,0,0,0,1]):
         i =0
+        if interframe is None:
+            interframe = self.interframe_time
         for exp in exposures:
             self.setTimedPattern(i,exp_pattern,exp)
             i+=1
