@@ -690,13 +690,16 @@ class MosaicPanel(FigureCanvas):
 
 
         if self.cfg['MosaicPlanner']['autofocus_toggle']:
-            self.imgSrc.set_hardware_autofocus_state(False)
+            print 'toggle autofocus'
+            self.imgSrc.set_hardware_autofocus_state(False,False)
 
         if (self.cfg['MosaicPlanner']['hardware_trigger'] == True) and (chrome_correction == False) and (success != False):
             hardware_acquire()
         else:
             software_acquire()
 
+        if self.cfg['MosaicPlanner']['autofocus_toggle']:
+            self.imgSrc.set_hardware_autofocus_state(True,True)
         if not hold_focus:
             self.imgSrc.set_z(current_z)
             if self.imgSrc.has_hardware_autofocus():
@@ -1954,7 +1957,7 @@ class ZVISelectFrame(wx.Frame):
         #default_image=""
 
         #recursively call old init function
-        wx.Frame.__init__(self, parent, title=title, size=(2000,885),pos=(5,5))
+        wx.Frame.__init__(self, parent, title=title, size=(1800,885),pos=(5,5))
         #self.cfg = wx.Config('settings')
         if not os.path.isfile(SETTINGS_FILE):
             from shutil import copyfile

@@ -230,10 +230,11 @@ class imageSource():
         if self.has_hardware_autofocus():
             return self.mmc.isContinuousFocusEnabled()
            
-    def set_hardware_autofocus_state(self,state):
+    def set_hardware_autofocus_state(self,state,dowait=True):
         if self.has_hardware_autofocus():
             self.mmc.enableContinuousFocus(state)
-            self.mmc.waitForDevice(self.mmc.getAutoFocusDevice())
+            if dowait:
+                self.mmc.waitForDevice(self.mmc.getAutoFocusDevice())
         
     def has_hardware_autofocus(self):
         #NEED TO IMPLEMENT IF NOT MICROMANAGER
