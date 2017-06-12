@@ -689,6 +689,9 @@ class MosaicPanel(FigureCanvas):
                             self.dataQueue.put((slice_index,frame_index, z_index, prot_name,path,data,ch,stagexy[0],stagexy[1],z,triggerflag,calcFocus,afc_image))
 
 
+        if self.cfg['MosaicPlanner']['autofocus_toggle']:
+            self.imgSrc.set_hardware_autofocus_state(False)
+
         if (self.cfg['MosaicPlanner']['hardware_trigger'] == True) and (chrome_correction == False) and (success != False):
             hardware_acquire()
         else:
