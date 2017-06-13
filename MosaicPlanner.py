@@ -2249,6 +2249,7 @@ class ZVISelectFrame(wx.Frame):
                 self.mosaicCanvas.posList.save_position_list_JSON(self.array_filepicker.GetPath(),trans=self.Transform)
             else:
                 self.mosaicCanvas.posList.save_position_list_JSON(self.array_filepicker.GetPath(),trans=None)
+            self.mosaicCanvas.posList.slicePositions[0].save_frame_state_JSON(self.array_filepicker.GetPath(),1)
 
     def on_image_collect_load(self,event):
         path=self.imgCollectDirPicker.GetPath()

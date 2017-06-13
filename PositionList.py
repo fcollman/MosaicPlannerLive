@@ -844,6 +844,12 @@ class posList():
         file.write(thestring)
         file.close()
 
+
+    # def save_frame_state_JSON(self,filename):
+    #     framelist = []
+    #     for index,frame in enumerate(self.slicePositions.frameList.slicePositions):
+
+
     def save_frame_list_OMX(self,filename,trans=None,Z=13235.0):
         """save the positionlist to a SmartSEM position list csv format, where each frame of the mosaic is its own position
         keywords:
@@ -1404,6 +1410,39 @@ class slicePosition():
             # print 'Initial:', self.initial_trigger
             # print 'Normal:', self.autofocus_trigger
             self.__updatePointActivated('frame')
+
+
+    def save_frame_state_JSON(self,filename,section_num):
+        statedict = {'inactive' : 0,
+                     'active' : 1,
+                     'initial_frame' : 2,
+                     'trigger_autofocus' : 3}
+        filename, format = filename.split('.')
+        filename = filename + 'frame_state_table.' + format
+
+        if self.frameList == None:
+            return None
+        else:
+
+            statelist = []
+            print 'framelist:', self.frameList
+            for fpos in self.frameList.slicePositions:
+                if not fpos.activated:
+                    statelist.append(statedict['inactive'])
+                elif fpos.initial_trigger:
+                    statelist.append(statedict['initial_frame'])
+                elif fpos.autofocus_trigger:
+                    statelist.append(statedict['trigger_autofocus'])
+                else:
+                    statelist.append(statedict['active'])
+
+        dict = {"SECTION" : section_num,
+                "STATE TABLE" : statelist}
+        thestring=json.JSONEncoder().encode(dict)
+        with open(filename,'w+') as file:
+            print thestring
+            json.dump(thestring,file)
+        file.close()
 
     def select_if_inside(self,verts):
         """select this point if it is inside the list of vertices given (created by Lasso tool)
