@@ -19,12 +19,12 @@ class LeicaDMI(object):
 
     def get_AFC_image(self):
         self.sendCmd("48066 -1")
-        Nloops = 323
+        Nloops = 50  # 323
         my_array = np.zeros(Nloops * 8)
-        for index in np.arange(0, 2584, 8):
+        for index in np.arange(840, 1240, 8):  # (0, 2584, 8):
             vals = self.sendCmd("48066 " + str(index))
             temp = np.array(map(int, vals.split()))
-            my_array[index:index + 8] = temp[2:]
+            my_array[index-840:index-840 + 8] = temp[2:]  # my_array[index:index + 8] = temp[2:]
         return my_array
 
     def get_AFC_score(self):
