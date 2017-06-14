@@ -1418,7 +1418,7 @@ class slicePosition():
                      'initial_frame' : 2,
                      'trigger_autofocus' : 3}
         filename, format = filename.split('.')
-        filename = filename + 'frame_state_table.' + format
+        filename = filename + 'frame_state_table.' + 'json'
 
         if self.frameList == None:
             return None
@@ -1439,7 +1439,7 @@ class slicePosition():
         dict = {"SECTION" : section_num,
                 "STATE TABLE" : statelist}
         thestring=json.JSONEncoder().encode(dict)
-        with open(filename,'w+') as file:
+        with open(filename,'a+') as file:
             print thestring
             json.dump(thestring,file)
         file.close()
