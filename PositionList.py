@@ -1412,21 +1412,19 @@ class slicePosition():
             self.__updatePointActivated('frame')
 
 
-    def save_frame_state_JSON(self,filename,section_num):
-        statedict = {'inactive' : 0,
-                     'active' : 1,
-                     'initial_frame' : 2,
-                     'trigger_autofocus' : 3}
+    def save_frame_state_JSON(self,filename,poslist):
         filename, format = filename.split('.')
         filename = filename + 'frame_state_table.' + 'json'
 
-        if self.frameList == None:
-            return None
-        else:
+        def create_state_list(self,fpos):
 
-            statelist = []
-            print 'framelist:', self.frameList
-            for fpos in self.frameList.slicePositions:
+                statedict = {'inactive' : 0,
+                             'active' : 1,
+                             'initial_frame' : 2,
+                             'trigger_autofocus' : 3}
+                statelist = []
+                print 'framelist:', self.frameList
+
                 if not fpos.activated:
                     statelist.append(statedict['inactive'])
                 elif fpos.initial_trigger:
@@ -1435,13 +1433,19 @@ class slicePosition():
                     statelist.append(statedict['trigger_autofocus'])
                 else:
                     statelist.append(statedict['active'])
+                return statelist
 
-        dict = {"SECTION" : section_num,
-                "STATE TABLE" : statelist}
-        thestring=json.JSONEncoder().encode(dict)
-        with open(filename,'a+') as file:
-            print thestring
-            json.dump(thestring,file)
+
+        statetabledict = {}
+        if self.frameList == None:
+            return None
+        else:
+            for fpos in self.frameList.slicePositions:
+        # dict = {"SECTION" : section_num,
+        #         "STATE TABLE" : statelist}
+        thestring=json.JSONEncoder().encode(statetabledict)
+        with open(filename,'w') as file:
+            file.write(thestring)
         file.close()
 
     def select_if_inside(self,verts):
