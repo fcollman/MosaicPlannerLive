@@ -2219,8 +2219,8 @@ class ZVISelectFrame(wx.Frame):
         self.mosaicCanvas.navtoolbar.set_mosaic_parameters(self.mosaicCanvas.posList.mosaic_settings)
         self.mosaicCanvas.draw()
 
-        if self.array_formatBox.GetValue()=='JSON':
-            self.mosaicCanvas.posList.load_frame_state_table(self.array_filepicker.GetPath())
+        # if self.array_formatBox.GetValue()=='JSON':
+        self.mosaicCanvas.posList.load_frame_state_table(self.array_filepicker.GetPath())
 
 
     def on_array_save(self,event):
@@ -2256,8 +2256,8 @@ class ZVISelectFrame(wx.Frame):
             else:
                 print 'hello'
                 self.mosaicCanvas.posList.save_position_list_JSON(self.array_filepicker.GetPath(),trans=None)
-            print 'attempting to save frame state table'
-            self.mosaicCanvas.posList.on_save_frame_state_table(self.array_filepicker.GetPath())
+        print 'attempting to save frame state table'
+        self.mosaicCanvas.posList.on_save_frame_state_table(self.array_filepicker.GetPath())
 
     def on_image_collect_load(self,event):
         path=self.imgCollectDirPicker.GetPath()
