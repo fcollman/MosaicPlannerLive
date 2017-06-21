@@ -220,7 +220,8 @@ class posList():
             #if the frames already exist, use the set_mosaic_visible function to make them visible/invisible
             #as frameList is a posList class.. low and behold fancy recursive META logic
             if not pos.frameList==None:
-                pos.frameList.set_mosaic_visible(visible)       
+                pos.frameList.set_mosaic_visible(visible)
+
     
     def select_points_inside(self,verts): 
         """select all the points inside the vertices created by the Lasso widget callback function
@@ -643,6 +644,23 @@ class posList():
         ifile.close()
         self.updateNumbers()
 
+    def load_frame_state_table(self,filename):
+        filename, formattype = filename.split('.')
+        filename = filename + 'frame_state_table.json'
+
+
+
+        ifile = open(filename,'rb')
+        thedict = json.load(ifile)
+
+        print type(thedict)
+        for i,item in enumerate(sorted(thedict)):
+            print type(i), type(item)
+            print thedict[item]
+            self.slicePositions[i].update_framestates(thedict[item])
+
+
+
     def save_position_list(self,filename,trans=None):
         """save the positionlist to a axiovision position list format, csv format
         
@@ -845,9 +863,21 @@ class posList():
         file.close()
 
 
-    # def save_frame_state_JSON(self,filename):
-    #     framelist = []
-    #     for index,frame in enumerate(self.slicePositions.frameList.slicePositions):
+    def on_save_frame_state_table(self,filepath):
+
+        filename, formattype = filepath.split('.')
+        filename = filename + 'frame_state_table.json'
+        statetable_dict = {}
+
+        for i in range(len(self.slicePositions)):
+            section_num, frame_statelist = self.slicePositions[i].create_frame_state_list()
+            statetable_dict[section_num] = frame_statelist
+        thestring = json.JSONEncoder().encode(statetable_dict)
+        with open(filename,'w') as file:
+            file.write(thestring)
+        file.close()
+
+
 
 
     def save_frame_list_OMX(self,filename,trans=None,Z=13235.0):
@@ -983,7 +1013,7 @@ class slicePosition():
     """class which contains information about a single position in the position list, and is responsible for keeping 
     its matplotlib representation up to date via function calls which are mostly managed by its posList"""
     def __init__(self,axis,pos_list,x,y,withpoint=True,selected=False, activated = True, autofocus_trigger = False, initial_trigger = False,
-                 edgecolor='g',number=-1,numberDisplaySettings=NumberDisplaySettings(),z=None,angle = 0,showAngle=True):
+                 edgecolor='g',number=-1,numberDisplaySettings=NumberDisplaySettings(),z=None,angle = 0,showAngle=True, framestatetable = None):
         """constructor function
         
         keywords:
@@ -1006,6 +1036,7 @@ class slicePosition():
         self.activated=activated
         self.autofocus_trigger = autofocus_trigger
         self.initial_trigger = initial_trigger
+        self.framestatetable = framestatetable
         self.withpoint=withpoint
         self.number = number
         self.numberDisplaySettings = numberDisplaySettings
@@ -1076,6 +1107,8 @@ class slicePosition():
             self.__paintFramesTilted()
         else:
             self.__paintFramesGrid()
+        if self.framestatetable != None:
+            self.update_framestates(self.framestatetable)
             
     def __paintFramesGrid(self):
         if not self.axis: return None
@@ -1184,7 +1217,9 @@ class slicePosition():
                 for x in xrange:
                     self.frameList.add_position(xx[y,x],yy[y,x],withpoint=False,edgecolor='c')
 
+
             self.frameList.set_mosaic_visible(True)
+
 
             #shiftx_rot=.5*(self.pos_list.mosaic_settings.mx-1)*fw*(1-alpha);
             #self.frameList.shift_all(-shiftx_rot*cos(self.angle),-shiftx_rot*sin(self.angle))
@@ -1412,19 +1447,19 @@ class slicePosition():
             self.__updatePointActivated('frame')
 
 
-    def save_frame_state_JSON(self,filename,poslist):
-        filename, format = filename.split('.')
-        filename = filename + 'frame_state_table.' + 'json'
+    def create_frame_state_list(self):
+        # filename, format = filename.split('.')
+        # filename = filename + 'frame_state_table.' + 'json'
 
-        def create_state_list(self,fpos):
-
-                statedict = {'inactive' : 0,
-                             'active' : 1,
-                             'initial_frame' : 2,
-                             'trigger_autofocus' : 3}
-                statelist = []
-                print 'framelist:', self.frameList
-
+        statedict = {'inactive' : 0,
+                    'active' : 1,
+                    'initial_frame' : 2,
+                    'trigger_autofocus' : 3}
+        statelist = []
+        if self.frameList == None:
+            return None
+        else:
+            for fpos in self.frameList.slicePositions:
                 if not fpos.activated:
                     statelist.append(statedict['inactive'])
                 elif fpos.initial_trigger:
@@ -1433,20 +1468,25 @@ class slicePosition():
                     statelist.append(statedict['trigger_autofocus'])
                 else:
                     statelist.append(statedict['active'])
-                return statelist
+
+            return self.number, statelist
 
 
-        statetabledict = {}
+
+    def update_framestates(self,statelist):
         if self.frameList == None:
-            return None
-        else:
-            for fpos in self.frameList.slicePositions:
-        # dict = {"SECTION" : section_num,
-        #         "STATE TABLE" : statelist}
-        thestring=json.JSONEncoder().encode(statetabledict)
-        with open(filename,'w') as file:
-            file.write(thestring)
-        file.close()
+            self.paintFrames()
+            self.framestatetable = statelist
+        for i,fpos in enumerate(self.frameList.slicePositions):
+            framestate = statelist[i]
+            if framestate == 0:
+                fpos.set_activated(False,type = 'frame')
+            elif framestate == 2:
+                fpos.set_autofocus_trigger(True,'initial')
+            elif framestate == 3:
+                fpos.set_autofocus_trigger(True)
+            else:
+                fpos.set_activated(True, type = 'frame')
 
     def select_if_inside(self,verts):
         """select this point if it is inside the list of vertices given (created by Lasso tool)

@@ -536,6 +536,7 @@ class MosaicPanel(FigureCanvas):
         self.on_crop_tool()
         self.draw()
 
+
     def write_slice_metadata(self,filename,ch,xpos,ypos,zpos):
         f = open(filename, 'w')
         channelname=self.channel_settings.prot_names[ch]
@@ -2214,8 +2215,13 @@ class ZVISelectFrame(wx.Frame):
             self.mosaicCanvas.posList.add_from_file_ZEN(self.array_filepicker.GetPath())
         elif self.array_formatBox.GetValue()=='JSON': #MultiRibbons
             self.mosaicCanvas.posList.add_from_file_JSON(self.array_filepicker.GetPath())
+
         self.mosaicCanvas.navtoolbar.set_mosaic_parameters(self.mosaicCanvas.posList.mosaic_settings)
         self.mosaicCanvas.draw()
+
+        if self.array_formatBox.GetValue()=='JSON':
+            self.mosaicCanvas.posList.load_frame_state_table(self.array_filepicker.GetPath())
+
 
     def on_array_save(self,event):
         """event handler for the array save button"""
@@ -2248,10 +2254,10 @@ class ZVISelectFrame(wx.Frame):
             if self.save_transformed.IsChecked():
                 self.mosaicCanvas.posList.save_position_list_JSON(self.array_filepicker.GetPath(),trans=self.Transform)
             else:
+                print 'hello'
                 self.mosaicCanvas.posList.save_position_list_JSON(self.array_filepicker.GetPath(),trans=None)
-            for i in range(len(self.mosaicCanvas.posList.slicePositions)):
-                slicePositions = self.mosaicCanvas.posList.slicePositions()
-                self.mosaicCanvas.posList.slicePositions[i].save_frame_state_JSON(self.array_filepicker.GetPath(),slicePositions)
+            print 'attempting to save frame state table'
+            self.mosaicCanvas.posList.on_save_frame_state_table(self.array_filepicker.GetPath())
 
     def on_image_collect_load(self,event):
         path=self.imgCollectDirPicker.GetPath()
