@@ -1515,7 +1515,6 @@ class slicePosition():
             self.pointLine2D.set_markeredgecolor(color)
         if type == 'frame':
             if (self.initial_trigger):
-                print 'initial'
                 self.activated = True
                 self.autofocus_trigger = False
                 color = 'y'
