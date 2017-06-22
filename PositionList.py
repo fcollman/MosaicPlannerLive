@@ -1432,7 +1432,7 @@ class slicePosition():
 
     def set_autofocus_trigger(self,trigger, type = 'Normal'):
         if type == 'Normal':
-
+            self.initial_trigger = False
             self.autofocus_trigger = trigger
             self.__updatePointActivated('frame')
         if type == 'Initial':
@@ -1514,7 +1514,6 @@ class slicePosition():
             # self.pointLine2D.set_markercolor(color)
             self.pointLine2D.set_markeredgecolor(color)
         if type == 'frame':
-            # print 'made it to update point activated'
             if (self.initial_trigger):
                 print 'initial'
                 self.activated = True

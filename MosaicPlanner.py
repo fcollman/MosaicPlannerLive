@@ -1297,9 +1297,15 @@ class MosaicPanel(FigureCanvas):
 
                         elif evt.key == 'f':
                             framepos = pos.frameList.get_position_nearest(evt.xdata,evt.ydata)
-                            framepos.initial_trigger = False
+
 
                             framepos.set_autofocus_trigger((not framepos.autofocus_trigger))
+
+                        elif evt.key == 'a':
+                            frameindex = pos.frameList.get_nearest_position_index(evt.xdata,evt.ydata)
+                            for position in self.posList.slicePositions:
+                                framepos = position.frameList.slicePositions[frameindex]
+                                framepos.set_autofocus_trigger((not framepos.autofocus_trigger))
 
                         elif evt.key == 'l':
                             frameindex = pos.frameList.get_nearest_position_index(evt.xdata,evt.ydata)
@@ -1842,7 +1848,7 @@ class MosaicPanel(FigureCanvas):
         if buttonpress:
             self.imgSrc.set_binning(1)
         print "software autofocus"
-        if acquisition_boolean:
+        if (acquisition_boolean) and (self.cfg['MosaicPlanner']['hardware_trigger']):
             self.imgSrc.stop_hardware_triggering()
         self.imgSrc.set_hardware_autofocus_state(False) #turn off autofocus
         ch = self.channel_settings.map_chan
@@ -1903,7 +1909,7 @@ class MosaicPanel(FigureCanvas):
         time.sleep(2*self.cfg['MosaicPlanner']['autofocus_wait'])
         self.imgSrc.set_hardware_autofocus_state(True) #turn on autofocus
         self.imgSrc.set_exposure(self.channel_settings.exposure_times[ch])
-        if acquisition_boolean:
+        if (acquisition_boolean) and (self.cfg['MosaicPlanner']['hardware_trigger']):
             channels = [ch for ch in self.channel_settings.channels if self.channel_settings.usechannels[ch]]
             exp_times = [self.channel_settings.exposure_times[ch] for ch in self.channel_settings.channels if self.channel_settings.usechannels[ch]]
             self.imgSrc.setup_hardware_triggering(channels,exp_times)
