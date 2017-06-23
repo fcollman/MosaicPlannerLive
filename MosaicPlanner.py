@@ -198,7 +198,14 @@ class MosaicToolbar(NavBarImproved):
         self.snapHereTool    = self.add_user_tool('snaphere',7,cameraBmp,True,'move scope and snap image here')
         self.snapPictureTool = self.add_user_tool('snappic',8,mosaicBmp,True,'take 3x3 mosaic on click')
         self.selectNear      = self.add_user_tool('selectnear',9,selectnearBmp,True,'Add Nearest Point to selection')
-        self.activateNear    = self.add_user_tool('toggleactivate',10,activateBmp,True,'Toggle Activation of nearest point to selection')
+        self.activateNear    = self.add_user_tool('toggleactivate',10,activateBmp,True,'Toggle Activation of nearest point to selection, \n'
+                                                                                       'Hold shift to activate/deactivate frame,\n'
+                                                                                       'Hold T to activate/deactivate all frames,\n'
+                                                                                       'Hold R to acttivate/deactivate same frame in all sections,\n'
+                                                                                       'Hold F to toggle software autofocus on frame,\n'
+                                                                                       'Hold C to toggle software autofocus on same frame in all sections,\n'
+                                                                                       'Hold I to set inital frame in all sections,\n'
+                                                                                       'Hold L to designate initial frame')
         self.addTool         = self.add_user_tool('add', 11, addpointBmp, True, 'Add a Point')
         self.oneTool         = self.add_user_tool('selectone', 12, oneBmp, True, 'Choose pointLine2D 1')
         self.twoTool         = self.add_user_tool('selecttwo', 13, twoBmp, True, 'Choose pointLine2D 2')
@@ -1301,7 +1308,7 @@ class MosaicPanel(FigureCanvas):
 
                             framepos.set_autofocus_trigger((not framepos.autofocus_trigger))
 
-                        elif evt.key == 'a':
+                        elif evt.key == 'c':
                             frameindex = pos.frameList.get_nearest_position_index(evt.xdata,evt.ydata)
                             for position in self.posList.slicePositions:
                                 framepos = position.frameList.slicePositions[frameindex]

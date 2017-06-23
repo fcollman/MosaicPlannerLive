@@ -957,9 +957,9 @@ class posList():
     def __sort_points(self,vertsort=False):
         """sort the slicePositions in the list according to their x value"""
         if self.dosort:
-			if vertsort:
-				self.slicePositions.sort(key=lambda pos: pos.y, reverse=False)  
-			else:
+            if vertsort:
+                self.slicePositions.sort(key=lambda pos: pos.y, reverse=False)
+            else:
 				self.slicePositions.sort(key=lambda pos: pos.x, reverse=False)  
             
     def updateNumbers(self):
