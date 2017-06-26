@@ -2233,7 +2233,8 @@ class ZVISelectFrame(wx.Frame):
         self.mosaicCanvas.draw()
 
         # if self.array_formatBox.GetValue()=='JSON':
-        self.mosaicCanvas.posList.load_frame_state_table(self.array_filepicker.GetPath())
+        if self.mosaicCanvas.cfg['MosaicPlanner']['frame_state_save']:
+            self.mosaicCanvas.posList.load_frame_state_table(self.array_filepicker.GetPath())
 
 
     def on_array_save(self,event):

@@ -29,7 +29,7 @@ from matplotlib.lines import Line2D
 from matplotlib.quiver import Quiver
 #from matplotlib.nxutils import points_inside_poly
 from CenterRectangle import CenterRectangle
-
+import os
 from scipy.interpolate import griddata
 import lxml.etree as ET
 import json
@@ -649,11 +649,13 @@ class posList():
         filename = filename + 'frame_state_table.json'
 
 
-
-        ifile = open(filename,'rb')
-        thedict = json.load(ifile)
-        for i,item in enumerate(sorted(thedict)):
-            self.slicePositions[i].update_framestates(thedict[item])
+        if os.path.exists(filename):
+            ifile = open(filename,'rb')
+            thedict = json.load(ifile)
+            for i,item in enumerate(sorted(thedict)):
+                self.slicePositions[i].update_framestates(thedict[item])
+        else:
+            pass
 
 
 
