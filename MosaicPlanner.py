@@ -2269,8 +2269,8 @@ class ZVISelectFrame(wx.Frame):
             else:
                 print 'hello'
                 self.mosaicCanvas.posList.save_position_list_JSON(self.array_filepicker.GetPath(),trans=None)
-        print 'attempting to save frame state table'
-        self.mosaicCanvas.posList.on_save_frame_state_table(self.array_filepicker.GetPath())
+        if self.mosaicCanvas.cfg['MosaicPlanner']['frame_state_save']:
+            self.mosaicCanvas.posList.on_save_frame_state_table(self.array_filepicker.GetPath())
 
     def on_image_collect_load(self,event):
         path=self.imgCollectDirPicker.GetPath()
