@@ -969,7 +969,7 @@ class MosaicPanel(FigureCanvas):
         # self.imgSrc.set_binning(1)
         # binning=self.imgSrc.get_binning()
         # numchan,chrom_correction = self.summarize_channel_settings()
-        self.slack_notify("about to image %d Ribbons"%len(self.Ribbon_Num))
+        self.slack_notify("about to image %d Ribbons"%(self.Ribbon_Num))
 
         # if self.cfg['MosaicPlanner']['hardware_trigger']:
         #     # iterates over channels/exposure times in appropriate order
@@ -1006,11 +1006,11 @@ class MosaicPanel(FigureCanvas):
                 self.draw()
 
                 #load poslist from JSON file
-                posList = self.posList.add_from_file_JSON(poslistpath[rib])
+                self.posList.add_from_file_JSON(poslistpath[rib])
                 self.posList.rotate_boxes_angle()
                 self.posList.set_frames_visible(True)
                 self.draw()
-                self.on_run_acq(posList,outdirlist[rib])
+                self.on_run_acq(self.posList,outdirlist[rib])
         #
         #         #from on_run_acq
         #         self.slack_notify("Acquiring data from ribbon %s of %s with %s sections"%(rib,self.Ribbon_Num,len(self.posList.slicePositions)))
@@ -1133,7 +1133,7 @@ class MosaicPanel(FigureCanvas):
 
     
 
-    def on_run_acq(self,posList,outdir = None,event="none"):
+    def on_run_acq(self,outdir = None,event="none"):
         print "running"
         from SetupAlerts import SetupAlertDialog
 
@@ -1164,10 +1164,8 @@ class MosaicPanel(FigureCanvas):
         if not self.multiribbon_boolean:
             for key,value in self.outdirdict.iteritems():
                 outdir = self.outdirdict[key]
-            posList = self.posList
         else:
             outdir = outdir
-            posList = posList
         if outdir is None:
             return None
 
@@ -1178,7 +1176,14 @@ class MosaicPanel(FigureCanvas):
             self.write_session_metadata(value)
 
         if self.multiribbon_boolean:
-            self.imgSrc.move_safe_and_focus(posList.slicePositions[1].x,posList.slicePositions[1].y)
+            if len(self.posList.slicePositions) < 2:
+                initial_focus_slice = 0
+            else:
+                initial_focus_slice = 1
+
+            print 'length slice pos', len(self.posList.slicePositions)
+
+            self.imgSrc.move_safe_and_focus(self.posList.slicePositions[initial_focus_slice].x,self.posList.slicePositions[initial_focus_slice].y)
             self.software_autofocus(acquisition_boolean=False)
         else:
             self.move_safe_to_start()
@@ -1225,8 +1230,8 @@ class MosaicPanel(FigureCanvas):
 
 
         #loop over positions
-        for i,pos in enumerate(posList.slicePositions):
-            if i==(len(posList.slicePositions)-1):
+        for i,pos in enumerate(self.posList.slicePositions):
+            if i==(len(self.posList.slicePositions)-1):
                     self.slack_notify('last section imaging beginning')
             if pos.activated:
                 if not goahead:
@@ -1280,7 +1285,7 @@ class MosaicPanel(FigureCanvas):
                             # print 'moving on'
                             pass
                         self.ResetPiezo()
-                        if i==(len(posList.slicePositions)-1):
+                        if i==(len(self.posList.slicePositions)-1):
                             if j == (len(pos.frameList.slicePositions) - 1):
                                 self.slack_notify('Done Imaging!')
                         (goahead, skip)=self.progress.Update((i*numFrames) + j+1,'section %d of %d, frame %d'%(i,numSections-1,j))
