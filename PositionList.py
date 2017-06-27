@@ -643,6 +643,7 @@ class posList():
         self.set_mosaic_settings(self.mosaic_settings)
         ifile.close()
         self.updateNumbers()
+        self.load_frame_state_table(filename)
 
     def load_frame_state_table(self,filename):
         filename, formattype = filename.split('.')
