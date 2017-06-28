@@ -529,6 +529,8 @@ class posList():
             rownum += 1          
         ifile.close() 
         self.updateNumbers()
+        self.load_frame_state_table(filename)
+
     def add_from_file_OMX(self,filename):
         """add points to the position list from an OMX position list file
         
@@ -558,6 +560,7 @@ class posList():
             rownum += 1          
         ifile.close() 
         self.updateNumbers()
+        self.load_frame_state_table(filename)
     
     def add_from_file_ZEN(self,filename):
         """add points to the position list from an OMX position list file
@@ -586,6 +589,7 @@ class posList():
             rownum += 1          
         ifile.close() 
         self.updateNumbers()
+        self.load_frame_state_table(filename)
         
     def add_from_file_SmartSEM(self,filename):
         """add points to the position list from a Smart SEM position list file
@@ -686,7 +690,7 @@ class posList():
             else:
                 (xt,yt)=trans.transform(pos.x,pos.y)
                 writer.writerow(["%d"%(100000+index),xt,yt,pos.z," blue "," blue "])
-    
+
     
     def save_position_list_uM(self,filename,trans=None):
         self.__sort_points()
@@ -834,7 +838,7 @@ class posList():
                 writer.writerow(['%03d: %f'%(index,pos.x),pos.y,Z])    
             else:
                 (xt,yt)=trans.transform(pos.x,pos.y)
-                writer.writerow(['%03d: %f'%(index,xt),yt,Z])  
+                writer.writerow(['%03d: %f'%(index,xt),yt,Z])
 
     def save_position_list_JSON(self,filename,trans=None): #MultiRibbons
         #save the positionlist to JSON format, include position x, y, angle, mosaic settings, channel settings

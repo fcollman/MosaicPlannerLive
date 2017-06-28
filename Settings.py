@@ -836,7 +836,6 @@ class MultiRibbonSettings(wx.Dialog): #MultiRibbons
             #pathway[i]=self.RibbonFilePath[i].GetPath()
             newpath=self.RibbonFilePath[i].GetPath()
             pathway.append(newpath)
-            print 'new path length:', len(newpath)
             if len(newpath) == 0:
                 self.ToImageList.append(False)
             else:
