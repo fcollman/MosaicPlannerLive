@@ -1010,7 +1010,7 @@ class MosaicPanel(FigureCanvas):
                 self.posList.rotate_boxes_angle()
                 self.posList.set_frames_visible(True)
                 self.draw()
-                self.on_run_acq(self.posList,outdirlist[rib])
+                self.on_run_acq(outdirlist[rib])
         #
         #         #from on_run_acq
         #         self.slack_notify("Acquiring data from ribbon %s of %s with %s sections"%(rib,self.Ribbon_Num,len(self.posList.slicePositions)))
@@ -1152,6 +1152,7 @@ class MosaicPanel(FigureCanvas):
 
         self.slack_notify("about to image %d sections"%len(self.posList.slicePositions))
 
+
         Caption = "about to capture %d sections, binning is %dx%d, numchannel is %d"%(len(self.posList.slicePositions),binning,binning,numchan)
         dlg = wx.MessageDialog(self,message=Caption, style = wx.OK|wx.CANCEL)
 
@@ -1182,6 +1183,8 @@ class MosaicPanel(FigureCanvas):
                 initial_focus_slice = 1
 
             print 'length slice pos', len(self.posList.slicePositions)
+            if self.imgSrc.is_hardware_triggering():
+                self.imgSrc.stop_hardware_triggering()
 
             self.imgSrc.move_safe_and_focus(self.posList.slicePositions[initial_focus_slice].x,self.posList.slicePositions[initial_focus_slice].y)
             self.software_autofocus(acquisition_boolean=False)
