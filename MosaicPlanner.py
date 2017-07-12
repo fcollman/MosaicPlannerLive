@@ -584,7 +584,7 @@ class MosaicPanel(FigureCanvas):
             while not self.imgSrc.is_hardware_autofocus_done():
                 time.sleep(sleep)
                 attempts+=1
-                if attempts>50:
+                if attempts>100:
                     print "not auto-focusing correctly.. giving up after 10 seconds"
                     break
 
@@ -1282,7 +1282,7 @@ class MosaicPanel(FigureCanvas):
                                 break
                         if pos.frameList.slicePositions[j].activated:
                             autofocus_trigger = pos.frameList.slicePositions[j].autofocus_trigger
-                            print autofocus_trigger
+                            # print autofocus_trigger
                             self.multiDacq(success,outdir,chrom_correction,autofocus_trigger,triggerflag,fpos.x,fpos.y,current_z,i,j,hold_focus)
                         else:
                             # print 'moving on'
