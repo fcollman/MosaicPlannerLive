@@ -136,6 +136,12 @@ class imageSource():
         self.mmc.setConfig('Triggering','Software')
         self.mmc.setConfig('Triggering','Software')
 
+    def is_hardware_triggering(self):
+        if self.mmc.getCurrentConfig('Triggering') == 'Hardware':
+            return True
+        else:
+            return False
+
     def setup_hardware_triggering(self,channels,exposure_times):
 
         #set up triggering to "Hardware" to load all the

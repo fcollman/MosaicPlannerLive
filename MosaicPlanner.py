@@ -96,6 +96,26 @@ class RemoteInterface(RemoteObject):
         print "setting new stage position to x:{}, y:{}".format(incomingStagePosition[0], incomingStagePosition[1])
         self.parent.setStagePosition(incomingStagePosition[0], incomingStagePosition[1])
 
+    def on_run_multi(self):
+        print 'preparing to image multiple ribbons'
+        outdirlist = self.get_directory_settings()
+        self.parent.on_run_multi_acq(outdirlist)
+
+    def get_directory_settings(self):
+        outdirdict = self.parent.outdirdict
+        outdirlist =[]
+        keys = sorted(outdirdict)
+        for key in keys:
+            outdirlist.append(outdirdict[key])
+        return outdirlist
+
+    def get_position_list_settings(self):
+        #will return a list of position lists to load into on run multi
+        pass
+
+    def change_channel_settings(self):
+        self.parent.edit_channels()
+
 
 
 
@@ -932,20 +952,26 @@ class MosaicPanel(FigureCanvas):
         self.software_autofocus(acquisition_boolean= True)
         # self.imgSrc.setup_hardware_triggering(channels,exp_times)
 
-    def on_run_multi_acq(self,event="none"): #MultiRibbons
+    def on_run_multi_acq(self,poslistpath = None, outdirlist = None,event="none"): #MultiRibbons
         #pick position lists
-        outdirlist =[]
-        keys = sorted(self.outdirdict)
-        for key in keys:
-            outdirlist.append(self.outdirdict[key])
-        print 'outdirlist:', outdirlist
-        print 'keys', keys
-        poslistpath=[]
-        dlg = MultiRibbonSettings(None, -1,self.Ribbon_Num, keys, title = "Multiribbon Settings", settings = self.channel_settings,style=wx.OK)
-        ret=dlg.ShowModal()
-        if ret == wx.ID_OK:
-            poslistpath, ToImageList =dlg.GetSettings()
-        dlg.Destroy()
+        if outdirlist == None:
+            outdirlist =[]
+            keys = sorted(self.outdirdict)
+            for key in keys:
+                 outdirlist.append(self.outdirdict[key])
+            print 'outdirlist:', outdirlist
+            print 'keys', keys
+        if poslistpath == None:
+            poslistpath=[]
+            dlg = MultiRibbonSettings(None, -1,self.Ribbon_Num, keys, title = "Multiribbon Settings", settings = self.channel_settings,style=wx.OK)
+            ret=dlg.ShowModal()
+            if ret == wx.ID_OK:
+                poslistpath, ToImageList =dlg.GetSettings()
+            dlg.Destroy()
+
+        else:
+            poslistpath = poslistpath
+            ToImageList = [True] * len(poslistpath)
         print "poslistpath:", poslistpath
         print 'to Image list:', ToImageList
 
@@ -1011,124 +1037,7 @@ class MosaicPanel(FigureCanvas):
                 self.posList.set_frames_visible(True)
                 self.draw()
                 self.on_run_acq(outdirlist[rib])
-        #
-        #         #from on_run_acq
-        #         self.slack_notify("Acquiring data from ribbon %s of %s with %s sections"%(rib,self.Ribbon_Num,len(self.posList.slicePositions)))
-        #         self.make_channel_directories(outdirlist[rib])
-        #
-        #         self.write_session_metadata(outdirlist[rib])
-        #
-        #         #self.move_safe_to_start() - do not use
-        #         #lower objective, move the stage to section 1 of the ribbon
-        #         self.imgSrc.move_safe_and_focus(self.posList.slicePositions[1].x,self.posList.slicePositions[1].y)
-        #
-        #         #call software autofocus
-        #         self.software_autofocus()
-        #
-        #         self.move_safe_to_start() #move to section 0
-        #
-        #         self.dataQueue = mp.Queue()
-        #
-        #         metadata_dictionary = {
-        #         'channelname'    : self.channel_settings.prot_names,
-        #         '(height,width)' : self.imgSrc.get_sensor_size(),
-        #         'ScaleFactorX'   : self.imgSrc.get_pixel_size(),
-        #         'ScaleFactorY'   : self.imgSrc.get_pixel_size(),
-        #         'exp_time'       : self.channel_settings.exposure_times,
-        #         }
-        #         ssh_opts = dict(self.cfg['SSH'])
-        #         ssh_opts['mount_point']=self.lookup_mountpoint(outdirlist[rib])
-        #         self.saveProcess =  mp.Process(target=file_save_process,args=(self.dataQueue, metadata_dictionary, ssh_opts))
-        #         self.saveProcess.start()
-        #
-        #         numFrames,numSections = self.setup_progress_bar()
-        #         print "numFrames:", numFrames, "numSections:", numSections
-        #
-        #         hold_focus = not (self.zstack_settings.zstack_flag or chrom_correction)
-        #
-        #
-        #
-        #         goahead = True
-        #         #loop over positions
-        #         for i,pos in enumerate(self.posList.slicePositions):
-        #             if pos.activated:
-        #                 if not goahead:
-        #                     break
-        #                 if not self.imgSrc.get_hardware_autofocus_state():
-        #                     self.slack_notify('HELP! lost autofocus between frames',notify=True)
-        #                     print "autofocus not enabled when moving between sections.. "
-        #                     goahead=False
-        #                     break
-        #                 (goahead, skip) = self.progress.Update(i*numFrames,'section %d of %d'%(i,numSections-1))
-        #                 #turn on autofocus
-        #                 self.ResetPiezo()
-        #                 current_z = self.imgSrc.get_z()
-        #                 if pos.frameList is None:
-        #                     triggerflag = False
-        #                     autofocus_trigger = False
-        #                     self.multiDacq(success,outdirlist[rib],chrom_correction,autofocus_trigger,triggerflag,pos.x,pos.y,current_z,i,hold_focus=hold_focus)
-        #                 else:
-        #                     triggerflag = False
-        #                     initial_position = self.get_initial_position(pos)
-        #                     if initial_position is not None:
-        #                         print 'moving to initial position to focus'
-        #                         initx = initial_position[0]
-        #                         inity = initial_position[1]
-        #                         self.move_to_initial_and_focus(initx,inity)
-        #                     for j,fpos in enumerate(pos.frameList.slicePositions):
-        #                         if j == (len(pos.frameList.slicePositions) - 1):
-        #                             triggerflag = True
-        #                         if not goahead:
-        #                             print "breaking out!"
-        #                             break
-        #                         if not self.imgSrc.get_hardware_autofocus_state():
-        #                             self.slack_notify('HELP! lost autofocus between frames',notify=True)
-        #                             print "autofocus no longer enabled while moving between frames.. quiting"
-        #                             goahead = False
-        #                             break
-        #                         if pos.frameList.slicePositions[j].activated:
-        #                             autofocus_trigger = pos.frameList.slicePositions[j].autofocus_trigger
-        #                             self.multiDacq(success,outdirlist[rib],chrom_correction,autofocus_trigger,triggerflag,fpos.x,fpos.y,current_z,i,j,hold_focus)
-        #                         else:
-        #                             pass
-        #                         self.ResetPiezo()
-        #                         if i==(len(self.posList.slicePositions)-1):
-        #                             if j == (len(pos.frameList.slicePositions) - 1):
-        #                                 self.slack_notify('Done Imaging!')
-        #                         (goahead, skip)=self.progress.Update((i*numFrames) + j,'ribbon %d of %d, section %d of %d, frame %d'%(rib,self.Ribbon_Num-1,i,numSections-1,j))
-        #                     #======================================================
-        #                     if self.interface.pause == True:
-        #                         while self.interface.pause == True:
-        #                             self._check_sock(True)
-        #                             (goahead, skip)=self.progress.Update((i*numFrames) + j+1,'REMOTELY PAUSED -- section %d of %d, frame %d'%(i,numSections-1,j))
-        #                             #time.sleep(0.1)
-        #                             wx.Yield()
-        #                     #======================================================
-        #                 wx.Yield()
-        #                 if not goahead:
-        #                     self.slack_notify('Imaging stopped prematurely')
-        #                     self.slack_notify('on section %d'%i)
-        #                     if pos.frameList is not None:
-        #                         self.slack_notify("frame %d"%(j))
-        #                     print "acquisition stopped prematurely"
-        #                     print "section %d"%(i)
-        #                     if pos.frameList is not None:
-        #                         print "frame %d"%(j)
-        #
-        #
-        #
-        #         self.dataQueue.put(STOP_TOKEN)
-        #         self.saveProcess.join()
-        #         print "save process ended, ribbon %d of 3"%(rib)
-        #         self.progress.Destroy()
-        #         self.move_safe_to_start()
-        #         if self.cfg['MosaicPlanner']['hardware_trigger']:
-        #             self.imgSrc.stop_hardware_triggering()
-        #     else:
-        #         print 'Moving on'
-        #         pass
-        # progress_ribbons.Destroy()
-        # self.imgSrc.set_binning(2)
+
         self.imgSrc.stop_hardware_triggering()
 
     
