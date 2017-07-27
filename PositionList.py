@@ -864,6 +864,7 @@ class posList():
         file = open(filename,'w')
         file.write(thestring)
         file.close()
+        self.on_save_frame_state_table(filename)
 
 
     def on_save_frame_state_table(self,filepath):

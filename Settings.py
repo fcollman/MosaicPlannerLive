@@ -801,7 +801,7 @@ class ChangeSEMSettings(wx.Dialog):
 
 class MultiRibbonSettings(wx.Dialog): #MultiRibbons
     """dialog for setting multiribbon aquisition"""
-    def __init__(self, parent, id, ribbon_number,slot_labels, title, settings,style):
+    def __init__(self, parent, id, ribbon_number,slot_labels, title,style):
         wx.Dialog.__init__(self, parent, id, title,style=wx.DEFAULT_DIALOG_STYLE, size=(1000, 300))
 
         vbox = wx.BoxSizer(wx.VERTICAL)

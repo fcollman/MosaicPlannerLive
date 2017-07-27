@@ -79,15 +79,12 @@ class RemoteInterface(RemoteObject):
             self.pause = False
         else:
             self.pause = True
-        #import pdb; pdb.set_trace()
 
     def _check_rep(self):
-        #import pdb; pdb.set_trace()
         super(RemoteInterface, self)._check_rep()
 
     def getStagePosition(self):
         print "Getting stage position..."
-        #import pdb; pdb.set_trace()
         stagePosition = self.parent.getStagePosition()
         print "StagePosition:{}".format(stagePosition)
         return stagePosition
@@ -96,10 +93,35 @@ class RemoteInterface(RemoteObject):
         print "setting new stage position to x:{}, y:{}".format(incomingStagePosition[0], incomingStagePosition[1])
         self.parent.setStagePosition(incomingStagePosition[0], incomingStagePosition[1])
 
+    def setZPosition(self, incomingZPosition):
+        print "setting Z Position to z:{}".format(incomingZPosition)
+        self.parent.setZPosition(incomingZPosition)
+
+    def getZPosition(self):
+        print "getting Z position..."
+        zPos = self.parent.getZPosition()
+        print "Z Position:{}".format(zPos)
+        return zPos
+
+    def getRemainingImagingTime(self):
+        print "getting remaining imaging time..."
+        remainingTime = self.parent.getRemainingImagingTime()
+        print "remainingTime:{}".format(remainingTime)
+        return remainingTime
+
+    def remoteSavePositionListJSON(self, filename, trans=None):
+        print "saving position list to {}".format(filename)
+        self.parent.remoteSavePositionListJSON(filename, trans=trans)
+
+    def remoteLoadPositionListJSON(self, filename):
+        print "loading position list from {}".format(filename)
+        self.parent.remoteLoadPositionListJSON(filename)
+
     def on_run_multi(self):
         print 'preparing to image multiple ribbons'
         outdirlist = self.get_directory_settings()
-        self.parent.on_run_multi_acq(outdirlist)
+        poslistpath, ToImageList = self.get_position_list_settings()
+        self.parent.on_run_multi_acq(poslistpath,outdirlist,ToImageList)
 
     def get_directory_settings(self):
         outdirdict = self.parent.outdirdict
@@ -111,7 +133,13 @@ class RemoteInterface(RemoteObject):
 
     def get_position_list_settings(self):
         #will return a list of position lists to load into on run multi
-        pass
+        keys = sorted(self.parent.outdirdict)
+        dlg = MultiRibbonSettings(None, -1, self.parent.Ribbon_Num, keys, title = "Multiribbon Settings",style=wx.OK)
+        ret=dlg.ShowModal()
+        if ret == wx.ID_OK:
+            poslistpath, ToImageList =dlg.GetSettings()
+        dlg.Destroy()
+        return poslistpath, ToImageList
 
     def change_channel_settings(self):
         self.parent.edit_channels()
@@ -563,6 +591,24 @@ class MosaicPanel(FigureCanvas):
         self.on_crop_tool()
         self.draw()
 
+    def on_load_new(self):
+        """##################################
+        method will create new mosaic image object to clear/load matplotlib canvas
+        enabling user to create new map/image pathways without having to close/restart program
+        will be called by an icon in ZVIselectframe
+
+        will need:
+        1)GUI to pick new sample data/identifiers:
+            call change directory settings?
+            set mutliribbon boolean to true
+            set ribbon number to ribbon number + 1
+            append info to output dir
+        2) set new mosaic image object to whatever these settings determined in 1 are
+            similar to on load method above except without the transpose xy line
+
+
+        ##################################"""
+
 
     def write_slice_metadata(self,filename,ch,xpos,ypos,zpos):
         f = open(filename, 'w')
@@ -952,7 +998,7 @@ class MosaicPanel(FigureCanvas):
         self.software_autofocus(acquisition_boolean= True)
         # self.imgSrc.setup_hardware_triggering(channels,exp_times)
 
-    def on_run_multi_acq(self,poslistpath = None, outdirlist = None,event="none"): #MultiRibbons
+    def on_run_multi_acq(self,poslistpath = None, outdirlist = None, ToImageList = None, event="none"): #MultiRibbons
         #pick position lists
         if outdirlist == None:
             outdirlist =[]
@@ -963,7 +1009,7 @@ class MosaicPanel(FigureCanvas):
             print 'keys', keys
         if poslistpath == None:
             poslistpath=[]
-            dlg = MultiRibbonSettings(None, -1,self.Ribbon_Num, keys, title = "Multiribbon Settings", settings = self.channel_settings,style=wx.OK)
+            dlg = MultiRibbonSettings(None, -1,self.Ribbon_Num, keys, title = "Multiribbon Settings",style=wx.OK)
             ret=dlg.ShowModal()
             if ret == wx.ID_OK:
                 poslistpath, ToImageList =dlg.GetSettings()
@@ -971,7 +1017,7 @@ class MosaicPanel(FigureCanvas):
 
         else:
             poslistpath = poslistpath
-            ToImageList = [True] * len(poslistpath)
+            ToImageList = ToImageList
         print "poslistpath:", poslistpath
         print 'to Image list:', ToImageList
 
@@ -1850,6 +1896,35 @@ class MosaicPanel(FigureCanvas):
     def setStagePosition(self, newXPos, newYPos):
         self.imgSrc.move_stage(newXPos, newYPos)
 
+    def setZPosition(self, newZPos):
+        self.imgSrc.set_z(newZPos)
+
+    def getZPosition(self):
+        zPosition = self.imgSrc.get_z()
+        return zPosition
+
+    def getRemainingImagingTime(self):
+        remainingTime = wx.PD_REMAINING_TIME
+        return remainingTime
+
+    def remoteSavePositionListJSON(self, trans=None):
+        if self.cfg['MosaicPlanner']['default_arraypath']:
+            jsonfilepath = self.cfg['MosaicPlanner']['default_arraypath']
+        else:
+            map_path = self.cfg['MosaicPlanner']['default_imagepath']
+            pathlist = map_path.rsplit('\\',1)
+            jsonfilepath = pathlist[0] + '\\' + pathlist[1] + '_%sx%sat%s.json' % (self.cfg['MosaicSettings']['mosaic_mx'],self.cfg['MosaicSettings']['mosaic_my'],
+                                                                                   self.cfg['MosaicSettings']['mosaic_overlap'])
+
+        if trans:
+            self.posList.save_position_list_JSON(jsonfilepath,trans=self.Transform)
+        else:
+            self.posList.save_position_list_JSON(jsonfilepath,trans=None)
+        self.posList.save_frame_list(jsonfilepath)
+
+    def remoteLoadPositionListJSON(self, filename):
+        self.posList.add_from_file_JSON(filename)
+
 class ZVISelectFrame(wx.Frame):
     """class extending wx.Frame for highest level handling of GUI components """
     ID_RELATIVEMOTION = wx.NewId()
@@ -2192,6 +2267,15 @@ class ZVISelectFrame(wx.Frame):
                 self.mosaicCanvas.posList.save_position_list_JSON(self.array_filepicker.GetPath(),trans=None)
         if self.mosaicCanvas.cfg['MosaicPlanner']['frame_state_save']:
             self.mosaicCanvas.posList.on_save_frame_state_table(self.array_filepicker.GetPath())
+
+    def on_new_map(self):
+        dlg = wx.MessageDialog(self,message = "Map new ribbon?",style = wx.YES|wx.NO)
+        button_pressed = dlg.ShowModal()
+        if button_pressed == wx.ID_YES:
+            self.mosaicCanvas=MosaicPanel(self,config=self.cfg)
+        else:
+            pass
+
 
     def on_image_collect_load(self,event):
         path=self.imgCollectDirPicker.GetPath()
