@@ -66,6 +66,7 @@ class DirectorySettings():
             else:
                 # return map_folder
                 cfg['MosaicPlanner']['default_imagepath'] = map_folder
+            return map_folder
         elif kind == 'data':
             data_folder = os.path.join(root,self.Sample_ID,'raw','data','Ribbon%04d'%self.Ribbon_ID,'session%02d'%self.Session_ID)
             if not os.path.exists(data_folder):
@@ -106,7 +107,7 @@ class RibbonNumberDialog(wx.Dialog):
         vbox = wx.BoxSizer(wx.VERTICAL)
 
         self.RibbonNum_txt = wx.StaticText(self,label = "Number of Ribbons:")
-        self.RibbonNum_IntCtrl = wx.lib.intctrl.IntCtrl(self,value = 1, min = 1, max = None, allow_none = False)
+        self.RibbonNum_IntCtrl = wx.lib.intctrl.IntCtrl(self,value = 1, min = 1, max = 8, allow_none = False)
 
         ok_button = wx.Button(self,wx.ID_OK,'OK')
         cancel_button = wx.Button(self,wx.ID_CANCEL,'Cancel')
@@ -124,6 +125,34 @@ class RibbonNumberDialog(wx.Dialog):
         val = self.RibbonNum_IntCtrl.GetValue()
         return val
 
+class MapSettingsDialog(wx.Dialog):
+    def __init__(self,parent,id,mapdict,title = "Choose Ribbon to Map:"):
+        wx.Dialog.__init__(self,parent,id,title,style = wx.DEFAULT_DIALOG_STYLE, size = (300,80))
+        vbox = wx.BoxSizer(wx.VERTICAL)
+
+        self.mapdict = mapdict
+        self.mappaths = []
+        for key,value in self.mapdict.iteritems():
+            self.mappaths.append(self.mapdict[key])
+        self.mapchoice_combobox = wx.ComboBox(self,-1, pos=(170, 170), size=(300, -1), choices= self.mappaths,value = self.mappaths[0], style=wx.CB_READONLY)
+        ok_button = wx.Button(self,wx.ID_OK)
+        hbox1 = wx.BoxSizer(wx.HORIZONTAL)
+        hbox2 = wx.BoxSizer(wx.HORIZONTAL)
+
+
+
+        # hbox1.Add(self.mapchoice_txt)
+        hbox1.Add(self.mapchoice_combobox)
+        hbox2.Add(ok_button,0,wx.CENTER)
+        vbox.Add(hbox1)
+        vbox.Add(hbox2)
+
+        self.SetSizer(vbox)
+        self.Centre()
+
+    def GetValue(self):
+        mapchoice = self.mapchoice_combobox.GetValue()
+        return mapchoice
 
 
 

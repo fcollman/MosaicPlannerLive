@@ -46,7 +46,7 @@ from NavigationToolBarImproved import NavigationToolbar2Wx_improved as NavBarImp
 from Settings import (MosaicSettings, CameraSettings,SiftSettings,ChangeCameraSettings, ImageSettings,
                        ChangeImageMetadata, SmartSEMSettings, ChangeSEMSettings, ChannelSettings,
                        ChangeChannelSettings, ChangeSiftSettings, CorrSettings,ChangeCorrSettings,
-                      ChangeZstackSettings, ZstackSettings, DirectorySettings, ChangeDirectorySettings, RibbonNumberDialog, MultiRibbonSettings)
+                      ChangeZstackSettings, ZstackSettings, DirectorySettings, ChangeDirectorySettings, RibbonNumberDialog, MultiRibbonSettings, MapSettingsDialog)
 
 from configobj import ConfigObj
 from validate import Validator
@@ -465,6 +465,7 @@ class MosaicPanel(FigureCanvas):
         # load directory settings
 
         self.outdirdict = {}
+        self.mapdict = {}
         self.multiribbon_boolean = self.askMultiribbons()
         if not self.multiribbon_boolean:
             self.Ribbon_Num = 1
@@ -488,7 +489,7 @@ class MosaicPanel(FigureCanvas):
             print 'Map Number:', self.directory_settings.Map_num
             self.directory_settings.save_settings(config)
             self.outdirdict['Slot' + str(self.directory_settings.Slot_num)] = dictvalue
-            self.directory_settings.create_directory(config,kind='map')
+            self.mapdict['Slot' + str(self.directory_settings.Slot_num)] = self.directory_settings.create_directory(config,kind='map')
 
         else:
             self.Ribbon_Num = self.get_ribbon_number()
@@ -507,10 +508,14 @@ class MosaicPanel(FigureCanvas):
                             goahead = True
                 self.outdirdict['Slot' + str(self.directory_settings.Slot_num)] = dictvalue
                 self.directory_settings.save_settings(config)
-            self.directory_settings.create_directory(config, kind= 'map')
+                self.mapdict['Slot' + str(self.directory_settings.Slot_num)] = self.directory_settings.create_directory(config, kind= 'map')
+                self.What_toMap()
+
+
 
         for key,value in self.outdirdict.iteritems():
             print "Output directory:",key,value
+            print "Map directory:", key, self.mapdict[key]
             # print self.directory_settings
         # load Zstack settings
         self.zstack_settings = ZstackSettings()
@@ -569,6 +574,18 @@ class MosaicPanel(FigureCanvas):
             return True
         else:
             return False
+
+    def What_toMap(self):
+        dlg = MapSettingsDialog(None,-1,mapdict = self.mapdict)
+        buttonpressed = dlg.ShowModal()
+        if buttonpressed == wx.ID_OK:
+            mapchoice = dlg.GetValue()
+            print 'mapchoice is:', mapchoice
+            return mapchoice
+
+
+
+
 
     def get_ribbon_number(self):
         dlg = RibbonNumberDialog(None,-1,style = wx.ID_OK)
@@ -1950,6 +1967,7 @@ class ZVISelectFrame(wx.Frame):
     ID_SNAPCONTROL = wx.NewId()
     ID_RETAKECONTROL = wx.NewId()
     ID_LEICAAFC = wx.NewId()
+    ID_NEWMAP = wx.NewId()
 
     # ID_Alfred = wx.NewId()
 
@@ -2043,6 +2061,7 @@ class ZVISelectFrame(wx.Frame):
         self.launch_ASIControl = Imaging_Menu.Append(self.ID_ASIAUTOFOCUS, 'Allen ASI AutoFocus Control', kind= wx.ITEM_NORMAL)
         self.launch_Snap = Imaging_Menu.Append(self.ID_SNAPCONTROL,'Snap single channel images',kind = wx.ITEM_NORMAL)
         self.launch_Retake = Imaging_Menu.Append(self.ID_RETAKECONTROL,'Retake dialog',kind = wx.ITEM_NORMAL)
+        # self.new_map = Imaging_Menu.Append(self.ID_NEWMAP,'Launch New Map', kind= wx.Button)
         if len(self.cfg['LeicaDMI']['port'])>0:
             self.launch_Leica = Imaging_Menu.Append(self.ID_LEICAAFC,'Leica AFC dialog',kind= wx.ITEM_NORMAL)
 
@@ -2058,6 +2077,8 @@ class ZVISelectFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.mosaicCanvas.launch_snap,id = self.ID_SNAPCONTROL)
         self.Bind(wx.EVT_MENU, self.mosaicCanvas.launch_retake,id = self.ID_RETAKECONTROL)
         self.Bind(wx.EVT_MENU, self.mosaicCanvas.launch_LeicaAFC, id= self.ID_LEICAAFC)
+        print 'line 2063'
+        # self.Bind(wx.EVT_BUTTON, self.on_new_map(), id = self.ID_NEWMAP)
 
 
         Imaging_Menu.Check(self.ID_USE_FOCUS_CORRECTION,self.cfg['MosaicPlanner']['use_focus_correction'])
@@ -2164,6 +2185,7 @@ class ZVISelectFrame(wx.Frame):
         #self.OnImageLoad()
         #self.on_array_load()
         #self.mosaicCanvas.draw()
+
     def toggle_transpose_xy(self,evt=None):
         print "toggle called",self.transpose_xy.IsChecked()
 
