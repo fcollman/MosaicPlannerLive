@@ -204,6 +204,7 @@ class MosaicToolbar(NavBarImproved):
     ON_SOFTWARE_AF = wx.NewId()
 
 
+
     def __init__(self, plotCanvas):
         """
         plotCanvas: an instance of MosaicPanel which has the correct features (see class doc)
@@ -357,6 +358,7 @@ class MosaicToolbar(NavBarImproved):
         self.canvas.posList.set_mosaic_visible(self.showMosaicCheck.IsChecked())
         self.canvas.draw()
 
+
     def get_mosaic_parameters(self):
         """extract out an instance of MosaicSettings from the current controls with the proper values"""
         return MosaicSettings(mag=self.magChoiceCtrl.GetValue(),
@@ -499,7 +501,6 @@ class MosaicPanel(FigureCanvas):
                 self.edit_Directory_settings()
                 dictvalue = self.get_output_dir(self.directory_settings)
                 if dictvalue == None:
-                    print "line 405"
                     goahead = False
                     while goahead == False:
                         self.edit_Directory_settings()
@@ -509,7 +510,8 @@ class MosaicPanel(FigureCanvas):
                 self.outdirdict['Slot' + str(self.directory_settings.Slot_num)] = dictvalue
                 self.directory_settings.save_settings(config)
                 self.mapdict['Slot' + str(self.directory_settings.Slot_num)] = self.directory_settings.create_directory(config, kind= 'map')
-                self.What_toMap()
+        if self.multiribbon_boolean:
+           self.What_toMap()
 
 
 
@@ -580,7 +582,10 @@ class MosaicPanel(FigureCanvas):
         buttonpressed = dlg.ShowModal()
         if buttonpressed == wx.ID_OK:
             mapchoice = dlg.GetValue()
-            print 'mapchoice is:', mapchoice
+            self.cfg['MosaicPlanner']['default_imagepath'] = mapchoice
+            for key, value in self.mapdict.iteritems():
+                if value == mapchoice:
+                    self.cfg['MosaicPlanner']['default_arraypath'] = self.outdirdict[key]
             return mapchoice
 
 
@@ -604,6 +609,10 @@ class MosaicPanel(FigureCanvas):
     def on_load(self,rootPath):
         self.rootPath = rootPath
         print "transpose toggle state",self.imgSrc.transpose_xy
+        if self.mosaicImage != None:
+            self.subplot.clear()
+            self.mosaicImage = None
+
         self.mosaicImage=MosaicImage(self.subplot,self.posone_plot,self.postwo_plot,self.corrplot,self.imgSrc,rootPath,figure=self.figure)
         self.on_crop_tool()
         self.draw()
@@ -1984,7 +1993,7 @@ class ZVISelectFrame(wx.Frame):
         #default_image=""
 
         #recursively call old init function
-        wx.Frame.__init__(self, parent, title=title, size=(1800,885),pos=(5,5))
+        wx.Frame.__init__(self, parent, title=title, size=(1900,885),pos=(5,5))
         #self.cfg = wx.Config('settings')
         if not os.path.isfile(SETTINGS_FILE):
             from shutil import copyfile
@@ -2077,7 +2086,6 @@ class ZVISelectFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.mosaicCanvas.launch_snap,id = self.ID_SNAPCONTROL)
         self.Bind(wx.EVT_MENU, self.mosaicCanvas.launch_retake,id = self.ID_RETAKECONTROL)
         self.Bind(wx.EVT_MENU, self.mosaicCanvas.launch_LeicaAFC, id= self.ID_LEICAAFC)
-        print 'line 2063'
         # self.Bind(wx.EVT_BUTTON, self.on_new_map(), id = self.ID_NEWMAP)
 
 
@@ -2108,6 +2116,8 @@ class ZVISelectFrame(wx.Frame):
         style=wx.FLP_USE_TEXTCTRL, size=wx.Size(300,20))
         self.imgCollectDirPicker.SetPath(self.cfg['MosaicPlanner']['default_imagepath'])
         self.imgCollect_load_button=wx.Button(self,id=wx.ID_ANY,label="Load",name="imgCollect load")
+        self.new_map_button = wx.Button(self,id=wx.ID_ANY, label = "New Map", name="newmap button")
+        self.Bind(wx.EVT_BUTTON,self.start_newmap,self.new_map_button)
 
         #wire up the button to the "on_load" button
         self.Bind(wx.EVT_BUTTON, self.on_image_collect_load,self.imgCollect_load_button)
@@ -2147,6 +2157,7 @@ class ZVISelectFrame(wx.Frame):
         self.imgCollect_filepickersizer.Add(self.imgCollectLabel,0,wx.EXPAND)
         self.imgCollect_filepickersizer.Add(self.imgCollectDirPicker,1,wx.EXPAND)
         self.imgCollect_filepickersizer.Add(self.imgCollect_load_button,0,wx.EXPAND)
+        self.imgCollect_filepickersizer.Add(self.new_map_button,0,wx.EXPAND)
 
         #define a horizontal sizer for them and place the file picker components in there
         self.array_filepickersizer=wx.BoxSizer(wx.HORIZONTAL)
@@ -2185,6 +2196,11 @@ class ZVISelectFrame(wx.Frame):
         #self.OnImageLoad()
         #self.on_array_load()
         #self.mosaicCanvas.draw()
+
+    def start_newmap(self,evt=None):
+        self.mosaicCanvas.What_toMap()
+        self.imgCollectDirPicker.SetPath(self.cfg['MosaicPlanner']['default_imagepath'])
+        self.array_filepicker.SetPath(self.cfg['MosaicPlanner']['default_arraypath'])
 
     def toggle_transpose_xy(self,evt=None):
         print "toggle called",self.transpose_xy.IsChecked()
@@ -2290,13 +2306,6 @@ class ZVISelectFrame(wx.Frame):
         if self.mosaicCanvas.cfg['MosaicPlanner']['frame_state_save']:
             self.mosaicCanvas.posList.on_save_frame_state_table(self.array_filepicker.GetPath())
 
-    def on_new_map(self):
-        dlg = wx.MessageDialog(self,message = "Map new ribbon?",style = wx.YES|wx.NO)
-        button_pressed = dlg.ShowModal()
-        if button_pressed == wx.ID_YES:
-            self.mosaicCanvas=MosaicPanel(self,config=self.cfg)
-        else:
-            pass
 
 
     def on_image_collect_load(self,event):
