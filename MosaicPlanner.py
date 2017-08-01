@@ -120,7 +120,7 @@ class RemoteInterface(RemoteObject):
     def on_run_multi(self):
         print 'preparing to image multiple ribbons'
         outdirlist = self.get_directory_settings()
-        poslistpath, ToImageList = self.get_position_list_settings()
+        # poslistpath, ToImageList = self.get_position_list_settings()
         self.parent.on_run_multi_acq(poslistpath,outdirlist,ToImageList)
 
     def get_directory_settings(self):
@@ -132,14 +132,15 @@ class RemoteInterface(RemoteObject):
         return outdirlist
 
     def get_position_list_settings(self):
-        #will return a list of position lists to load into on run multi
-        keys = sorted(self.parent.outdirdict)
-        dlg = MultiRibbonSettings(None, -1, self.parent.Ribbon_Num, keys, title = "Multiribbon Settings",style=wx.OK)
-        ret=dlg.ShowModal()
-        if ret == wx.ID_OK:
-            poslistpath, ToImageList =dlg.GetSettings()
-        dlg.Destroy()
-        return poslistpath, ToImageList
+        pass
+        # #will return a list of position lists to load into on run multi
+        # keys = sorted(self.parent.outdirdict)
+        # dlg = MultiRibbonSettings(None, -1, self.parent.Ribbon_Num, keys, title = "Multiribbon Settings",style=wx.OK)
+        # ret=dlg.ShowModal()
+        # if ret == wx.ID_OK:
+        #     poslistpath, ToImageList =dlg.GetSettings()
+        # dlg.Destroy()
+        # return poslistpath, ToImageList
 
     def change_channel_settings(self):
         self.parent.edit_channels()
@@ -610,7 +611,13 @@ class MosaicPanel(FigureCanvas):
         self.rootPath = rootPath
         print "transpose toggle state",self.imgSrc.transpose_xy
         if self.mosaicImage != None:
+            self.posList.select_all()
+            self.posList.delete_selected()
             self.subplot.clear()
+            self.posone_plot.clear()
+            self.postwo_plot.clear()
+
+
             self.mosaicImage = None
 
         self.mosaicImage=MosaicImage(self.subplot,self.posone_plot,self.postwo_plot,self.corrplot,self.imgSrc,rootPath,figure=self.figure)
