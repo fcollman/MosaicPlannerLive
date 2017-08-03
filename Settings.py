@@ -20,6 +20,7 @@ import wx
 import os
 import json
 import marshmallow as mm
+import yaml
 
 class DirectorySettings():
 
@@ -94,7 +95,25 @@ class DirectorySettings():
             return None
 
 
+class SessionSettings():
+    def __init__(self,meta_experiment_name = None,Ribbon_num = None,outdirdict = None,mapdirdict = None,arrayfiledict = None,channel_settings = None,pointer = None,**kwargs):
+        self.meta_experiment_name = meta_experiment_name
+        self.Ribbon_num = Ribbon_num
+        self.channel_settings = channel_settings
+        self.outdirdict = outdirdict
+        self.mapdirdict = mapdirdict
+        self.arrayfiledict = arrayfiledict
+        self.pointer = pointer
 
+    def to_file(self,filetype = '.yaml'):
+        data = {'Meta Experiment' : self.meta_experiment_name,
+                    'Ribbon Number': self.Ribbon_num,
+                    'Data Filepaths' : self.outdirdict,
+                    'Map Directories': self.mapdirdict,}
+        filename = self.pointer + 'session.yml'
+        with open(filename,'w') as outfile:
+            yaml.dump(data,outfile,default_flow_style = False)
+        outfile.close()
 
 
 

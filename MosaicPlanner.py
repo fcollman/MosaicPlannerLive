@@ -46,7 +46,8 @@ from NavigationToolBarImproved import NavigationToolbar2Wx_improved as NavBarImp
 from Settings import (MosaicSettings, CameraSettings,SiftSettings,ChangeCameraSettings, ImageSettings,
                        ChangeImageMetadata, SmartSEMSettings, ChangeSEMSettings, ChannelSettings,
                        ChangeChannelSettings, ChangeSiftSettings, CorrSettings,ChangeCorrSettings,
-                      ChangeZstackSettings, ZstackSettings, DirectorySettings, ChangeDirectorySettings, RibbonNumberDialog, MultiRibbonSettings, MapSettingsDialog)
+                      ChangeZstackSettings, ZstackSettings, DirectorySettings, ChangeDirectorySettings, RibbonNumberDialog, MultiRibbonSettings, MapSettingsDialog,
+                      SessionSettings)
 
 from configobj import ConfigObj
 from validate import Validator
@@ -120,7 +121,9 @@ class RemoteInterface(RemoteObject):
     def on_run_multi(self):
         print 'preparing to image multiple ribbons'
         outdirlist = self.get_directory_settings()
-        # poslistpath, ToImageList = self.get_position_list_settings()
+        # ToImageList = len(outdirlist)*[True]
+
+        poslistpath, ToImageList = self.get_position_list_settings()
         self.parent.on_run_multi_acq(poslistpath,outdirlist,ToImageList)
 
     def get_directory_settings(self):
@@ -514,11 +517,17 @@ class MosaicPanel(FigureCanvas):
         if self.multiribbon_boolean:
            self.What_toMap()
 
+        self.session = SessionSettings(self.cfg['Directories']['meta_experiment_name'],self.Ribbon_Num,self.outdirdict,self.mapdict)
+
 
 
         for key,value in self.outdirdict.iteritems():
             print "Output directory:",key,value
             print "Map directory:", key, self.mapdict[key]
+            pointer = self.mapdict[key].split('map')
+        self.session.pointer = pointer[0]
+        print pointer
+        self.session.to_file()
             # print self.directory_settings
         # load Zstack settings
         self.zstack_settings = ZstackSettings()
@@ -570,6 +579,14 @@ class MosaicPanel(FigureCanvas):
     def _check_sock(self, event):
         self.interface._check_rep()
 
+    def setZPosition(self,position):
+        focus = self.imgSrc.mmc.getFocusDevice()
+        currentpos = self.imgSrc.mmc.getPosition(focus)
+        # self.imgSrc.mmc.setProperty(focus,'Speed',self.cfg['TecanSettings']['Z-OilingSpeed']
+        self.imgSrc.mmc.setPosition(focus,position)
+        
+
+
     def askMultiribbons(self):
         dlg = wx.MessageDialog(self,message = "Are you imaging multiple ribbons?",style = wx.YES|wx.NO)
         button_pressed = dlg.ShowModal()
@@ -577,6 +594,15 @@ class MosaicPanel(FigureCanvas):
             return True
         else:
             return False
+
+    def Oil_Check(self,xytuple,filepath,n = 4):
+        assert(type(xytuple) == tuple)
+        x,y = xytuple[0],xytuple[1]
+        (fw,fh)=self.mosaicImage.imgCollection.get_image_size_um()
+        for i in range(-n,n+1):
+            for j in range(-n,n+1):
+                self.mosaicImage.imgCollection.add_image_to_path(x+(j*fw),y+(i*fh),filepath)
+
 
     def What_toMap(self):
         dlg = MapSettingsDialog(None,-1,mapdict = self.mapdict)

@@ -131,6 +131,7 @@ class ImageCollection():
         self.minvalue=0
         self.maxvalue=512
         self.working_area = working_area
+        self.oilimgclass = None
 
     def display8bit(self,image, display_min, display_max): 
         image = np.array(image, copy=True)
@@ -228,6 +229,23 @@ class ImageCollection():
         #add this image to the collection
         theimage=self.add_image(thedata,bbox)
         return theimage
+
+    def add_image_to_path(self,x,y,path):
+        try:
+            (data,bbox) = self.imageSource.take_image(x,y)
+            if data.dtype == np.uint16:
+                maxval = self.imageSource.get_max_pixel_value()
+                data = self.lut_convert16as8bit(data,0,60000)
+        except:
+            pass
+        if self.oilimgclass is None:
+            self.oilimgclass = MyImage(imagePath=path)
+
+        self.oilimgclass.save_data(data)
+
+
+
+
         
         
     def get_cutout_from_source(self,box):
