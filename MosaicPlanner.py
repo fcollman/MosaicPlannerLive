@@ -579,12 +579,18 @@ class MosaicPanel(FigureCanvas):
     def _check_sock(self, event):
         self.interface._check_rep()
 
-    def setZPosition(self,position):
+    def setZPosition(self,position,oilingbool = False):
         focus = self.imgSrc.mmc.getFocusDevice()
         currentpos = self.imgSrc.mmc.getPosition(focus)
+        # if oilingbool:
         # self.imgSrc.mmc.setProperty(focus,'Speed',self.cfg['TecanSettings']['Z-OilingSpeed']
         self.imgSrc.mmc.setPosition(focus,position)
-        
+
+    def getZPosition(self):
+        focus = self.imgSrc.mmc.getFocusDevice()
+        currentpos = self.imgSrc.mmc.getPosition(focus)
+        return currentpos
+
 
 
     def askMultiribbons(self):
