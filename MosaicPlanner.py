@@ -37,6 +37,7 @@ import LiveMode
 from PositionList import posList
 from MyLasso import MyLasso
 from MosaicImage import MosaicImage
+from ImageCollection import ImageCollection
 from Transform import Transform,ChangeTransform
 
 from MMPropertyBrowser import MMPropertyBrowser
@@ -73,50 +74,67 @@ class RemoteInterface(RemoteObject):
         super(RemoteInterface, self).__init__(rep_port=rep_port)
         print "Opening Remote Interface on port:{}".format(rep_port)
         self.parent = parent
-        self.pause = False
+        self._pause = False
 
-    def toggle_pause(self):
-        if self.pause is True:
-            self.pause = False
-        else:
-            self.pause = True
+    @property
+    def pause(self):
+        return self._pause
+
+    @pause.setter
+    def pause(self, value):
+        self._pause = value
 
     def _check_rep(self):
         super(RemoteInterface, self)._check_rep()
 
-    def getStagePosition(self):
-        print "Getting stage position..."
+    def get_stage_pos(self):
         stagePosition = self.parent.getStagePosition()
-        print "StagePosition:{}".format(stagePosition)
+        print "StagePosition: {}".format(stagePosition)
         return stagePosition
 
-    def setStagePosition(self, incomingStagePosition):
-        print "setting new stage position to x:{}, y:{}".format(incomingStagePosition[0], incomingStagePosition[1])
+    def set_stage_pos(self, incomingStagePosition):
         self.parent.setStagePosition(incomingStagePosition[0], incomingStagePosition[1])
+        print "Set new stage position to x:{}, y:{}".format(incomingStagePosition[0], incomingStagePosition[1])
 
-    def setZPosition(self, incomingZPosition):
-        print "setting Z Position to z:{}".format(incomingZPosition)
-        self.parent.setZPosition(incomingZPosition)
-
-    def getZPosition(self):
-        print "getting Z position..."
+    def get_objective_z(self):
         zPos = self.parent.getZPosition()
-        print "Z Position:{}".format(zPos)
+        print "Z Position: {}".format(zPos)
         return zPos
 
-    def getRemainingImagingTime(self):
-        print "getting remaining imaging time..."
+    def set_objective_z(self, incomingZPosition, oiling=True):
+        self.parent.setZPosition(incomingZPosition, oiling)
+        print "Set Z Position to z: {}".format(incomingZPosition)
+
+    def get_remaining_time(self):
         remainingTime = self.parent.getRemainingImagingTime()
         print "remainingTime:{}".format(remainingTime)
         return remainingTime
 
-    def remoteSavePositionListJSON(self, filename, trans=None):
-        print "saving position list to {}".format(filename)
-        self.parent.remoteSavePositionListJSON(filename, trans=trans)
+    def get_current_session(self):
+        """ Gets the current imaging session metadata.
 
-    def remoteLoadPositionListJSON(self, filename):
-        print "loading position list from {}".format(filename)
-        self.parent.remoteLoadPositionListJSON(filename)
+        Returns:
+            dict: session data
+        """
+        return {}
+
+    def set_current_session(self, session_data):
+        """ Sets the current imaging session metadata from a session file.
+
+        Args:
+            session_data (dict): session data
+        """
+
+    def load_session(self, session_file):
+        """ Reads a session from a yaml file and loads it.
+
+        Args:
+            session_file (str): path to session file
+
+        """
+        with open(session_file, 'r') as f:
+            data = yaml.load(f)
+        self.set_current_session(data)
 
     def on_run_multi(self):
         print 'preparing to image multiple ribbons'
@@ -145,8 +163,47 @@ class RemoteInterface(RemoteObject):
         # dlg.Destroy()
         # return poslistpath, ToImageList
 
+    def sample_nearby(self, pos=None, folder="", size=3):
+        """ Samples a grid of images and saves them to a specified folder.
+
+        args:
+            pos (tuple): position of center image, defaults to current position
+            folder (str): folder to save images to
+            size (int): rows and columns in each direction (total images are (2*size+1)^2)
+        """
+        self.parent.grabGrid(pos, folder, size)
+        print "Grid grabbed @ {}".format(folder)
+
+    def check_bubbles(self, img_folder):
+        """ Checks for bubbles in the images in specified folder.
+
+        args:
+            folder (str): folder of images
+
+        Returns:
+            list: list of images containing detected bubbles
+        """
+        return []
+
+    def autofocus(self):
+        """ Triggers autofocus.
+        """
+        best_offset = self.parent.software_autofocus(False, False)
+        print "Autofocus finished."
+        return best_offset
+
     def change_channel_settings(self):
+        """ ROB: what is this?
+
+        """
         self.parent.edit_channels()
+
+    @property
+    def is_acquiring(self):
+        """ Returns whether or not MP is acquiring
+        """
+        #return self.parent.acquiring
+        return False
 
 
 
@@ -601,13 +658,35 @@ class MosaicPanel(FigureCanvas):
         else:
             return False
 
-    def Oil_Check(self,xytuple,filepath,n = 4):
-        assert(type(xytuple) == tuple)
-        x,y = xytuple[0],xytuple[1]
-        (fw,fh)=self.mosaicImage.imgCollection.get_image_size_um()
-        for i in range(-n,n+1):
-            for j in range(-n,n+1):
-                self.mosaicImage.imgCollection.add_image_to_path(x+(j*fw),y+(i*fh),filepath)
+    def grabGrid(self,pos=None,folder="",n=3):
+        """ Grabs a (2n+1)^2 grid of images around `xytuple` and saves them to
+                filepath.
+        """
+        assert(n%2==1)
+        pos = pos or self.getStagePosition()
+        if folder=="":
+            folder = "C:/tmp"
+        elif not os.path.isdir(folder):
+            os.makedirs(folder)
+
+        collection = ImageCollection(rootpath=folder, imageSource=self.imgSrc, axis=self.subplot)
+        (fw, fh)=self.mosaicImage.imgCollection.get_image_size_um()
+        x, y = pos
+        for i in range(-(n-1)/2, (n-1)/2+1):
+            for j in range(-(n-1)/2, (n-1)/2+1):
+                filename = "%03d_%03d.tif"%(i,j)
+                mypath = os.path.join(folder,filename)
+                collection.add_image_to_path(x+(j*fw), y+(i*fh), mypath)
+
+        # self.imgCollection=ImageCollection(rootpath=rootPath,imageSource=imgSrc,axis=self.axis)
+        # assert(type(xytuple) == tuple)
+        # x,y = xytuple[0],xytuple[1]
+        # (fw,fh)=self.mosaicImage.imgCollection.get_image_size_um()
+        # for i in range(-n,n+1):
+        #     for j in range(-n,n+1):
+        #         filename = "%03d_%03d.tif"%(i,j)
+        #         mypath = os.path.join(folderpath,filename)
+        #         self.mosaicImage.imgCollection.add_image_to_path(x+(j*fw),y+(i*fh),mypath)
 
 
     def What_toMap(self):
@@ -1953,6 +2032,7 @@ class MosaicPanel(FigureCanvas):
             self.imgSrc.setup_hardware_triggering(channels,exp_times)
         if buttonpress:
             self.imgSrc.set_binning(2)
+        return best_offset
 
     def getStagePosition(self):
         stagePosition = self.imgSrc.get_xy()
@@ -1961,12 +2041,12 @@ class MosaicPanel(FigureCanvas):
     def setStagePosition(self, newXPos, newYPos):
         self.imgSrc.move_stage(newXPos, newYPos)
 
-    def setZPosition(self, newZPos):
-        self.imgSrc.set_z(newZPos)
-
-    def getZPosition(self):
-        zPosition = self.imgSrc.get_z()
-        return zPosition
+    # def setZPosition(self, newZPos):
+    #     self.imgSrc.set_z(newZPos)
+    #
+    # def getZPosition(self):
+    #     zPosition = self.imgSrc.get_z()
+    #     return zPosition
 
     def getRemainingImagingTime(self):
         remainingTime = wx.PD_REMAINING_TIME
