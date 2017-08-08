@@ -232,12 +232,12 @@ class ImageCollection():
     def add_image_to_path(self,x,y,path):
         try:
             (data,bbox) = self.imageSource.take_image(x,y)
-            if data.dtype == np.uint16:
-                maxval = self.imageSource.get_max_pixel_value()
-                data = self.lut_convert16as8bit(data,0,60000)
+            # if data.dtype == np.uint16:
+            #     maxval = self.imageSource.get_max_pixel_value()
+            #     data = self.lut_convert16as8bit(data,0,60000)
             imsave(path, data)
-        except:
-            pass
+        except Exception as e:
+            print("Failed to add image to path: {}".format(e))
 
         
         

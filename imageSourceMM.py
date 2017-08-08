@@ -544,6 +544,57 @@ class imageSource():
             if i==20:
                 break
 
+    def focus_search(self,
+                     search_range=320,
+                     step=20,
+                     settle_time=1.0,
+                     attempts=3):
+
+        low = -search_range/2
+        high = search_range/2
+        focus_stage=self.mmc.getFocusDevice()
+        original_position=self.mmc.getPosition(focus_stage)
+
+        # check if it is already at the optimal spot
+        time.sleep(settle_time)
+        if self.attempt_focus(settle_time):
+            return self.mmc.getPosition(focus_stage)
+
+        # search `attempt` times
+        for attempt in range(attempts):
+            self.mmc.setRelativePosition(focus_stage, low)
+            self.mmc.waitForDevice(focus_stage)
+
+            # search from low to high
+            for i in range(low, high, step):
+                self.mmc.setRelativePosition(focus_stage, step)
+                self.mmc.waitForDevice(focus_stage)
+                time.sleep(settle_time)
+                if self.attempt_focus(settle_time):
+                    return self.mmc.getPosition(focus_stage)
+
+            # return to original position after every attempt
+            self.mmc.setPosition (focus_stage, original_position)
+            self.mmc.waitForDevice(focus_stage)
+
+        # all attempts failed
+        raise Exception("Couldn't find hardware focus.")
+
+    def attempt_focus(self, settle_time=1.0):
+        self.mmc.enableContinuousFocus(True)
+        #self.mmc.waitForDevice(self.mmc.getAutoFocusDevice())
+        time.sleep(settle_time)
+        if self.mmc.isContinuousFocusEnabled():
+            for i in range(10):
+                time.sleep(0.1)
+                if self.mmc.isContinuousFocusLocked():
+                    return True
+        return False
+        #return self.mmc.isContinuousFocusLocked()
+
+
+
+
     def set_xy_new(self,x,y,use_focus_plane=False): #MultiRibbons
         # modified version of set_xy to be called by move_safe_and_focus with removed self.mmc.waitForDevice(stg)
         # to avoid error when waiting time exceeds 5s

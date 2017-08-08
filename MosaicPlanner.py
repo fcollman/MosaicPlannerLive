@@ -97,13 +97,48 @@ class RemoteInterface(RemoteObject):
         print "Set new stage position to x:{}, y:{}".format(incomingStagePosition[0], incomingStagePosition[1])
 
     def get_objective_z(self):
-        zPos = self.parent.getZPosition()
-        print "Z Position: {}".format(zPos)
-        return zPos
+        pos_z = self.parent.getZPosition()
+        print "Z Position: {}".format(pos_z)
+        return pos_z
 
-    def set_objective_z(self, incomingZPosition, oiling=True):
-        self.parent.setZPosition(incomingZPosition, oiling)
-        print "Set Z Position to z: {}".format(incomingZPosition)
+    def set_objective_z(self, pos_z, speed=None):
+        if speed:
+            # save old speed
+            # set new speed
+            pass
+        self.parent.setZPosition(pos_z)
+        # make sure it got there
+        if not pos_z-0.5 < self.get_objective_z() < pos_z+0.5:
+            self.set_objective_z(pos_z)
+        print "Set Z Position to z: {}".format(pos_z)
+        if speed:
+            #reset old speed
+            pass
+
+    def get_objective_property_names(self):
+        # check that it has that property
+        objective = self.parent.imgSrc.mmc.getFocusDevice()
+        return self.parent.imgSrc.mmc.getDevicePropertyNames(objective)
+
+    def get_objective_property(self, property):
+        objective = self.parent.imgSrc.mmc.getFocusDevice()
+        return self.parent.imgSrc.mmc.getProperty(objective, property)
+
+    def set_objective_property(self, property, value):
+        objective = self.parent.imgSrc.mmc.getFocusDevice()
+        return self.parent.imgSrc.mmc.setProperty(objective, property, value)
+
+    def set_objective_vel(self, vel):
+        """ Sets objective move speed
+        """
+
+    def get_objective_vel(self):
+        """ Get objective speed
+
+        """
+
+    def set_mm_timeout(self, ms):
+        self.parent.imgSrc.mmc.setTimeoutMs(ms)
 
     def get_remaining_time(self):
         remainingTime = self.parent.getRemainingImagingTime()
@@ -185,12 +220,17 @@ class RemoteInterface(RemoteObject):
         """
         return []
 
-    def autofocus(self):
+    def autofocus(self, search_range=320, step=20, settle_time=1.0, attempts=3):
         """ Triggers autofocus.
         """
-        best_offset = self.parent.software_autofocus(False, False)
-        print "Autofocus finished."
-        return best_offset
+        # best_offset = self.parent.software_autofocus(False, False)
+        # print "Autofocus finished."
+        # return best_offset
+        #self.parent.imgSrc.set_hardware_autofocus_state(True)
+        self.parent.imgSrc.focus_search(search_range=search_range,
+                                        step=step,
+                                        settle_time=settle_time,
+                                        attempts=attempts)
 
     def change_channel_settings(self):
         """ ROB: what is this?
@@ -205,6 +245,77 @@ class RemoteInterface(RemoteObject):
         #return self.parent.acquiring
         return False
 
+    def check_bubbles(self, img_folder):
+        """ MOVE CODE TO IMAGE PROCESSING MODULE
+        """
+        import cv2
+        import tifffile
+        data_files = []
+        for file in os.listdir(img_folder):
+            data_files.append(os.path.join(img_folder, file))
+
+        params = cv2.SimpleBlobDetector_Params()
+
+        # Change thresholds
+        params.minThreshold = 0
+        params.maxThreshold = 15
+        params.thresholdStep = 1
+
+        # Filter by Area.
+        params.filterByArea = True
+        params.maxArea = 1e7
+        params.minArea = 5e4
+
+        # Filter by Circularity
+        params.filterByCircularity = False
+        params.minCircularity = 0.5
+
+        # Filter by Convexity
+        params.filterByConvexity = True
+        params.minConvexity = 0.97
+
+        # Filter by Inertia
+        params.filterByInertia = False
+        params.minInertiaRatio = 0.4
+
+        # Find bubbles
+        score = np.zeros((len(data_files),),dtype='uint8')
+        x = np.zeros((len(data_files),))
+        y = np.zeros((len(data_files),))
+        s = np.zeros((len(data_files),))
+
+        blobReport = []
+
+        for i, filename in enumerate(data_files):
+            img = tifffile.imread(filename)
+            img = cv2.blur(img, (50,50))
+            a = 255.0/(np.max(img) - np.min(img))
+            b = np.min(img)*(-255.0)/(np.max(img)-np.min(img))
+            img = cv2.convertScaleAbs(img,alpha=a,beta=b)
+            params.maxThreshold = int(round(np.min(img) + (np.min(img) + np.median(img))/4))
+            img[0,:]=img[-1,:]=img[:,0]=img[:,-1]=np.median(img)
+
+            # Create a detector with the parameters
+            ver = (cv2.__version__).split('.')
+            if int(ver[0]) < 3 :
+                detector = cv2.SimpleBlobDetector(params)
+            else :
+                detector = cv2.SimpleBlobDetector_create(params)
+
+            keypoints = detector.detect(img)
+            if keypoints:
+                score[i] = 1
+                x[i] = keypoints[0].pt[0]
+                y[i] = keypoints[0].pt[1]
+                s[i] = keypoints[0].size
+                print i, params.maxThreshold, "found %d blobs" % len(keypoints)
+                blobReport.append(filename)
+            else:
+                score[i] = 0
+                print i, params.maxThreshold, "no blobs"
+
+        print "blobReport:{}".format(blobReport)
+        return blobReport
 
 
 
@@ -636,12 +747,14 @@ class MosaicPanel(FigureCanvas):
     def _check_sock(self, event):
         self.interface._check_rep()
 
-    def setZPosition(self,position,oilingbool = False):
+    def setZPosition(self,position, wait=True):
         focus = self.imgSrc.mmc.getFocusDevice()
         currentpos = self.imgSrc.mmc.getPosition(focus)
         # if oilingbool:
         # self.imgSrc.mmc.setProperty(focus,'Speed',self.cfg['TecanSettings']['Z-OilingSpeed']
         self.imgSrc.mmc.setPosition(focus,position)
+        if wait:
+            self.imgSrc.mmc.waitForDevice(focus)
 
     def getZPosition(self):
         focus = self.imgSrc.mmc.getFocusDevice()
@@ -668,6 +781,11 @@ class MosaicPanel(FigureCanvas):
             folder = "C:/tmp"
         elif not os.path.isdir(folder):
             os.makedirs(folder)
+
+        self.imgSrc.set_binning(1)
+        ch = self.channel_settings.map_chan
+        #self.imgSrc.set_exposure(self.cfg['Software Autofocus']['focus_exp_time'])
+        self.imgSrc.set_channel(ch)
 
         collection = ImageCollection(rootpath=folder, imageSource=self.imgSrc, axis=self.subplot)
         (fw, fh)=self.mosaicImage.imgCollection.get_image_size_um()
