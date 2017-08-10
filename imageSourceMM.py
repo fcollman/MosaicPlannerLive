@@ -71,6 +71,24 @@ class imageSource():
             self.mmc.setConfig('Triggering','Software')
         #set the exposure to use
 
+    @property
+    def objective(self):
+        """ The microscope objective device.
+        """
+        return self.mmc.getFocusDevice()
+
+    @property
+    def stage(self):
+        """ The microscope XY stage.
+        """
+        return self.mmc.getXYStageDevice()
+
+    @property
+    def hw_autofocus(self):
+        """ The microscope HW autofocus.
+        """
+        return self.mmc.getAutoFocusDevice()
+
     def reset_piezo(self,cfg):
 
         do_stage_reset=cfg['enableStageReset']
@@ -344,28 +362,23 @@ class imageSource():
         #    x = -x
         #if flipy == 1:
         #    y = -y
-        
-        stg=self.mmc.getXYStageDevice()
-        self.mmc.setXYPosition(stg,x,y)
-        self.mmc.waitForDevice(stg)
+
+        self.mmc.setXYPosition(self.stage, x, y)
+        self.mmc.waitForDevice(self.stage)
         #print self.get_xy()
         
 
 
     def get_xy_flip(self):
-        xystg=self.mmc.getXYStageDevice()
-        flipx=int(self.mmc.getProperty(xystg,"TransposeMirrorX"))==1
-        flipy=int(self.mmc.getProperty(xystg,"TransposeMirrorY"))==1
+        flipx=int(self.mmc.getProperty(self.stage,"TransposeMirrorX"))==1
+        flipy=int(self.mmc.getProperty(self.stage,"TransposeMirrorY"))==1
 
         return flipx,flipy
     def get_xy(self):
-        #NEED TO IMPLEMENT IF NOT MICROMANAGER
-        xystg=self.mmc.getXYStageDevice()
-        
         flipx,flipy = self.get_xy_flip()
 
-        x=self.mmc.getXPosition(xystg)
-        y=self.mmc.getYPosition(xystg)
+        x=self.mmc.getXPosition(self.stage)
+        y=self.mmc.getYPosition(self.stage)
 
         if self.transpose_xy:
             xt = x
@@ -379,12 +392,11 @@ class imageSource():
 
         return (x,y)
     def get_z(self):
-        focus_stage=self.mmc.getFocusDevice()
-        return self.mmc.getPosition(focus_stage)
+        return self.mmc.getPosition(self.objective)
+
     def set_z(self,z):
-        focus_stage=self.mmc.getFocusDevice()
-        self.mmc.setPosition (focus_stage,z)
-        self.mmc.waitForDevice(focus_stage)
+        self.mmc.setPosition (self.objective,z)
+        self.mmc.waitForDevice(self.objective)
         
     def get_pixel_size(self):
         #NEED TO IMPLEMENT IF NOT MICROMANAGER
@@ -514,7 +526,7 @@ class imageSource():
 
     def move_safe_and_focus(self,x,y): #MultiRibbons
         #lower objective, move the stage to position x,y
-        focus_stage=self.mmc.getFocusDevice()
+        focus_stage = self.objective
         #self.mmc.setRelativePosition(focus_stage,-3000.0)
         for j in range(300): #use small z steps to lower objective slowly
             self.mmc.setRelativePosition(-10.0)
@@ -524,8 +536,8 @@ class imageSource():
         time.sleep(1)
         self.set_xy_new(x,y)
         time.sleep(40)
-        stg=self.mmc.getXYStageDevice()
-        self.mmc.waitForDevice(stg)
+
+        self.mmc.waitForDevice(self.stage)
         #self.mmc.setRelativePosition(focus_stage,2700.0)
         for j in range(310): #use small z steps to raise objective slowly
             self.mmc.setRelativePosition(10.0)
@@ -552,7 +564,7 @@ class imageSource():
 
         low = -search_range/2
         high = search_range/2
-        focus_stage=self.mmc.getFocusDevice()
+        focus_stage=self.objective
         original_position=self.mmc.getPosition(focus_stage)
 
         # check if it is already at the optimal spot
@@ -612,8 +624,7 @@ class imageSource():
         #if flipy == 1:
         #    y = -y
 
-        stg=self.mmc.getXYStageDevice()
-        self.mmc.setXYPosition(stg,x,y)
+        self.mmc.setXYPosition(self.stage, x, y)
         #self.mmc.waitForDevice(stg)
 
     def set_autofocus_offset(self,offset): #MultiRibbons

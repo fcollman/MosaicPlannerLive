@@ -31,7 +31,6 @@ from pyqtgraph.Qt import QtCore, QtGui
 
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 from matplotlib.figure import Figure
-from zro import RemoteObject
 
 import LiveMode
 from PositionList import posList
@@ -68,257 +67,6 @@ SETTINGS_FILE = 'MosaicPlannerSettings.cfg'
 SETTINGS_MODEL_FILE = 'MosaicPlannerSettingsModel.cfg'
 import logging
 logging.getLogger('MosaicPlanner').addHandler(logging.NullHandler())
-
-class RemoteInterface(RemoteObject):
-    def __init__(self, rep_port, parent):
-        super(RemoteInterface, self).__init__(rep_port=rep_port)
-        print "Opening Remote Interface on port:{}".format(rep_port)
-        self.parent = parent
-        self._pause = False
-
-    @property
-    def pause(self):
-        return self._pause
-
-    @pause.setter
-    def pause(self, value):
-        self._pause = value
-
-    def _check_rep(self):
-        super(RemoteInterface, self)._check_rep()
-
-    def get_stage_pos(self):
-        stagePosition = self.parent.getStagePosition()
-        print "StagePosition: {}".format(stagePosition)
-        return stagePosition
-
-    def set_stage_pos(self, incomingStagePosition):
-        self.parent.setStagePosition(incomingStagePosition[0], incomingStagePosition[1])
-        print "Set new stage position to x:{}, y:{}".format(incomingStagePosition[0], incomingStagePosition[1])
-
-    def get_objective_z(self):
-        pos_z = self.parent.getZPosition()
-        print "Z Position: {}".format(pos_z)
-        return pos_z
-
-    def set_objective_z(self, pos_z, speed=None):
-        if speed:
-            # save old speed
-            # set new speed
-            pass
-        self.parent.setZPosition(pos_z)
-        # make sure it got there
-        if not pos_z-0.5 < self.get_objective_z() < pos_z+0.5:
-            self.set_objective_z(pos_z)
-        print "Set Z Position to z: {}".format(pos_z)
-        if speed:
-            #reset old speed
-            pass
-
-    def get_objective_property_names(self):
-        # check that it has that property
-        objective = self.parent.imgSrc.mmc.getFocusDevice()
-        return self.parent.imgSrc.mmc.getDevicePropertyNames(objective)
-
-    def get_objective_property(self, property):
-        objective = self.parent.imgSrc.mmc.getFocusDevice()
-        return self.parent.imgSrc.mmc.getProperty(objective, property)
-
-    def set_objective_property(self, property, value):
-        objective = self.parent.imgSrc.mmc.getFocusDevice()
-        return self.parent.imgSrc.mmc.setProperty(objective, property, value)
-
-    def set_objective_vel(self, vel):
-        """ Sets objective move speed
-        """
-
-    def get_objective_vel(self):
-        """ Get objective speed
-
-        """
-
-    def set_mm_timeout(self, ms):
-        self.parent.imgSrc.mmc.setTimeoutMs(ms)
-
-    def get_remaining_time(self):
-        remainingTime = self.parent.getRemainingImagingTime()
-        print "remainingTime:{}".format(remainingTime)
-        return remainingTime
-
-    def get_current_session(self):
-        """ Gets the current imaging session metadata.
-
-        Returns:
-            dict: session data
-        """
-        return {}
-
-    def set_current_session(self, session_data):
-        """ Sets the current imaging session metadata from a session file.
-
-        Args:
-            session_data (dict): session data
-        """
-
-    def load_session(self, session_file):
-        """ Reads a session from a yaml file and loads it.
-
-        Args:
-            session_file (str): path to session file
-
-        """
-        with open(session_file, 'r') as f:
-            data = yaml.load(f)
-        self.set_current_session(data)
-
-    def on_run_multi(self):
-        print 'preparing to image multiple ribbons'
-        outdirlist = self.get_directory_settings()
-        # ToImageList = len(outdirlist)*[True]
-
-        poslistpath, ToImageList = self.get_position_list_settings()
-        self.parent.on_run_multi_acq(poslistpath,outdirlist,ToImageList)
-
-    def get_directory_settings(self):
-        outdirdict = self.parent.outdirdict
-        outdirlist =[]
-        keys = sorted(outdirdict)
-        for key in keys:
-            outdirlist.append(outdirdict[key])
-        return outdirlist
-
-    def get_position_list_settings(self):
-        pass
-        # #will return a list of position lists to load into on run multi
-        # keys = sorted(self.parent.outdirdict)
-        # dlg = MultiRibbonSettings(None, -1, self.parent.Ribbon_Num, keys, title = "Multiribbon Settings",style=wx.OK)
-        # ret=dlg.ShowModal()
-        # if ret == wx.ID_OK:
-        #     poslistpath, ToImageList =dlg.GetSettings()
-        # dlg.Destroy()
-        # return poslistpath, ToImageList
-
-    def sample_nearby(self, pos=None, folder="", size=3):
-        """ Samples a grid of images and saves them to a specified folder.
-
-        args:
-            pos (tuple): position of center image, defaults to current position
-            folder (str): folder to save images to
-            size (int): rows and columns in each direction (total images are (2*size+1)^2)
-        """
-        self.parent.grabGrid(pos, folder, size)
-        print "Grid grabbed @ {}".format(folder)
-
-    def check_bubbles(self, img_folder):
-        """ Checks for bubbles in the images in specified folder.
-
-        args:
-            folder (str): folder of images
-
-        Returns:
-            list: list of images containing detected bubbles
-        """
-        return []
-
-    def autofocus(self, search_range=320, step=20, settle_time=1.0, attempts=3):
-        """ Triggers autofocus.
-        """
-        # best_offset = self.parent.software_autofocus(False, False)
-        # print "Autofocus finished."
-        # return best_offset
-        #self.parent.imgSrc.set_hardware_autofocus_state(True)
-        self.parent.imgSrc.focus_search(search_range=search_range,
-                                        step=step,
-                                        settle_time=settle_time,
-                                        attempts=attempts)
-
-    def change_channel_settings(self):
-        """ ROB: what is this?
-
-        """
-        self.parent.edit_channels()
-
-    @property
-    def is_acquiring(self):
-        """ Returns whether or not MP is acquiring
-        """
-        #return self.parent.acquiring
-        return False
-
-    def check_bubbles(self, img_folder):
-        """ MOVE CODE TO IMAGE PROCESSING MODULE
-        """
-        import cv2
-        import tifffile
-        data_files = []
-        for file in os.listdir(img_folder):
-            data_files.append(os.path.join(img_folder, file))
-
-        params = cv2.SimpleBlobDetector_Params()
-
-        # Change thresholds
-        params.minThreshold = 0
-        params.maxThreshold = 15
-        params.thresholdStep = 1
-
-        # Filter by Area.
-        params.filterByArea = True
-        params.maxArea = 1e7
-        params.minArea = 5e4
-
-        # Filter by Circularity
-        params.filterByCircularity = False
-        params.minCircularity = 0.5
-
-        # Filter by Convexity
-        params.filterByConvexity = True
-        params.minConvexity = 0.97
-
-        # Filter by Inertia
-        params.filterByInertia = False
-        params.minInertiaRatio = 0.4
-
-        # Find bubbles
-        score = np.zeros((len(data_files),),dtype='uint8')
-        x = np.zeros((len(data_files),))
-        y = np.zeros((len(data_files),))
-        s = np.zeros((len(data_files),))
-
-        blobReport = []
-
-        for i, filename in enumerate(data_files):
-            img = tifffile.imread(filename)
-            img = cv2.blur(img, (50,50))
-            a = 255.0/(np.max(img) - np.min(img))
-            b = np.min(img)*(-255.0)/(np.max(img)-np.min(img))
-            img = cv2.convertScaleAbs(img,alpha=a,beta=b)
-            params.maxThreshold = int(round(np.min(img) + (np.min(img) + np.median(img))/4))
-            img[0,:]=img[-1,:]=img[:,0]=img[:,-1]=np.median(img)
-
-            # Create a detector with the parameters
-            ver = (cv2.__version__).split('.')
-            if int(ver[0]) < 3 :
-                detector = cv2.SimpleBlobDetector(params)
-            else :
-                detector = cv2.SimpleBlobDetector_create(params)
-
-            keypoints = detector.detect(img)
-            if keypoints:
-                score[i] = 1
-                x[i] = keypoints[0].pt[0]
-                y[i] = keypoints[0].pt[1]
-                s[i] = keypoints[0].size
-                print i, params.maxThreshold, "found %d blobs" % len(keypoints)
-                blobReport.append(filename)
-            else:
-                score[i] = 0
-                print i, params.maxThreshold, "no blobs"
-
-        print "blobReport:{}".format(blobReport)
-        return blobReport
-
-
-
 
 
 class MosaicToolbar(NavBarImproved):
@@ -570,15 +318,6 @@ class MosaicPanel(FigureCanvas):
         FigureCanvas.__init__(self, parent, -1, self.figure, **kwargs)
         self.canvas = self.figure.canvas
 
-
-
-        # set up the remote interface
-        self.interface = RemoteInterface(rep_port=7777, parent=self)
-        self.timer = wx.Timer(self)
-        self.Bind(wx.EVT_TIMER, self._check_sock, self.timer)
-        self.timer.Start(200)
-
-
         #format the appearance
         self.figure.set_facecolor((1, 1, 1))
         self.figure.set_edgecolor((1, 1, 1))
@@ -744,14 +483,29 @@ class MosaicPanel(FigureCanvas):
         else:
             self.dmi = None
 
+        self._setup_remote_control()
+
+    def _setup_remote_control(self):
+        try:
+            # TODO: support for other remote control libraries
+            from remote import RemoteInterface
+            self.interface = RemoteInterface(rep_port=7777, parent=self)
+            self.timer = wx.Timer(self)
+            self.Bind(wx.EVT_TIMER, self._check_sock, self.timer)
+            self.timer.Start(200)
+        except ImportError as e:
+            logging.warning("Failed to import zro. No remote interface")
+        except Exception as e:
+            logging.exception("Failed to set up remote control interface.")
+
     def _check_sock(self, event):
+        """ Checks for commands from remote control interface.
+        """
         self.interface._check_rep()
 
     def setZPosition(self,position, wait=True):
-        focus = self.imgSrc.mmc.getFocusDevice()
+        focus = self.imgSrc.objective
         currentpos = self.imgSrc.mmc.getPosition(focus)
-        # if oilingbool:
-        # self.imgSrc.mmc.setProperty(focus,'Speed',self.cfg['TecanSettings']['Z-OilingSpeed']
         self.imgSrc.mmc.setPosition(focus,position)
         if wait:
             self.imgSrc.mmc.waitForDevice(focus)
