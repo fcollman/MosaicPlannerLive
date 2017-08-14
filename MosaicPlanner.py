@@ -576,6 +576,9 @@ class MosaicPanel(FigureCanvas):
                 f.write(self.channel_settings.prot_names[ch] + "\t" + "%f\t%s\n" % (self.channel_settings.exposure_times[ch],ch))
 
 
+        f.write("Imaged on:" + "\t" + self.cfg['MosaicPlanner']['microscope_name'])
+
+
     def autofocus_loop(self,hold_focus,wait,sleep):
         attempts=0
         if self.imgSrc.has_hardware_autofocus():
