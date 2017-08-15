@@ -272,8 +272,8 @@ class VideoView(QtGui.QWidget):
         fps1 = 1.0 / (now-self.updateTime)
         self.updateTime = now
         self.fps = self.fps * 0.6 + fps1 * 0.4
-        if self.i == 0:
-            print "%0.1f fps" % self.fps
+        # if self.i == 0:
+        #     print "%0.1f fps" % self.fps
         self.update()
             
 

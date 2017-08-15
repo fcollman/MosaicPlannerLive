@@ -39,9 +39,11 @@ import os
 import time
 import logging
 
-from zro import RemoteObject
+from zro import RemoteObject, Publisher
 
-class RemoteInterface(RemoteObject):
+from imgprocessing import make_thumbnail
+
+class RemoteInterface(Publisher):
     """ Allows remote control of certain Mosaic Planner features.
 
         All public attributes and methods of this class can be called
@@ -56,8 +58,8 @@ class RemoteInterface(RemoteObject):
             parent (MosaicPlanner): reference to MosaicPlanner
 
     """
-    def __init__(self, rep_port, parent):
-        super(RemoteInterface, self).__init__(rep_port=rep_port)
+    def __init__(self, rep_port, pub_port, parent):
+        super(RemoteInterface, self).__init__(rep_port=rep_port, pub_port=pub_port)
         logging.info("Opening Remote Interface on port:{}".format(rep_port))
         self.parent = parent
         self._pause = False
@@ -219,6 +221,18 @@ class RemoteInterface(RemoteObject):
         self.parent.grabGrid(pos, folder, size)
         logging.info("Grid grabbed @ {}".format(folder))
 
+    def grab_image(self):
+        """ Returns the current image from the camera.
+
+        Returns:
+            numpy.ndarray: the current image data
+        """
+        data = self.parent.imgSrc.snap_image()
+        thumb = make_thumbnail(data, autoscale=True)
+        self.publish(thumb)
+        return data
+
+
     def connect_objective(self, pos_z, speed=None):
         approach_offset = 4000.0 # configurable?
         # go to approach offset first
@@ -335,4 +349,3 @@ class RemoteInterface(RemoteObject):
 
         logging.info("blobReport:{}".format(blobReport))
         return blobReport
-

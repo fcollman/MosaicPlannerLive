@@ -59,6 +59,7 @@ from LeicaAFCView import LeicaAFCView
 from LeicaDMI import LeicaDMI
 from slacker import Slacker
 from SaveThread import file_save_process
+from imgprocessing import make_thumbnail
 import scipy.optimize as opt #softwarea-autofocus
 
 from Tokens import STOP_TOKEN,BUBBLE_TOKEN
@@ -345,9 +346,9 @@ class MosaicPanel(FigureCanvas):
                 if self.cfg['MosaicPlanner']['demoMode']:
                     from imageSourceDemo import imageSource
                 else:
-                    from imageSourceMM import imageSource
+                    from imageSourceMM import ImageSource
 
-                self.imgSrc=imageSource(self.MM_config_file,
+                self.imgSrc=ImageSource(self.MM_config_file,
                                         MasterArduinoPort=self.cfg['MMArduino']['port'],
                                         interframe_time=self.cfg['MMArduino']['interframe_time'],
                                         filtswitch = self.cfg['MosaicPlanner']['filter_switch'])
@@ -489,14 +490,13 @@ class MosaicPanel(FigureCanvas):
         try:
             # TODO: support for other remote control libraries
             from remote import RemoteInterface
-            self.interface = RemoteInterface(rep_port=7777, parent=self)
+            self.interface = RemoteInterface(rep_port=7777, pub_port=7778, parent=self)
             self.timer = wx.Timer(self)
             self.Bind(wx.EVT_TIMER, self._check_sock, self.timer)
             self.timer.Start(200)
-        except ImportError as e:
-            logging.warning("Failed to import zro. No remote interface")
         except Exception as e:
             logging.exception("Failed to set up remote control interface.")
+            self.interface = None
 
     def _check_sock(self, event):
         """ Checks for commands from remote control interface.
@@ -548,7 +548,13 @@ class MosaicPanel(FigureCanvas):
             for j in range(-(n-1)/2, (n-1)/2+1):
                 filename = "%03d_%03d.tif"%(i,j)
                 mypath = os.path.join(folder,filename)
-                collection.add_image_to_path(x+(j*fw), y+(i*fh), mypath)
+                img = collection.add_image_to_path(x+(j*fw), y+(i*fh), mypath)
+
+                # if we have a remote interface, publish subsampled image
+                if self.interface:
+                    t0 = time.clock()
+                    self.interface.publish(make_thumbnail(img))
+                    print(time.clock()-t0)
 
         # self.imgCollection=ImageCollection(rootpath=rootPath,imageSource=imgSrc,axis=self.axis)
         # assert(type(xytuple) == tuple)
@@ -1253,7 +1259,7 @@ class MosaicPanel(FigureCanvas):
                                 break
                         if pos.frameList.slicePositions[j].activated:
                             autofocus_trigger = pos.frameList.slicePositions[j].autofocus_trigger
-                            print autofocus_trigger
+                            #print autofocus_trigger
                             self.multiDacq(success,outdir,chrom_correction,autofocus_trigger,triggerflag,fpos.x,fpos.y,current_z,i,j,hold_focus)
                         else:
                             # print 'moving on'

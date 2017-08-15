@@ -8,7 +8,7 @@ import datetime
 import os
 from MMArduino import MMArduino
 
-class imageSource():
+class ImageSource():
     
     def __init__(self,configFile,channelGroupName='Channels',
                  use_focus_plane  = False, focus_points=None,
@@ -69,7 +69,7 @@ class imageSource():
             self.mmc.stopPropertySequence(filtswitch,'State')
             self.mmc.setConfig('Triggering','Software')
             self.mmc.setConfig('Triggering','Software')
-        #set the exposure to use
+
 
     @property
     def objective(self):
@@ -465,7 +465,6 @@ class imageSource():
         data = self.flip_image(data)
         return data
 
-
     def flip_image(self,data):
 
         (flipx,flipy,trans) = self.get_image_flip()
@@ -638,3 +637,5 @@ class imageSource():
     
     def shutdown(self):
         self.mmc.unloadAllDevices()
+
+imageSource = ImageSource  #DW: i fixed the name but wanted to preserve backwards compatibility

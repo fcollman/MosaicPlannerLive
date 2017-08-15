@@ -1,5 +1,8 @@
+""" SaveThread.py
 
-import paramiko
+Multiprocessing Queue to save images and potentially do some preprocessing / publishing.
+
+"""
 import os
 from tifffile import imsave
 import pandas as pd
@@ -9,7 +12,30 @@ import sys
 import traceback
 from Tokens import STOP_TOKEN,BUBBLE_TOKEN
 import json
+import logging
+import time
+
+from imgprocessing import make_thumbnail
+
+try:
+    import paramiko
+    HAS_PARAMIKO = True
+except ImportError as e:
+    HAS_PARAMIKO = False
+    logging.warning("Couldn't import paramiko.")
+
+
+
 def file_save_process(queue,message_queue, metadata_dictionary,ssh_opts):
+
+    logging.basicConfig(level=logging.DEBUG)
+
+    try:
+        from zro import Publisher
+        publisher = Publisher(pub_port=7779)
+    except Exception as e:
+        publisher = None
+        logging.exception("Save thread failed to init publisher. Data will not be published.")
 
     while True:
         token = queue.get()
@@ -17,10 +43,16 @@ def file_save_process(queue,message_queue, metadata_dictionary,ssh_opts):
             return
         else:
             try:
+                t0_t = time.clock()
                 (slice_index,frame_index, z_index, prot_name, path, data, ch, x, y, z,triggerflag,calcfocus,afc_image) = token
                 tif_filepath = os.path.join(path, prot_name + "_S%04d_F%04d_Z%02d.tif" % (slice_index, frame_index, z_index))
                 metadata_filepath = os.path.join(path, prot_name + "_S%04d_F%04d_Z%02d_metadata.txt"%(slice_index, frame_index, z_index))
-                imsave(tif_filepath,data)
+                write_img(tif_filepath, data)
+                if publisher:
+                    t0_p = time.clock()
+                    thumb = make_thumbnail(data, bin=2)
+                    publisher.publish(thumb)
+                    #logging.debug("Publishing took: {} seconds".format(time.clock()-t0_p))
                 write_slice_metadata(metadata_filepath, ch, x, y, z, slice_index, triggerflag, metadata_dictionary,ssh_opts)
                 if calcfocus:
                     focus_filepath = os.path.join(path, prot_name + "_S%04d_F%04d_Z%02d_focus.csv"%(slice_index, frame_index, z_index))
@@ -29,8 +61,18 @@ def file_save_process(queue,message_queue, metadata_dictionary,ssh_opts):
                     afc_image_filepath = os.path.join(path, prot_name + "_S%04d_F%04d_Z%02d_afc.json"%(slice_index, frame_index, z_index))
                     #np.savetxt(afc_image_filepath, afc_image)
                     write_afc_image(afc_image_filepath, afc_image,x,y,slice_index,frame_index)
+                #logging.debug("Entire save operation took: {} seconds".format(time.clock()-t0_t))
             except:
                 message_queue.put((STOP_TOKEN,traceback.print_exc()))
+
+def write_img(path, img):
+    """ Writes a numpy image as a tif file.
+
+    args:
+        path (str): file path to save img to
+        img (numpy.ndarray): img data
+    """
+    imsave(path, img)
 
 
 def write_focus_score(filename, data, ch,xpos,ypos,slide_index,frame_index,prot_name):
@@ -80,30 +122,30 @@ def write_slice_metadata(filename, ch, xpos, ypos, zpos, slice_index,triggerflag
     f.write("%s\t%s\t%s\n" %(xpos, ypos, zpos))
     if triggerflag == True:
 
+        if HAS_PARAMIKO:
+            if ssh_opts['do_ssh_trigger']:
+                fname =ssh_opts['cron_dir']
+                sessiondir, frametitle = os.path.split(filename)
+                sessiondir, chname = os.path.split(sessiondir)
+                # print "Session Directory", sessiondir
+                sessiondir = '/'.join(sessiondir.split('\\'))
+                junk, sessiondir = sessiondir.split(':')
+                print 'mount point is', ssh_opts['mount_point']
+                sessiondir = os.path.join(ssh_opts['mount_point'], sessiondir)
+                sessiondir = ssh_opts['mount_point']+'/'+sessiondir
+                # print sessiondir
+                meta_experiment_name = ssh_opts['meta_experiment_name']
+                outputstring = "%s,%s,%s"%(sessiondir,slice_index,meta_experiment_name)
 
-        if ssh_opts['do_ssh_trigger']:
-            fname =ssh_opts['cron_dir']
-            sessiondir, frametitle = os.path.split(filename)
-            sessiondir, chname = os.path.split(sessiondir)
-            # print "Session Directory", sessiondir
-            sessiondir = '/'.join(sessiondir.split('\\'))
-            junk, sessiondir = sessiondir.split(':')
-            print 'mount point is', ssh_opts['mount_point']
-            sessiondir = os.path.join(ssh_opts['mount_point'], sessiondir)
-            sessiondir = ssh_opts['mount_point']+'/'+sessiondir
-            # print sessiondir
-            meta_experiment_name = ssh_opts['meta_experiment_name']
-            outputstring = "%s,%s,%s"%(sessiondir,slice_index,meta_experiment_name)
+                #linux command to dump outputstring to filename
+                cmd = "echo %s > %s"%(outputstring,fname)
 
-            #linux command to dump outputstring to filename
-            cmd = "echo %s > %s"%(outputstring,fname)
-
-            #run the command via ssh to machine ibs-sharmi-ux1
-            ssh = paramiko.SSHClient()
-            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            try:
-                ssh.connect(ssh_opts['host'], username=ssh_opts['username'], password=ssh_opts['password'], timeout = ssh_opts['timeout'])
-                ssh.exec_command(cmd)
-            except paramiko.ssh_exception.SSHException:
-                print "failed to trigger SSH to %s@%s"%(ssh_opts['host'],ssh_opts['username'])
+                #run the command via ssh to machine ibs-sharmi-ux1
+                ssh = paramiko.SSHClient()
+                ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                try:
+                    ssh.connect(ssh_opts['host'], username=ssh_opts['username'], password=ssh_opts['password'], timeout = ssh_opts['timeout'])
+                    ssh.exec_command(cmd)
+                except paramiko.ssh_exception.SSHException:
+                    print "failed to trigger SSH to %s@%s"%(ssh_opts['host'],ssh_opts['username'])
 

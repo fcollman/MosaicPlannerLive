@@ -3,7 +3,7 @@ import time
 from Rectangle import Rectangle
 import wx
 
-class imageSource():
+class ImageSource():
     
     def __init__(self,configFile,channelGroupName='Channels',
                  use_focus_plane  = False, focus_points=None,
@@ -354,3 +354,5 @@ class imageSource():
         
     def shutdown(self):
         pass
+
+imgSource = ImageSource

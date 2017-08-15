@@ -214,7 +214,7 @@ class ImageCollection():
             (thedata,bbox)=self.imageSource.take_image(x,y)
             if thedata.dtype == np.uint16:
                 print "converting"
-                maxval=self.imageSource.get_max_pixel_value()
+                #maxval=self.imageSource.get_max_pixel_value()
                 thedata=self.lut_convert16as8bit(thedata,0,60000)
             
         except:
@@ -236,6 +236,7 @@ class ImageCollection():
             #     maxval = self.imageSource.get_max_pixel_value()
             #     data = self.lut_convert16as8bit(data,0,60000)
             imsave(path, data)
+            return data
         except Exception as e:
             print("Failed to add image to path: {}".format(e))
 
