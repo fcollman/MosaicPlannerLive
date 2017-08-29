@@ -663,6 +663,8 @@ class MosaicPanel(FigureCanvas):
             if self.channel_settings.usechannels[ch]:
                 f.write(self.channel_settings.prot_names[ch] + "\t" + "%f\t%s\n" % (self.channel_settings.exposure_times[ch],ch))
 
+        f.write("Meta Experiment name:\t%s" %(self.cfg['Directories']['meta_experiment_name']))
+
 
     def autofocus_loop(self,hold_focus,wait,sleep):
         attempts=0
