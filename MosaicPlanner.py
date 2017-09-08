@@ -344,7 +344,7 @@ class MosaicPanel(FigureCanvas):
         while self.imgSrc is None:
             try:
                 if self.cfg['MosaicPlanner']['demoMode']:
-                    from imageSourceDemo import imageSource
+                    from imageSourceDemo import ImageSource
                 else:
                     from imageSourceMM import ImageSource
 
@@ -434,6 +434,7 @@ class MosaicPanel(FigureCanvas):
             print "Map directory:", key, self.mapdict[key]
             pointer = self.mapdict[key].split('map')
         self.session.pointer = pointer[0]
+        self.cfg['MosaicPlanner']['default_arraypath'] = pointer[0]
         print pointer
         self.session.to_file()
             # print self.directory_settings
