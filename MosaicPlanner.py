@@ -609,17 +609,18 @@ class MosaicPanel(FigureCanvas):
             if self.channel_settings.usechannels[ch]:
                 last_channel = ch
 
-        def software_acquire(z=presentZ):
+        def software_acquire(presentZ):
             # currZ=self.imgSrc.get_z()
             # presentZ = currZ
             for z_index, zplane in enumerate(zplanes_to_visit):
                 for k,ch in enumerate(self.channel_settings.channels):
-                    #print datetime.datetime.now().time()," start channel",ch, " zplane", zplane
+                    # print datetime.datetime.now().time()," start channel",ch, " zplane", zplane
                     prot_name=self.channel_settings.prot_names[ch]
+                    print prot_name
                     path=os.path.join(outdir,prot_name)
                     if self.channel_settings.usechannels[ch]:
                         #ti = time.clock()*1000
-                        #print time.clock(),'start'
+                        print time.clock(),'start'
                         if not hold_focus:
                             z = zplane + self.channel_settings.zoffsets[ch]
                             if not z == presentZ:
@@ -669,10 +670,10 @@ class MosaicPanel(FigureCanvas):
                             self.dataQueue.put((slice_index,frame_index, z_index, prot_name,path,data,ch,stagexy[0],stagexy[1],z,triggerflag,calcFocus))
 
 
-        if (self.cfg['MosaicPlanner']['hardware_trigger'] == True) and (chrome_correction == False) and (success != False):
+        if (self.cfg['MosaicPlanner']['hardware_trigger'] == True) and (chrome_correction == False) and (success != False) and (self.zstack_settings.zstack_flag == False):
             hardware_acquire()
         else:
-            software_acquire()
+            software_acquire(presentZ)
 
         if not hold_focus:
             self.imgSrc.set_z(current_z)
@@ -950,6 +951,12 @@ class MosaicPanel(FigureCanvas):
             print channels
             print exp_times
             success=self.imgSrc.setup_hardware_triggering(channels,exp_times)
+        else:
+            channels = [ch for ch in self.channel_settings.channels if self.channel_settings.usechannels[ch]]
+            exp_times = [self.channel_settings.exposure_times[ch] for ch in self.channel_settings.channels if self.channel_settings.usechannels[ch]]
+            success = False
+            print channels
+            print exp_times
 
 
 

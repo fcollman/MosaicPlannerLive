@@ -431,6 +431,7 @@ class imageSource():
         for attempt in range(5):
             try:
                 # do thing
+                print 'snap'
                 self.mmc.snapImage()
             except:
                 # perhaps reconnect, etc.
