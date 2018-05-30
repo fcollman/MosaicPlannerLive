@@ -963,20 +963,22 @@ class MosaicPanel(FigureCanvas):
         goahead = True
 
         if not self.imgSrc.get_hardware_autofocus_state():
-            self.slack_notify('HELP! lost autofocus on way to first position',notify=True)
+            if self.cfg['Slack']['do_messaging']:
+                self.slack_notify('HELP! lost autofocus on way to first position',notify=True)
             print 'HELP! lost autofocus on way to first position'
             goahead=False
 
 
         #loop over positions
         for i,pos in enumerate(self.posList.slicePositions):
-            if i==(len(self.posList.slicePositions)-1):
+            if (i==(len(self.posList.slicePositions)-1)) and (self.cfg['Slack']['do_messaging']):
                     self.slack_notify('last section imaging beginning')
             if pos.activated:
                 if not goahead:
                     break
                 if not self.imgSrc.get_hardware_autofocus_state():
-                    self.slack_notify('HELP! lost autofocus between sections',notify=True)
+                    if self.cfg['Slack']['do_messaging']:
+                        self.slack_notify('HELP! lost autofocus between sections',notify=True)
                     goahead=False
                     break
                 (goahead, skip) = self.progress.Update(i*numFrames,'section %d of %d'%(i,numSections-1))
@@ -996,7 +998,8 @@ class MosaicPanel(FigureCanvas):
                             print "breaking out!"
                             break
                         if not self.imgSrc.get_hardware_autofocus_state():
-                            self.slack_notify('HELP! lost autofocus between frames',notify=True)
+                            if self.cfg['Slack']['do_messaging']:
+                                self.slack_notify('HELP! lost autofocus between frames',notify=True)
                             print "autofocus no longer enabled while moving between frames.. quiting"
                             goahead = False
                             break
@@ -1013,7 +1016,7 @@ class MosaicPanel(FigureCanvas):
                             pass
                         self.ResetPiezo()
                         if i==(len(self.posList.slicePositions)-1):
-                            if j == (len(pos.frameList.slicePositions) - 1):
+                            if j == (len(pos.frameList.slicePositions) - 1) and (self.cfg['Slack']['do_messaging']):
                                 self.slack_notify('Done Imaging!')
                         (goahead, skip)=self.progress.Update((i*numFrames) + j+1,'section %d of %d, frame %d'%(i,numSections-1,j))
                         #======================================================
@@ -1027,10 +1030,11 @@ class MosaicPanel(FigureCanvas):
 
                 wx.Yield()
         if not goahead:
-            self.slack_notify('Imaging stopped prematurely')
-            self.slack_notify('on section %d'%i)
-            if pos.frameList is not None:
-                self.slack_notify("frame %d"%(j))
+            if self.cfg['Slack']['do_messaging']:
+                self.slack_notify('Imaging stopped prematurely')
+                self.slack_notify('on section %d'%i)
+                if pos.frameList is not None:
+                    self.slack_notify("frame %d"%(j))
 
             print "acquisition stopped prematurely"
             print "section %d"%(i)
