@@ -38,7 +38,7 @@ from PositionList import posList
 from MyLasso import MyLasso
 from MosaicImage import MosaicImage
 from Transform import Transform,ChangeTransform
-
+from imageSourceMM import imageSource
 from MMPropertyBrowser import MMPropertyBrowser
 from ASI_Control import ASI_AutoFocus
 from FocusCorrectionPlaneWindow import FocusCorrectionPlaneWindow
@@ -640,17 +640,18 @@ class MosaicPanel(FigureCanvas):
             if self.channel_settings.usechannels[ch]:
                 last_channel = ch
 
-        def software_acquire(z=presentZ):
+        def software_acquire(presentZ):
             # currZ=self.imgSrc.get_z()
             # presentZ = currZ
             for z_index, zplane in enumerate(zplanes_to_visit):
                 for k,ch in enumerate(self.channel_settings.channels):
-                    #print datetime.datetime.now().time()," start channel",ch, " zplane", zplane
+                    # print datetime.datetime.now().time()," start channel",ch, " zplane", zplane
                     prot_name=self.channel_settings.prot_names[ch]
+                    print prot_name
                     path=os.path.join(outdir,prot_name)
                     if self.channel_settings.usechannels[ch]:
                         #ti = time.clock()*1000
-                        #print time.clock(),'start'
+                        print time.clock(),'start'
                         if not hold_focus:
                             z = zplane + self.channel_settings.zoffsets[ch]
                             if not z == presentZ:
@@ -704,10 +705,10 @@ class MosaicPanel(FigureCanvas):
             print 'toggle autofocus'
             self.imgSrc.set_hardware_autofocus_state(False,False)
 
-        if (self.cfg['MosaicPlanner']['hardware_trigger'] == True) and (chrome_correction == False) and (success != False):
+        if (self.cfg['MosaicPlanner']['hardware_trigger'] == True) and (chrome_correction == False) and (success != False) and (self.zstack_settings.zstack_flag == False):
             hardware_acquire()
         else:
-            software_acquire()
+            software_acquire(presentZ)
 
         if self.cfg['MosaicPlanner']['autofocus_toggle']:
             self.imgSrc.set_hardware_autofocus_state(True,True)
@@ -1010,27 +1011,33 @@ class MosaicPanel(FigureCanvas):
             print exp_times
             success=self.imgSrc.setup_hardware_triggering(channels,exp_times)
         else:
+            channels = [ch for ch in self.channel_settings.channels if self.channel_settings.usechannels[ch]]
+            exp_times = [self.channel_settings.exposure_times[ch] for ch in self.channel_settings.channels if self.channel_settings.usechannels[ch]]
             success = False
+            print channels
+            print exp_times
 
 
 
         goahead = True
 
         if not self.imgSrc.get_hardware_autofocus_state():
-            self.slack_notify('HELP! lost autofocus on way to first position',notify=True)
+            if self.cfg['Slack']['do_messaging']:
+                self.slack_notify('HELP! lost autofocus on way to first position',notify=True)
             print 'HELP! lost autofocus on way to first position'
             goahead=False
 
 
         #loop over positions
         for i,pos in enumerate(self.posList.slicePositions):
-            if i==(len(self.posList.slicePositions)-1):
+            if (i==(len(self.posList.slicePositions)-1)) and (self.cfg['Slack']['do_messaging']):
                     self.slack_notify('last section imaging beginning')
             if pos.activated:
                 if not goahead:
                     break
                 if not self.imgSrc.get_hardware_autofocus_state():
-                    self.slack_notify('HELP! lost autofocus between sections',notify=True)
+                    if self.cfg['Slack']['do_messaging']:
+                        self.slack_notify('HELP! lost autofocus between sections',notify=True)
                     goahead=False
                     break
                 (goahead, skip) = self.progress.Update(i*numFrames,'section %d of %d'%(i,numSections-1))
@@ -1060,7 +1067,8 @@ class MosaicPanel(FigureCanvas):
                             print "breaking out!"
                             break
                         if not self.imgSrc.get_hardware_autofocus_state():
-                            self.slack_notify('HELP! lost autofocus between frames',notify=True)
+                            if self.cfg['Slack']['do_messaging']:
+                                self.slack_notify('HELP! lost autofocus between frames',notify=True)
                             print "autofocus no longer enabled while moving between frames.. quiting"
                             goahead = False
                             break
@@ -1079,7 +1087,7 @@ class MosaicPanel(FigureCanvas):
                             pass
                         self.ResetPiezo()
                         if i==(len(self.posList.slicePositions)-1):
-                            if j == (len(pos.frameList.slicePositions) - 1):
+                            if j == (len(pos.frameList.slicePositions) - 1) and (self.cfg['Slack']['do_messaging']):
                                 self.slack_notify('Done Imaging!')
                         (goahead, skip)=self.progress.Update((i*numFrames) + j+1,'section %d of %d, frame %d'%(i,numSections-1,j))
                         #======================================================
@@ -1093,10 +1101,11 @@ class MosaicPanel(FigureCanvas):
 
                 wx.Yield()
         if not goahead:
-            self.slack_notify('Imaging stopped prematurely')
-            self.slack_notify('on section %d'%i)
-            if pos.frameList is not None:
-                self.slack_notify("frame %d"%(j))
+            if self.cfg['Slack']['do_messaging']:
+                self.slack_notify('Imaging stopped prematurely')
+                self.slack_notify('on section %d'%i)
+                if pos.frameList is not None:
+                    self.slack_notify("frame %d"%(j))
 
             print "acquisition stopped prematurely"
             print "section %d"%(i)
