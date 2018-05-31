@@ -467,7 +467,7 @@ class RetakeView(QtGui.QWidget):
 
         success, chrom_correction = self.setupAcq()
         self.mp.multiDacq(success, self.outdir, chrom_correction,
-                          False, currx, curry, currz, self.section,
+                          False, False, currx, curry, currz, self.section,
                           self.frame, hold_focus=True)
         d = {'pos': (currx, curry), 'symbol': '+','pen': pg.mkPen('w', width=5)}
         self.retakesScatterPlot.addPoints([d])
