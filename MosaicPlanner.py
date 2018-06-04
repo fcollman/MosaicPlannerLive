@@ -578,6 +578,42 @@ class MosaicPanel(FigureCanvas):
 
         f.write("Imaged on:" + "\t" + self.cfg['MosaicPlanner']['microscope_name'])
 
+    def write_session_metadata_json(self,outdir):
+
+
+        height, width = self.imgSrc.get_sensor_size()
+        length = len(self.posList.slicePositions)
+        numchan = 0
+        channel_dict = {}
+        for k,ch in enumerate(self.channel_settings.channels):
+            if self.channel_settings.usechannels[ch]:
+                numchan += 1
+                channel_dict[ch] = [self.channel_settings.prot_names[ch], self.channel_settings.exposure_times[ch]]
+
+
+        scalex = self.imgSrc.get_pixel_size()
+        scaley = self.imgSrc.get_pixel_size()
+        mosaicX = self.posList.mosaic_settings.mx
+        mosaicY = self.posList.mosaic_settings.my
+        scope_name = self.cfg['MosaicPlanner']['microscope_name']
+        session_num = self.cfg['Directories']['Session_ID']
+
+
+        metadata_dict = {'Image_Size' : [width,height],
+                         'No. Channels' : numchan,
+                         'Channel Settings' : channel_dict,
+                         'Mosaic Size XY' : [mosaicX,mosaicY],
+                         'ScaleX' : scalex,
+                         'ScaleY': scaley,
+                         'Scope' : scope_name,
+                         'Session' : session_num,
+                         'Ribbon Length' : length}
+        thestring = json.JSONEncoder.encode(metadata_dict)
+        filename = os.path.join(outdir, 'session_metadata.json')
+        f = open(filename, 'w')
+        f.write(thestring)
+        f.close()
+        
 
     def autofocus_loop(self,hold_focus,wait,sleep):
         attempts=0
