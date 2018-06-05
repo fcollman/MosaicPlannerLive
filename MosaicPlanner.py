@@ -617,7 +617,9 @@ class MosaicPanel(FigureCanvas):
                          'ribbon_length' : length,
                          'owner' : owner,
                          'project' : project}
-        thestring = json.JSONEncoder.encode(metadata_dict)
+
+        thestring = json.JSONEncoder().encode(metadata_dict)
+        # thestring = json.dumps(metadata_dict)
         filename = os.path.join(outdir, 'session_metadata.json')
         f = open(filename, 'w')
         f.write(thestring)
