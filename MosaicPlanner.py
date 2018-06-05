@@ -584,11 +584,14 @@ class MosaicPanel(FigureCanvas):
         height, width = self.imgSrc.get_sensor_size()
         length = len(self.posList.slicePositions)
         numchan = 0
-        channel_dict = {}
+        channel_list = []
         for k,ch in enumerate(self.channel_settings.channels):
             if self.channel_settings.usechannels[ch]:
                 numchan += 1
-                channel_dict[ch] = [self.channel_settings.prot_names[ch], self.channel_settings.exposure_times[ch]]
+                channel_dict = {'RLPosition': ch,
+                                'exposture_times' : self.channel_settings.exposure_times[ch],
+                                'channel' : self.channel_settings.prot_names[ch]}
+                channel_list.append(channel_dict)
 
 
         scalex = self.imgSrc.get_pixel_size()
@@ -597,23 +600,29 @@ class MosaicPanel(FigureCanvas):
         mosaicY = self.posList.mosaic_settings.my
         scope_name = self.cfg['MosaicPlanner']['microscope_name']
         session_num = self.cfg['Directories']['Session_ID']
+        owner = self.cfg['Directories']['meta_experiment_name'] #will change meta_experiment_name to owner
+        project = self.cfg['Directories']['Sample_ID']
 
 
-        metadata_dict = {'Image_Size' : [width,height],
-                         'No. Channels' : numchan,
-                         'Channel Settings' : channel_dict,
-                         'Mosaic Size XY' : [mosaicX,mosaicY],
+        metadata_dict = {'Height' : height,
+                         'Width' : width,
+                         '#chan' : numchan,
+                         'all_channels' : channel_list,
+                         'Mosaicx' : mosaicX,
+                         'MosaicY' : mosaicY,
                          'ScaleX' : scalex,
                          'ScaleY': scaley,
-                         'Scope' : scope_name,
-                         'Session' : session_num,
-                         'Ribbon Length' : length}
+                         'scope' : scope_name,
+                         'session' : session_num,
+                         'ribbon_length' : length,
+                         'owner' : owner,
+                         'project' : project}
         thestring = json.JSONEncoder.encode(metadata_dict)
         filename = os.path.join(outdir, 'session_metadata.json')
         f = open(filename, 'w')
         f.write(thestring)
         f.close()
-        
+
 
     def autofocus_loop(self,hold_focus,wait,sleep):
         attempts=0
@@ -1013,7 +1022,7 @@ class MosaicPanel(FigureCanvas):
 
             self.make_channel_directories(value)
 
-            self.write_session_metadata(value)
+            self.write_session_metadata_json(value)
 
 
         self.move_safe_to_start()
