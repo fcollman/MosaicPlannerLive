@@ -79,7 +79,7 @@ def write_slice_metadata_json(filename,ch,xpos,ypos,zpos,slice_index,triggerflag
                         'slice_index' : slice_index
     }
 
-    thestring = json.JSONEncoder().encod(slice_meta_dict)
+    thestring = json.JSONEncoder().encode(slice_meta_dict)
     f = open(filename,'w')
     f.write(thestring)
     f.close()
