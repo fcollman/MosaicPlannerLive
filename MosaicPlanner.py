@@ -1122,7 +1122,8 @@ class MosaicPanel(FigureCanvas):
                             break
                         if not self.messageQueue.empty():
                             token,message = self.messageQueue.get()
-                            self.slack_notify('HELP! save process failed: %s'%message)
+                            if self.cfg['Slack']['do_messaging']:
+                                self.slack_notify('HELP! save process failed: %s'%message)
                             if (token == STOP_TOKEN):
                                 goahead = False
                                 break
