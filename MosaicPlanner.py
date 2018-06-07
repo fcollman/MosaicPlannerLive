@@ -1025,6 +1025,7 @@ class MosaicPanel(FigureCanvas):
             self.make_channel_directories(value)
 
             self.write_session_metadata_json(value)
+            self.write_session_metadata(value)
 
 
         self.move_safe_to_start()
