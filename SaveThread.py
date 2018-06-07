@@ -69,6 +69,7 @@ def write_afc_image(filename, afc_image, xpos, ypos, slice_index, frame_index):
 
 
 def write_slice_metadata_json(filename,ch,xpos,ypos,zpos,slice_index,triggerflag,meta_dict,ssh_opts):
+    (height,width) = meta_dict['(height,width)']
     slice_meta_dict = { 'channelname' : meta_dict['channelname'][ch],
                         'ScaleFactorX'   : meta_dict['ScaleFactorX'],
                         'ScaleFactorY'   : meta_dict['ScaleFactorY'],
@@ -77,6 +78,8 @@ def write_slice_metadata_json(filename,ch,xpos,ypos,zpos,slice_index,triggerflag
                         'ypos' : ypos,
                         'scope_zpos' : zpos,
                         'slice_index' : slice_index
+                        'height' : height,
+                        'width' : width
     }
 
     thestring = json.JSONEncoder().encode(slice_meta_dict)
