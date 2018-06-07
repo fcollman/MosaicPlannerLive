@@ -62,10 +62,12 @@ class DirectorySettings():
             if not os.path.exists(map_folder):
                 os.makedirs(map_folder)
                 cfg['MosaicPlanner']['default_imagepath'] = map_folder
+                cfg['MosaicPlanner']['default_arraypath'] = map_folder
                 # return map_folder
             else:
                 # return map_folder
                 cfg['MosaicPlanner']['default_imagepath'] = map_folder
+                cfg['MosaicPlanner']['default_arraypath'] = map_folder
         elif kind == 'data':
             data_folder = os.path.join(root,self.Sample_ID,'raw','data','Ribbon%04d'%self.Ribbon_ID,'session%02d'%self.Session_ID)
             if not os.path.exists(data_folder):
