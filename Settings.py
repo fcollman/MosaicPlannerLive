@@ -19,6 +19,7 @@
 import wx
 import os
 import json
+import marshmallow as mm
 
 class DirectorySettings():
 
@@ -30,7 +31,7 @@ class DirectorySettings():
         self.Session_ID = Session_ID
         self.Slot_num = Slot_num
         self.Map_num = Map_num
-        self.meta_experiemnt_name = meta_experiment_name
+        self.meta_experiment_name = meta_experiment_name
 
 
 
@@ -41,7 +42,7 @@ class DirectorySettings():
         cfg['Directories']['Map_num'] = self.Map_num
         cfg['Directories']['Default_Path'] = self.default_path
         cfg['Directories']['Slot_num'] = self.Slot_num
-        cfg['SSH']['meta_experiment_name'] = self.meta_experiemnt_name
+        cfg['Directories']['meta_experiment_name'] = self.meta_experiment_name
         cfg.write()
 
     def load_settings(self,cfg):
@@ -51,7 +52,7 @@ class DirectorySettings():
         self.Session_ID = cfg['Directories']['Session_ID']
         self.Map_num = cfg['Directories']['Map_num']
         self.Slot_num = cfg['Directories']['Slot_num']
-        self.meta_experiemnt_name = cfg['SSH']['meta_experiment_name']
+        self.meta_experiment_name = cfg['Directories']['meta_experiment_name']
 
     def create_directory(self,cfg,kind):
         root = self.default_path
@@ -61,10 +62,12 @@ class DirectorySettings():
             if not os.path.exists(map_folder):
                 os.makedirs(map_folder)
                 cfg['MosaicPlanner']['default_imagepath'] = map_folder
+                cfg['MosaicPlanner']['default_arraypath'] = map_folder
                 # return map_folder
             else:
                 # return map_folder
                 cfg['MosaicPlanner']['default_imagepath'] = map_folder
+                cfg['MosaicPlanner']['default_arraypath'] = map_folder
         elif kind == 'data':
             data_folder = os.path.join(root,self.Sample_ID,'raw','data','Ribbon%04d'%self.Ribbon_ID,'session%02d'%self.Session_ID)
             if not os.path.exists(data_folder):
@@ -126,7 +129,7 @@ class ChangeDirectorySettings(wx.Dialog):
         # self.settings = settings
 
         self.MetaExp_txt = wx.StaticText(self,label = 'Meta Experiment Name:')
-        self.MetaExp_Ctrl = wx.TextCtrl(self,value = settings.meta_experiemnt_name)
+        self.MetaExp_Ctrl = wx.TextCtrl(self,value = settings.meta_experiment_name)
 
         self.RootDir_txt = wx.StaticText(self,label = 'Data Directory:')
         self.RootDir_Ctrl = wx.DirPickerCtrl(self,path=settings.default_path)
@@ -426,7 +429,12 @@ class ChangeSiftSettings(wx.Dialog):
         inlier_thresh = self.inlierThreshIntCtrl.GetValue()
         return SiftSettings(contrastThreshold,numFeatures,inlier_thresh)
         
-        
+class CameraSettingsSchema(mm.Schema):
+    sensor_height = mm.fields.Int(required=True)
+    sensor_widht = mm.fields.Int(required=True)
+    pix_width = mm.fields.Float(required=True)
+    pix_height = mm.fields.Float(required=True)
+
 class CameraSettings():
     """simple struct for containing the parameters for the camera"""
     def __init__(self,sensor_height=1040,sensor_width=1388,pix_width=6.5,pix_height=6.5):
@@ -436,6 +444,13 @@ class CameraSettings():
         #in microns
         self.pix_width=pix_width
         self.pix_height=pix_height
+    def to_dict(self):
+        d={'sensor_height':self.sensor_height,
+           'sensor_width':self.sensor_width,
+           'pix_width':self.pix_width,
+           'pix_height':self.pix_height
+        }
+        
     def save_settings(self,cfg):
         cfg['Camera_Settings']['sensor_height']=self.sensor_height
         cfg['Camera_Settings']['sensor_width']=self.sensor_width
@@ -600,7 +615,13 @@ class ChangeChannelSettings(wx.Dialog):
             zoffsets[ch]=self.ZOffCtrls[i].GetValue()
         return ChannelSettings(self.settings.channels,exposure_times=exposure_times,zoffsets=zoffsets,usechannels=usechannels,prot_names=prot_names,map_chan=map_chan)
         
- 
+class MosaicSettingsSchema(mm.Schema):
+    mx = mm.fields.Int(required=True)
+    my = mm.fields.Int(required=True)
+    overlap = mm.fields.Int(required=True)
+    show_box = mm.fields.Bool(required=True)
+    mag = mm.fields.Float(required=True)
+
 class MosaicSettings:
     def __init__(self,mag=65.486,mx=1,my=1,overlap=20,show_box=False,show_frames=False):
         """a simple struct class for encoding settings about mosaics

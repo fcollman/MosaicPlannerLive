@@ -12,6 +12,11 @@ class MMArduino(object):
         self.ser.timeout =.5
         self.ser.open()
         time.sleep(2)
+        self.ser.readlines()
+        self.sendCmd(chr(27))
+        self.sendCmd(chr(27))
+        self.sendCmd(chr(27))
+        self.sendCmd(chr(27))
     def sendMessage(self,message,debug=False):
         cmd = bytearray(message)
         answer = self.sendDirect(message,len(message))
@@ -88,7 +93,7 @@ class MMArduino(object):
             return self.sendMessage([23,0])
         else:
             return self.sendMessage([23,1])
-
+    
     def setupExposure(self,exposures,interframe=10,exp_pattern=[0,0,0,0,0,0,0,1]):
         i =0
         for exp in exposures:

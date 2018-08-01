@@ -53,14 +53,19 @@ from validate import Validator
 import cv2 #MultiRibbons
 from skimage.measure import block_reduce #MultiRibbons
 from Snap import SnapView
+from Retake import RetakeView
+from LeicaAFCView import LeicaAFCView
+from LeicaDMI import LeicaDMI
 from slacker import Slacker
 from SaveThread import file_save_process
 import scipy.optimize as opt #softwarea-autofocus
 
-STOP_TOKEN = 'STOP!!!'
+from Tokens import STOP_TOKEN,BUBBLE_TOKEN
 DEFAULT_SETTINGS_FILE = 'MosaicPlannerSettings.default.cfg'
 SETTINGS_FILE = 'MosaicPlannerSettings.cfg'
 SETTINGS_MODEL_FILE = 'MosaicPlannerSettingsModel.cfg'
+import logging
+logging.getLogger('MosaicPlanner').addHandler(logging.NullHandler())
 
 class RemoteInterface(RemoteObject):
     def __init__(self, rep_port, parent):
@@ -193,7 +198,14 @@ class MosaicToolbar(NavBarImproved):
         self.snapHereTool    = self.add_user_tool('snaphere',7,cameraBmp,True,'move scope and snap image here')
         self.snapPictureTool = self.add_user_tool('snappic',8,mosaicBmp,True,'take 3x3 mosaic on click')
         self.selectNear      = self.add_user_tool('selectnear',9,selectnearBmp,True,'Add Nearest Point to selection')
-        self.activateNear    = self.add_user_tool('toggleactivate',10,activateBmp,True,'Toggle Activation of nearest point to selection')
+        self.activateNear    = self.add_user_tool('toggleactivate',10,activateBmp,True,'Toggle Activation of nearest point to selection, \n'
+                                                                                       'Hold shift to activate/deactivate frame,\n'
+                                                                                       'Hold T to activate/deactivate all frames,\n'
+                                                                                       'Hold R to acttivate/deactivate same frame in all sections,\n'
+                                                                                       'Hold F to toggle software autofocus on frame,\n'
+                                                                                       'Hold C to toggle software autofocus on same frame in all sections,\n'
+                                                                                       'Hold I to set inital frame in all sections,\n'
+                                                                                       'Hold L to designate initial frame')
         self.addTool         = self.add_user_tool('add', 11, addpointBmp, True, 'Add a Point')
         self.oneTool         = self.add_user_tool('selectone', 12, oneBmp, True, 'Choose pointLine2D 1')
         self.twoTool         = self.add_user_tool('selecttwo', 13, twoBmp, True, 'Choose pointLine2D 2')
@@ -369,6 +381,11 @@ class MosaicPanel(FigureCanvas):
         self.imgSrc=None
         while self.imgSrc is None:
             try:
+                if self.cfg['MosaicPlanner']['demoMode']:
+                    from imageSourceDemo import imageSource
+                else:
+                    from imageSourceMM import imageSource
+
                 self.imgSrc=imageSource(self.MM_config_file,
                                         MasterArduinoPort=self.cfg['MMArduino']['port'],
                                         interframe_time=self.cfg['MMArduino']['interframe_time'],
@@ -451,6 +468,7 @@ class MosaicPanel(FigureCanvas):
         self.zstack_settings = ZstackSettings()
         self.zstack_settings.load_settings(config)
         self.snapView = None
+        self.retakeView = None
 
         #setup a blank position list
         self.posList=posList(self.subplot,mosaic_settings,self.camera_settings)
@@ -488,6 +506,11 @@ class MosaicPanel(FigureCanvas):
         if self.cfg['Slack']['slack_token'] is not None:
             self.slacker = Slacker(self.cfg['Slack']['slack_token'])
 
+        if len(self.cfg['LeicaDMI']['port']) > 0:
+            self.dmi = LeicaDMI(self.cfg['LeicaDMI']['port'])
+        else:
+            self.dmi = None
+
     def _check_sock(self, event):
         self.interface._check_rep()
 
@@ -510,7 +533,8 @@ class MosaicPanel(FigureCanvas):
         print "handling close"
         #if not self.mosaicImage == None:
         #    self.mosaicImage.cursor_timer.cancel()
-        self.imgSrc.mmc.unloadAllDevices()
+        self.imgSrc.stopSequenceAcquisition()
+        self.imgSrc.shutdown()
 
     def on_load(self,rootPath):
         self.rootPath = rootPath
@@ -518,6 +542,7 @@ class MosaicPanel(FigureCanvas):
         self.mosaicImage=MosaicImage(self.subplot,self.posone_plot,self.postwo_plot,self.corrplot,self.imgSrc,rootPath,figure=self.figure)
         self.on_crop_tool()
         self.draw()
+
 
     def write_slice_metadata(self,filename,ch,xpos,ypos,zpos):
         f = open(filename, 'w')
@@ -551,23 +576,63 @@ class MosaicPanel(FigureCanvas):
                 f.write(self.channel_settings.prot_names[ch] + "\t" + "%f\t%s\n" % (self.channel_settings.exposure_times[ch],ch))
 
 
-    def multiDacq(self,success,outdir,chrome_correction,triggerflag,x,y,current_z,slice_index,frame_index=0,hold_focus = False):
+        f.write("Imaged on:" + "\t" + self.cfg['MosaicPlanner']['microscope_name'])
 
-        #print datetime.datetime.now().time()," starting multiDAcq, autofocus on"
-        if not hold_focus:
-            if self.imgSrc.has_hardware_autofocus():
-                self.imgSrc.set_hardware_autofocus_state(True)
-        #print datetime.datetime.now().time()," starting stage move"
-        self.imgSrc.move_stage(x,y)
-        stagexy = self.imgSrc.get_xy()
-        wx.Yield()
+    def write_session_metadata_json(self,outdir):
+
+
+        height, width = self.imgSrc.get_sensor_size()
+        length = len(self.posList.slicePositions)
+        numchan = 0
+        channel_list = []
+        for k,ch in enumerate(self.channel_settings.channels):
+            if self.channel_settings.usechannels[ch]:
+                numchan += 1
+                channel_dict = {'RLPosition': ch,
+                                'exposture_times' : self.channel_settings.exposure_times[ch],
+                                'channel' : self.channel_settings.prot_names[ch]}
+                channel_list.append(channel_dict)
+
+
+        scalex = self.imgSrc.get_pixel_size()
+        scaley = self.imgSrc.get_pixel_size()
+        mosaicX = self.posList.mosaic_settings.mx
+        mosaicY = self.posList.mosaic_settings.my
+        scope_name = self.cfg['MosaicPlanner']['microscope_name']
+        session_num = self.cfg['Directories']['Session_ID']
+        owner = self.cfg['Directories']['meta_experiment_name'] #will change meta_experiment_name to owner
+        project = self.cfg['Directories']['Sample_ID']
+
+
+        metadata_dict = {'Height' : height,
+                         'Width' : width,
+                         '#chan' : numchan,
+                         'all_channels' : channel_list,
+                         'Mosaicx' : mosaicX,
+                         'MosaicY' : mosaicY,
+                         'ScaleX' : scalex,
+                         'ScaleY': scaley,
+                         'scope' : scope_name,
+                         'session' : session_num,
+                         'ribbon_length' : length,
+                         'owner' : owner,
+                         'project' : project}
+
+        thestring = json.JSONEncoder().encode(metadata_dict)
+        # thestring = json.dumps(metadata_dict)
+        filename = os.path.join(outdir, 'session_metadata.json')
+        f = open(filename, 'w')
+        f.write(thestring)
+        f.close()
+
+
+    def autofocus_loop(self,hold_focus,wait,sleep):
         attempts=0
-        #print datetime.datetime.now().time()," starting autofocus"
         if self.imgSrc.has_hardware_autofocus():
             #wait till autofocus settles
-            time.sleep(self.cfg['MosaicPlanner']['autofocus_wait'])
+            time.sleep(wait)
             while not self.imgSrc.is_hardware_autofocus_done():
-                time.sleep(self.cfg['MosaicPlanner']['autofocus_sleep'])
+                time.sleep(sleep)
                 attempts+=1
                 if attempts>50:
                     print "not auto-focusing correctly.. giving up after 10 seconds"
@@ -579,6 +644,28 @@ class MosaicPanel(FigureCanvas):
         else:
             score=self.imgSrc.image_based_autofocus(chan=self.channel_settings.map_chan)
             print score
+
+    def multiDacq(self,success,outdir,chrome_correction,autofocus_trigger,triggerflag,x,y,current_z,slice_index,frame_index=0,hold_focus = False):
+
+        #print datetime.datetime.now().time()," starting multiDAcq, autofocus on"
+        if not hold_focus:
+            if self.imgSrc.has_hardware_autofocus():
+                self.imgSrc.set_hardware_autofocus_state(True)
+        #print datetime.datetime.now().time()," starting stage move"
+        self.imgSrc.move_stage(x,y)
+        if autofocus_trigger:
+            self.software_autofocus(acquisition_boolean=True)
+        stagexy = self.imgSrc.get_xy()
+        wx.Yield()
+        self.autofocus_loop(hold_focus,self.cfg['MosaicPlanner']['autofocus_wait'],self.cfg['MosaicPlanner']['autofocus_sleep'])
+        if self.cfg['MosaicPlanner']['do_second_autofocus_wait']:
+            self.autofocus_loop(hold_focus,self.cfg['MosaicPlanner']['second_autofocus_wait'],self.cfg['MosaicPlanner']['autofocus_sleep'])
+
+        if (self.dmi is not None) & (self.cfg['LeicaDMI']['take_afc_image']):
+            afc_image = self.dmi.get_AFC_image()
+            self.dmi.set_AFC_hold(True)
+        else:
+            afc_image = None
 
         #print datetime.datetime.now().time()," starting multichannel acq"
         current_z = self.imgSrc.get_z()
@@ -600,17 +687,18 @@ class MosaicPanel(FigureCanvas):
             if self.channel_settings.usechannels[ch]:
                 last_channel = ch
 
-        def software_acquire(z=presentZ):
+        def software_acquire(presentZ):
             # currZ=self.imgSrc.get_z()
             # presentZ = currZ
             for z_index, zplane in enumerate(zplanes_to_visit):
                 for k,ch in enumerate(self.channel_settings.channels):
-                    #print datetime.datetime.now().time()," start channel",ch, " zplane", zplane
+                    # print datetime.datetime.now().time()," start channel",ch, " zplane", zplane
                     prot_name=self.channel_settings.prot_names[ch]
+                    print prot_name
                     path=os.path.join(outdir,prot_name)
                     if self.channel_settings.usechannels[ch]:
                         #ti = time.clock()*1000
-                        #print time.clock(),'start'
+                        print time.clock(),'start'
                         if not hold_focus:
                             z = zplane + self.channel_settings.zoffsets[ch]
                             if not z == presentZ:
@@ -629,9 +717,9 @@ class MosaicPanel(FigureCanvas):
                         else:
                             calcFocus = False
                         if ch is not last_channel:
-                            self.dataQueue.put((slice_index,frame_index, z_index, prot_name,path,data,ch,stagexy[0],stagexy[1],z,False,calcFocus))
+                            self.dataQueue.put((slice_index,frame_index, z_index, prot_name,path,data,ch,stagexy[0],stagexy[1],z,False,calcFocus,None))
                         else:
-                            self.dataQueue.put((slice_index,frame_index, z_index, prot_name,path,data,ch,stagexy[0],stagexy[1],z,triggerflag,calcFocus))
+                            self.dataQueue.put((slice_index,frame_index, z_index, prot_name,path,data,ch,stagexy[0],stagexy[1],z,triggerflag,calcFocus,afc_image))
 
         def hardware_acquire(z=presentZ):
             # currZ=self.imgSrc.get_z()
@@ -655,16 +743,22 @@ class MosaicPanel(FigureCanvas):
                         else:
                             calcFocus = False
                         if ch is not last_channel:
-                            self.dataQueue.put((slice_index,frame_index, z_index, prot_name,path,data,ch,stagexy[0],stagexy[1],z,False,calcFocus))
+                            self.dataQueue.put((slice_index,frame_index, z_index, prot_name,path,data,ch,stagexy[0],stagexy[1],z,False,calcFocus,None))
                         else:
-                            self.dataQueue.put((slice_index,frame_index, z_index, prot_name,path,data,ch,stagexy[0],stagexy[1],z,triggerflag,calcFocus))
+                            self.dataQueue.put((slice_index,frame_index, z_index, prot_name,path,data,ch,stagexy[0],stagexy[1],z,triggerflag,calcFocus,afc_image))
 
 
-        if (self.cfg['MosaicPlanner']['hardware_trigger'] == True) and (chrome_correction == False) and (success != False):
+        if self.cfg['MosaicPlanner']['autofocus_toggle']:
+            print 'toggle autofocus'
+            self.imgSrc.set_hardware_autofocus_state(False,False)
+
+        if (self.cfg['MosaicPlanner']['hardware_trigger'] == True) and (chrome_correction == False) and (success != False) and (self.zstack_settings.zstack_flag == False):
             hardware_acquire()
         else:
-            software_acquire()
+            software_acquire(presentZ)
 
+        if self.cfg['MosaicPlanner']['autofocus_toggle']:
+            self.imgSrc.set_hardware_autofocus_state(True,True)
         if not hold_focus:
             self.imgSrc.set_z(current_z)
             if self.imgSrc.has_hardware_autofocus():
@@ -675,29 +769,8 @@ class MosaicPanel(FigureCanvas):
 
         do_stage_reset=self.cfg['StageResetSettings']['enableStageReset']
         if do_stage_reset:
-            z_label = self.cfg['StageResetSettings']['compensationStage']
-            piezo_label = self.cfg['StageResetSettings']['resetStage']
-            min_threshold = self.cfg['StageResetSettings']['minThreshold']
-            max_threshold = self.cfg['StageResetSettings']['maxThreshold']
-            reset_position = self.cfg['StageResetSettings']['resetPosition']
-            invert_compensation = self.cfg['StageResetSettings']['invertCompensation']
+            self.imgSrc.reset_piezo(self.cfg['StageResetSettings'])
 
-            piezo = self.imgSrc.mmc.getPosition(piezo_label)
-            if (piezo<min_threshold) or (piezo>max_threshold):
-                z = self.imgSrc.mmc.getPosition(z_label)
-                islocked = self.imgSrc.mmc.isContinuousFocusEnabled()
-
-                if islocked:
-                    self.imgSrc.mmc.enableContinuousFocus(False)
-
-                if invert_compensation:
-                    self.imgSrc.mmc.setPosition(z_label,z+(piezo-reset_position))
-                else:
-                    self.imgSrc.mmc.setPosition(z_label,z-(piezo-reset_position))
-                self.imgSrc.mmc.setPosition(piezo_label,reset_position)
-
-                if islocked:
-                    self.imgSrc.mmc.enableContinuousFocus(True)
 
     def summarize_stage_settings(self):
         do_stage_reset = self.cfg['StageResetSettings']['enableStageReset']
@@ -776,7 +849,7 @@ class MosaicPanel(FigureCanvas):
         cfg = self.cfg
         path = directory_settings.create_directory(cfg,kind = 'data')
         if path is not None:
-            dlg=wx.DirDialog(self,message="Pick output directory",defaultPath=path)
+            dlg=wx.DirDialog(self, message="Pick output directory", defaultPath=path)
             button_pressed = dlg.ShowModal()
             if button_pressed == wx.ID_CANCEL:
                 wx.MessageBox("You didn't enter a save directory... \n Aborting acquisition")
@@ -796,13 +869,13 @@ class MosaicPanel(FigureCanvas):
                     os.makedirs(thedir)
 
 
-    def show_summary_dialog(self):
-        binning=self.imgSrc.get_binning()
-        caption = "about to capture %d sections, binning is %dx%d, numchannel is %d"%(len(self.posList.slicePositions),binning,binning,numchan)
-        dlg = wx.MessageDialog(self,message=caption, style = wx.OK|wx.CANCEL)
-        button_pressed = dlg.ShowModal()
-        if button_pressed == wx.ID_CANCEL:
-            return False
+    # def show_summary_dialog(self):
+    #     binning=self.imgSrc.get_binning()
+    #     caption = "about to capture %d sections, binning is %dx%d, numchannel is %d"%(len(self.posList.slicePositions),binning,binning,numchan)
+    #     dlg = wx.MessageDialog(self,message=caption, style = wx.OK|wx.CANCEL)
+    #     button_pressed = dlg.ShowModal()
+    #     if button_pressed == wx.ID_CANCEL:
+    #         return False
 
     def execute_imaging(self,pos_list,numFrames,numSections,channel_settings,chrome_correction,sample_information,mosaic_settings,zstack_settings,acquisition_settings,
                         stage_reset_settings,autofocus_settings):
@@ -829,7 +902,7 @@ class MosaicPanel(FigureCanvas):
             if pos.activated:
                 if not goahead:
                     break
-                if not self.imgSrc.mmc.isContinuousFocusEnabled():
+                if not self.imgSrc.get_hardware_autofocus_state():
                     print "autofocus not enabled when moving between sections.. "
                     goahead=False
                     break
@@ -844,7 +917,7 @@ class MosaicPanel(FigureCanvas):
                         if not goahead:
                             print "breaking out!"
                             break
-                        if not self.imgSrc.mmc.isContinuousFocusEnabled():
+                        if not self.imgSrc.get_hardware_autofocus_state():
                             print "autofocus no longer enabled while moving between frames.. quiting"
                             goahead = False
                             break
@@ -889,6 +962,28 @@ class MosaicPanel(FigureCanvas):
             d=json.load(fp)
         return d['mountpoint']
 
+    def get_initial_position(self,position):
+        for i in range(len(position.frameList.slicePositions)):
+            framepos = position.frameList.slicePositions[i]
+            if framepos.initial_trigger == True:
+                frameposx = framepos.x
+                frameposy = framepos.y
+                return [frameposx, frameposy]
+
+            elif i == (len(position.frameList.slicePositions)-1):
+                return None
+            else:
+                pass
+
+    def move_to_initial_and_focus(self,x,y):
+        self.imgSrc.move_stage(x,y)
+        stg = self.imgSrc.mmc.getXYStageDevice()
+        self.imgSrc.mmc.waitForDevice(stg)
+        # self.imgSrc.stop_hardware_triggering()
+        self.software_autofocus(acquisition_boolean= True)
+        # self.imgSrc.setup_hardware_triggering(channels,exp_times)
+    
+
     def on_run_acq(self,event="none"):
         print "running"
         from SetupAlerts import SetupAlertDialog
@@ -929,6 +1024,7 @@ class MosaicPanel(FigureCanvas):
 
             self.make_channel_directories(value)
 
+            self.write_session_metadata_json(value)
             self.write_session_metadata(value)
 
 
@@ -946,7 +1042,7 @@ class MosaicPanel(FigureCanvas):
         }
         ssh_opts = dict(self.cfg['SSH'])
         ssh_opts['mount_point']=self.lookup_mountpoint(outdir)
-        self.saveProcess =  mp.Process(target=file_save_process,args=(self.dataQueue, self.messageQueue,STOP_TOKEN, metadata_dictionary, ssh_opts))
+        self.saveProcess =  mp.Process(target=file_save_process,args=(self.dataQueue, self.messageQueue, metadata_dictionary, ssh_opts))
         self.saveProcess.start()
 
 
@@ -962,25 +1058,34 @@ class MosaicPanel(FigureCanvas):
             print channels
             print exp_times
             success=self.imgSrc.setup_hardware_triggering(channels,exp_times)
+        else:
+            channels = [ch for ch in self.channel_settings.channels if self.channel_settings.usechannels[ch]]
+            exp_times = [self.channel_settings.exposure_times[ch] for ch in self.channel_settings.channels if self.channel_settings.usechannels[ch]]
+            success = False
+            print channels
+            print exp_times
 
 
 
         goahead = True
-        if not self.imgSrc.mmc.isContinuousFocusEnabled():
-            self.slack_notify('HELP! lost autofocus on way to first position',notify=True)
+
+        if not self.imgSrc.get_hardware_autofocus_state():
+            if self.cfg['Slack']['do_messaging']:
+                self.slack_notify('HELP! lost autofocus on way to first position',notify=True)
             print 'HELP! lost autofocus on way to first position'
             goahead=False
 
 
         #loop over positions
         for i,pos in enumerate(self.posList.slicePositions):
-            if i==(len(self.posList.slicePositions)-1):
+            if (i==(len(self.posList.slicePositions)-1)) and (self.cfg['Slack']['do_messaging']):
                     self.slack_notify('last section imaging beginning')
             if pos.activated:
                 if not goahead:
                     break
-                if not self.imgSrc.mmc.isContinuousFocusEnabled():
-                    self.slack_notify('HELP! lost autofocus between sections',notify=True)
+                if not self.imgSrc.get_hardware_autofocus_state():
+                    if self.cfg['Slack']['do_messaging']:
+                        self.slack_notify('HELP! lost autofocus between sections',notify=True)
                     goahead=False
                     break
                 (goahead, skip) = self.progress.Update(i*numFrames,'section %d of %d'%(i,numSections-1))
@@ -989,9 +1094,19 @@ class MosaicPanel(FigureCanvas):
                 current_z = self.imgSrc.get_z()
                 if pos.frameList is None:
                     triggerflag = False
-                    self.multiDacq(success,outdir,chrom_correction,triggerflag,pos.x,pos.y,current_z,i,hold_focus=hold_focus)
+                    autofocus_trigger = False
+                    self.multiDacq(success,outdir,chrom_correction,autofocus_trigger,triggerflag,pos.x,pos.y,current_z,i,hold_focus=hold_focus)
                 else:
+
                     triggerflag = False
+                    initial_position = self.get_initial_position(pos)
+                    if initial_position is not None:
+                        print 'moving to initial position to focus'
+                        initx = initial_position[0]
+                        inity = initial_position[1]
+                        self.move_to_initial_and_focus(initx,inity)
+
+                        #move to initial position and focus function goes here
                     for j,fpos in enumerate(pos.frameList.slicePositions):
                         if j == (len(pos.frameList.slicePositions) - 1):
                             triggerflag = True
@@ -999,25 +1114,29 @@ class MosaicPanel(FigureCanvas):
                         if not goahead:
                             print "breaking out!"
                             break
-                        if not self.imgSrc.mmc.isContinuousFocusEnabled():
-                            self.slack_notify('HELP! lost autofocus between frames',notify=True)
+                        if not self.imgSrc.get_hardware_autofocus_state():
+                            if self.cfg['Slack']['do_messaging']:
+                                self.slack_notify('HELP! lost autofocus between frames',notify=True)
                             print "autofocus no longer enabled while moving between frames.. quiting"
                             goahead = False
                             break
                         if not self.messageQueue.empty():
                             token,message = self.messageQueue.get()
-                            self.slack_notify('HELP! save process failed: %s'%message)
+                            if self.cfg['Slack']['do_messaging']:
+                                self.slack_notify('HELP! save process failed: %s'%message)
                             if (token == STOP_TOKEN):
                                 goahead = False
-                            break
+                                break
                         if pos.frameList.slicePositions[j].activated:
-                            self.multiDacq(success,outdir,chrom_correction,triggerflag,fpos.x,fpos.y,current_z,i,j,hold_focus)
+                            autofocus_trigger = pos.frameList.slicePositions[j].autofocus_trigger
+                            print autofocus_trigger
+                            self.multiDacq(success,outdir,chrom_correction,autofocus_trigger,triggerflag,fpos.x,fpos.y,current_z,i,j,hold_focus)
                         else:
                             # print 'moving on'
                             pass
                         self.ResetPiezo()
                         if i==(len(self.posList.slicePositions)-1):
-                            if j == (len(pos.frameList.slicePositions) - 1):
+                            if j == (len(pos.frameList.slicePositions) - 1) and (self.cfg['Slack']['do_messaging']):
                                 self.slack_notify('Done Imaging!')
                         (goahead, skip)=self.progress.Update((i*numFrames) + j+1,'section %d of %d, frame %d'%(i,numSections-1,j))
                         #======================================================
@@ -1031,10 +1150,11 @@ class MosaicPanel(FigureCanvas):
 
                 wx.Yield()
         if not goahead:
-            self.slack_notify('Imaging stopped prematurely')
-            self.slack_notify('on section %d'%i)
-            if pos.frameList is not None:
-                self.slack_notify("frame %d"%(j))
+            if self.cfg['Slack']['do_messaging']:
+                self.slack_notify('Imaging stopped prematurely')
+                self.slack_notify('on section %d'%i)
+                if pos.frameList is not None:
+                    self.slack_notify("frame %d"%(j))
 
             print "acquisition stopped prematurely"
             print "section %d"%(i)
@@ -1104,7 +1224,7 @@ class MosaicPanel(FigureCanvas):
         dlg.Destroy()
 
     def edit_Directory_settings(self,event="none"):
-        dlg = ChangeDirectorySettings(None,-1,title = "Enter Sample Information",style = wx.OK,settings=self.directory_settings)
+        dlg = ChangeDirectorySettings(None,-1,title = u"Enter Sample Information",style = wx.OK,settings=self.directory_settings)
         ret = dlg.ShowModal()
         if ret == wx.ID_OK:
             self.directory_settings = dlg.get_settings()
@@ -1132,9 +1252,16 @@ class MosaicPanel(FigureCanvas):
         win = MMPropertyBrowser(self.imgSrc.mmc)
         win.show()
 
+    def launch_retake(self,event=None):
+        if self.retakeView is None:
+            self.retakeView = RetakeView(self)
+        self.retakeView.show()
+
+    def launch_LeicaAFC(self,event=None):
+        if self.LeicaAFCView is None:
+            self.LeicaAFCView = LeicaAFCView(self.imgSrc,self.cfg['LeicaDMI']['port'])
     def launch_snap(self, event=None):
         if self.snapView is None:
-            self.imgSrc.set_binning(1)
             print 'Binning is', self.imgSrc.get_binning()
             self.snapView = SnapView(self.imgSrc,exposure_times=self.channel_settings.exposure_times)
             self.snapView.changedExposureTimes.connect(self.getSnapExposures)
@@ -1235,6 +1362,46 @@ class MosaicPanel(FigureCanvas):
                                 for i in range(len(position.frameList.slicePositions)):
                                     framepos = position.frameList.slicePositions[i]
                                     framepos.set_activated((not framepos.activated),'frame')
+
+                        elif evt.key == 'f':
+                            framepos = pos.frameList.get_position_nearest(evt.xdata,evt.ydata)
+
+
+                            framepos.set_autofocus_trigger((not framepos.autofocus_trigger))
+
+                        elif evt.key == 'c':
+                            frameindex = pos.frameList.get_nearest_position_index(evt.xdata,evt.ydata)
+                            for position in self.posList.slicePositions:
+                                framepos = position.frameList.slicePositions[frameindex]
+                                framepos.set_autofocus_trigger((not framepos.autofocus_trigger))
+
+                        elif evt.key == 'l':
+                            frameindex = pos.frameList.get_nearest_position_index(evt.xdata,evt.ydata)
+                            for i,frame in enumerate(pos.frameList.slicePositions):
+                                if i != frameindex:
+                                    frame.set_autofocus_trigger(False, 'Initial')
+                                else:
+                                    frame.set_autofocus_trigger((not frame.initial_trigger),'Initial')
+
+
+
+                        elif evt.key == 'i':
+                            frameindex = pos.frameList.get_nearest_position_index(evt.xdata,evt.ydata)
+                            for position in self.posList.slicePositions:
+                                for i in range(len(position.frameList.slicePositions)):
+                                    if i != frameindex:
+                                        framepos = position.frameList.slicePositions[i]
+                                        framepos.set_autofocus_trigger(False,'Initial')
+                                    else:
+                                        framepos = position.frameList.slicePositions[i]
+                                        framepos.set_autofocus_trigger((not framepos.initial_trigger),'Initial')
+                                        #
+                                        # else:
+                                        #     framepos.set_autofocus_trigger(False,'Initial')
+
+
+
+
 
 
 
@@ -1580,6 +1747,21 @@ class MosaicPanel(FigureCanvas):
         numchan,chrom_correction = self.summarize_channel_settings()
         self.slack_notify("about to image %d Ribbons"%len(self.Ribbon_Num))
 
+        if self.cfg['MosaicPlanner']['hardware_trigger']:
+            # iterates over channels/exposure times in appropriate order
+            channels = [ch for ch in self.channel_settings.channels if self.channel_settings.usechannels[ch]]
+            exp_times = [self.channel_settings.exposure_times[ch] for ch in self.channel_settings.channels if
+                         self.channel_settings.usechannels[ch]]
+            for k, ch in enumerate(self.channel_settings.channels):
+                print 'Channel:', ch
+                print 'Exposure:', self.channel_settings.exposure_times[ch]
+            for k in range(len(channels)):
+                print 'Exposure in order:', exp_times[k]
+                print 'Channel in order:', channels[k]
+            success = self.imgSrc.setup_hardware_triggering(channels, exp_times)
+        else:
+            success = False
+
         #pick output directories
 
         # for rib in range(self.Ribbon_Num):
@@ -1637,7 +1819,7 @@ class MosaicPanel(FigureCanvas):
                 }
                 ssh_opts = dict(self.cfg['SSH'])
                 ssh_opts['mount_point']=self.lookup_mountpoint(outdirlist[rib])
-                self.saveProcess =  mp.Process(target=file_save_process,args=(self.dataQueue, STOP_TOKEN, metadata_dictionary, ssh_opts))
+                self.saveProcess =  mp.Process(target=file_save_process,args=(self.dataQueue, metadata_dictionary, ssh_opts))
                 self.saveProcess.start()
 
                 numFrames,numSections = self.setup_progress_bar()
@@ -1645,17 +1827,7 @@ class MosaicPanel(FigureCanvas):
 
                 hold_focus = not (self.zstack_settings.zstack_flag or chrom_correction)
 
-                if self.cfg['MosaicPlanner']['hardware_trigger']:
-                    #iterates over channels/exposure times in appropriate order
-                    channels = [ch for ch in self.channel_settings.channels if self.channel_settings.usechannels[ch]]
-                    exp_times = [self.channel_settings.exposure_times[ch] for ch in self.channel_settings.channels if self.channel_settings.usechannels[ch]]
-                    for k,ch in enumerate(self.channel_settings.channels):
-                        print 'Channel:', ch
-                        print 'Exposure:', self.channel_settings.exposure_times[ch]
-                    for k in range(len(channels)):
-                        print 'Exposure in order:', exp_times[k]
-                        print 'Channel in order:', channels[k]
-                    success=self.imgSrc.setup_hardware_triggering(channels,exp_times)
+
 
                 goahead = True
                 #loop over positions
@@ -1663,7 +1835,7 @@ class MosaicPanel(FigureCanvas):
                     if pos.activated:
                         if not goahead:
                             break
-                        if not self.imgSrc.mmc.isContinuousFocusEnabled():
+                        if not self.imgSrc.get_hardware_autofocus_state():
                             self.slack_notify('HELP! lost autofocus between frames',notify=True)
                             print "autofocus not enabled when moving between sections.. "
                             goahead=False
@@ -1673,23 +1845,31 @@ class MosaicPanel(FigureCanvas):
                         self.ResetPiezo()
                         current_z = self.imgSrc.get_z()
                         if pos.frameList is None:
-                            self.multiDacq(success,outdirlist[rib],chrom_correction,triggerflag,pos.x,pos.y,current_z,i,hold_focus=hold_focus)
+                            triggerflag = False
+                            autofocus_trigger = False
+                            self.multiDacq(success,outdirlist[rib],chrom_correction,autofocus_trigger,triggerflag,pos.x,pos.y,current_z,i,hold_focus=hold_focus)
                         else:
                             triggerflag = False
+                            initial_position = self.get_initial_position(pos)
+                            if initial_position is not None:
+                                print 'moving to initial position to focus'
+                                initx = initial_position[0]
+                                inity = initial_position[1]
+                                self.move_to_initial_and_focus(initx,inity)
                             for j,fpos in enumerate(pos.frameList.slicePositions):
                                 if j == (len(pos.frameList.slicePositions) - 1):
                                     triggerflag = True
                                 if not goahead:
                                     print "breaking out!"
                                     break
-                                if not self.imgSrc.mmc.isContinuousFocusEnabled():
+                                if not self.imgSrc.get_hardware_autofocus_state():
                                     self.slack_notify('HELP! lost autofocus between frames',notify=True)
                                     print "autofocus no longer enabled while moving between frames.. quiting"
                                     goahead = False
                                     break
                                 if pos.frameList.slicePositions[j].activated:
-
-                                    self.multiDacq(success,outdirlist[rib],chrom_correction,triggerflag,fpos.x,fpos.y,current_z,i,j,hold_focus)
+                                    autofocus_trigger = pos.frameList.slicePositions[j].autofocus_trigger
+                                    self.multiDacq(success,outdirlist[rib],chrom_correction,autofocus_trigger,triggerflag,fpos.x,fpos.y,current_z,i,j,hold_focus)
                                 else:
                                     pass
                                 self.ResetPiezo()
@@ -1732,17 +1912,23 @@ class MosaicPanel(FigureCanvas):
         self.imgSrc.set_binning(2)
 
 
-    def software_autofocus(self, buttonpress = False): #MultiRibbons
+    def software_autofocus(self,acquisition_boolean = False, buttonpress = False): #MultiRibbons
         if buttonpress:
             self.imgSrc.set_binning(1)
         print "software autofocus"
+        if (acquisition_boolean) and (self.cfg['MosaicPlanner']['hardware_trigger']):
+            self.imgSrc.stop_hardware_triggering()
         self.imgSrc.set_hardware_autofocus_state(False) #turn off autofocus
         ch = self.channel_settings.map_chan
-        self.imgSrc.set_exposure(self.channel_settings.exposure_times[ch])
+        self.imgSrc.set_exposure(self.cfg['Software Autofocus']['focus_exp_time'])
         self.imgSrc.set_channel(ch)
         (height,width) = self.imgSrc.get_sensor_size()
-        zstack_step = 0.3 #z step between images(microns)
-        zstack_number = 35 #number of images to take
+        zstack_step = self.cfg['Software Autofocus']['stepsize'] #z step between images(microns)
+        if acquisition_boolean:
+            zstack_number = self.cfg['Software Autofocus']['acquisition']
+        else:
+            zstack_number = self.cfg['Software Autofocus']['nonacquisition'] #number of images to take
+        print zstack_step, zstack_number
         stack = np.zeros((height,width,zstack_number))
         offsets = []
         current_z = self.imgSrc.get_z()
@@ -1763,38 +1949,38 @@ class MosaicPanel(FigureCanvas):
         print "calculating focus"
         print "offsets: ", offsets
         #using Laplacian
-        fstack = None
-        sigma = 50
+        score_med = np.zeros(zstack_number)
+        score_std = np.zeros(zstack_number)
         for i in range(len(zplanes_to_visit)):
             score = cv2.Laplacian(stack[:,:,i],cv2.CV_16U, ksize = 5)
-            score = block_reduce(score,(sigma,sigma),np.sum,cval=np.mean(score))
-            if fstack is None:
-                fstack = np.zeros((score.shape[0],score.shape[1],stack.shape[2]))
-            fstack[:,:,i]=score
-        var = np.std(fstack)
-        zscore = (fstack-np.median(fstack))/var
-        zscore1 = np.median(np.median(zscore,0),0)#added for testing
+            score_med[i] = np.median(score)
+            score_std[i] = np.std(score)
+        zscore = (score_med - np.median(score_med))/np.median(score_std)
         select = np.ones(len(offsets))
         for i in range(len(offsets)-1):
             if offsets[i]>=offsets[i+1] or offsets[i]==0:
                 select[i] = 0
         idx = np.nonzero(select)
-        zscore1 = zscore1[idx]
+        zscore = zscore[idx]
         offsets1 = np.array(offsets)
         offsets1 = offsets1[idx]
-        par_init = np.max(zscore1), np.min(zscore1), offsets1[np.argmax(zscore1)],\
-                   offsets1[np.argmax(zscore1)+1]-offsets1[np.argmax(zscore1)-1]
+        par_init = np.max(zscore)-np.min(zscore), np.min(zscore), offsets1[np.argmax(zscore)],\
+                   offsets1[int((zstack_number-1)/2)+1]-offsets1[int((zstack_number-1)/2)-1]
         def gauss_1d(x, amp, offset, x0, sigma_x):
             z = offset + amp*np.exp(-((x-x0)/sigma_x)**2)
             return z
-        print "zscore1", zscore1 #added for testing
-        popt, pcov = opt.curve_fit(gauss_1d, offsets1, zscore1, p0=par_init)
+        print "zscore", zscore
+        popt, pcov = opt.curve_fit(gauss_1d, offsets1, zscore, p0=par_init)
         best_offset = popt[2]
-
         print "best_offset: ", best_offset
         self.imgSrc.set_autofocus_offset(best_offset) #reset autofocus offset
         time.sleep(2*self.cfg['MosaicPlanner']['autofocus_wait'])
         self.imgSrc.set_hardware_autofocus_state(True) #turn on autofocus
+        self.imgSrc.set_exposure(self.channel_settings.exposure_times[ch])
+        if (acquisition_boolean) and (self.cfg['MosaicPlanner']['hardware_trigger']):
+            channels = [ch for ch in self.channel_settings.channels if self.channel_settings.usechannels[ch]]
+            exp_times = [self.channel_settings.exposure_times[ch] for ch in self.channel_settings.channels if self.channel_settings.usechannels[ch]]
+            self.imgSrc.setup_hardware_triggering(channels,exp_times)
         if buttonpress:
             self.imgSrc.set_binning(2)
 
@@ -1828,6 +2014,8 @@ class ZVISelectFrame(wx.Frame):
     ID_EDIT_ZSTACK = wx.NewId()
     ID_ASIAUTOFOCUS = wx.NewId()
     ID_SNAPCONTROL = wx.NewId()
+    ID_RETAKECONTROL = wx.NewId()
+    ID_LEICAAFC = wx.NewId()
 
     # ID_Alfred = wx.NewId()
 
@@ -1844,7 +2032,7 @@ class ZVISelectFrame(wx.Frame):
         #default_image=""
 
         #recursively call old init function
-        wx.Frame.__init__(self, parent, title=title, size=(1750,885),pos=(5,5))
+        wx.Frame.__init__(self, parent, title=title, size=(1800,885),pos=(5,5))
         #self.cfg = wx.Config('settings')
         if not os.path.isfile(SETTINGS_FILE):
             from shutil import copyfile
@@ -1920,6 +2108,9 @@ class ZVISelectFrame(wx.Frame):
         self.use_focus_correction = Imaging_Menu.Append(self.ID_USE_FOCUS_CORRECTION,'Use Focus Correction?','Use Focus Correction For Mapping',kind=wx.ITEM_CHECK)
         self.launch_ASIControl = Imaging_Menu.Append(self.ID_ASIAUTOFOCUS, 'Allen ASI AutoFocus Control', kind= wx.ITEM_NORMAL)
         self.launch_Snap = Imaging_Menu.Append(self.ID_SNAPCONTROL,'Snap single channel images',kind = wx.ITEM_NORMAL)
+        self.launch_Retake = Imaging_Menu.Append(self.ID_RETAKECONTROL,'Retake dialog',kind = wx.ITEM_NORMAL)
+        if len(self.cfg['LeicaDMI']['port'])>0:
+            self.launch_Leica = Imaging_Menu.Append(self.ID_LEICAAFC,'Leica AFC dialog',kind= wx.ITEM_NORMAL)
 
         self.Bind(wx.EVT_MENU, self.toggle_use_focus_correction,id=self.ID_USE_FOCUS_CORRECTION)
         self.Bind(wx.EVT_MENU, self.mosaicCanvas.edit_Zstack_settings,id=self.ID_EDIT_ZSTACK)
@@ -1931,6 +2122,8 @@ class ZVISelectFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.mosaicCanvas.edit_focus_correction_plane, id = self.ID_EDIT_FOCUS_CORRECTION)
         self.Bind(wx.EVT_MENU, self.mosaicCanvas.launch_ASI,id = self.ID_ASIAUTOFOCUS)
         self.Bind(wx.EVT_MENU, self.mosaicCanvas.launch_snap,id = self.ID_SNAPCONTROL)
+        self.Bind(wx.EVT_MENU, self.mosaicCanvas.launch_retake,id = self.ID_RETAKECONTROL)
+        self.Bind(wx.EVT_MENU, self.mosaicCanvas.launch_LeicaAFC, id= self.ID_LEICAAFC)
 
 
         Imaging_Menu.Check(self.ID_USE_FOCUS_CORRECTION,self.cfg['MosaicPlanner']['use_focus_correction'])
@@ -2096,8 +2289,14 @@ class ZVISelectFrame(wx.Frame):
             self.mosaicCanvas.posList.add_from_file_ZEN(self.array_filepicker.GetPath())
         elif self.array_formatBox.GetValue()=='JSON': #MultiRibbons
             self.mosaicCanvas.posList.add_from_file_JSON(self.array_filepicker.GetPath())
+
         self.mosaicCanvas.navtoolbar.set_mosaic_parameters(self.mosaicCanvas.posList.mosaic_settings)
         self.mosaicCanvas.draw()
+
+        # if self.array_formatBox.GetValue()=='JSON':
+        if self.mosaicCanvas.cfg['MosaicPlanner']['frame_state_save']:
+            self.mosaicCanvas.posList.load_frame_state_table(self.array_filepicker.GetPath())
+
 
     def on_array_save(self,event):
         """event handler for the array save button"""
@@ -2130,7 +2329,10 @@ class ZVISelectFrame(wx.Frame):
             if self.save_transformed.IsChecked():
                 self.mosaicCanvas.posList.save_position_list_JSON(self.array_filepicker.GetPath(),trans=self.Transform)
             else:
+                print 'hello'
                 self.mosaicCanvas.posList.save_position_list_JSON(self.array_filepicker.GetPath(),trans=None)
+        if self.mosaicCanvas.cfg['MosaicPlanner']['frame_state_save']:
+            self.mosaicCanvas.posList.on_save_frame_state_table(self.array_filepicker.GetPath())
 
     def on_image_collect_load(self,event):
         path=self.imgCollectDirPicker.GetPath()
