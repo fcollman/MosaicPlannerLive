@@ -524,17 +524,19 @@ class RetakeView(QtGui.QWidget):
             dft = pd.read_csv(data_file)
             df = df.append(dft,ignore_index=True)
         
+        # For new format of csv file use score instead of calculated score1_norm
 
-        frame_medians = df.groupby('frame_index')['score1_median'].median()
-        frame_stds = df.groupby('frame_index')['score1_std'].median()
-
-        for i,row in df.iterrows():
-            df.loc[i,'score1_norm'] = (row.score1_median - frame_medians[row.frame_index])/frame_stds[row.frame_index]
+        # frame_medians = df.groupby('frame_index')['score1_median'].median()
+        # frame_stds = df.groupby('frame_index')['score1_std'].median()
+        #
+        # for i,row in df.iterrows():
+        #     df.loc[i,'score1_norm'] = (row.score1_median - frame_medians[row.frame_index])/frame_stds[row.frame_index]
         
         self.focus_df = df
-        print self.focus_df.score1_norm
-        cmap = pg.ColorMap(pos=np.linspace(start=-.04,stop=.04,num=256), color=viridis)
-        colors = cmap.map(df.score1_norm)
+        print self.focus_df.score   #print self.focus_df.score1_norm
+        #cmap = pg.ColorMap(pos=np.linspace(start=-.04,stop=.04,num=256), color=viridis)
+        cmap = pg.ColorMap(pos=np.linspace(start=0,stop=21,num=256), color=viridis)   #changed colormap
+        colors = cmap.map(df.score)  #colors = cmap.map(df.score1_norm)
         brushes = [pg.mkBrush(c) for c in colors]
 
         self.sp = pg.ScatterPlotItem(size=150)

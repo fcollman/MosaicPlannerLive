@@ -9,6 +9,8 @@ import sys
 import traceback
 from Tokens import STOP_TOKEN,BUBBLE_TOKEN
 import json
+from FocusServiceRemote import FocusServiceRemote
+
 def file_save_process(queue,message_queue, metadata_dictionary,ssh_opts):
 
     while True:
@@ -25,8 +27,11 @@ def file_save_process(queue,message_queue, metadata_dictionary,ssh_opts):
                 write_slice_metadata(metadata_filepath, ch, x, y, z, slice_index, triggerflag, metadata_dictionary,ssh_opts)
                 write_slice_metadata_json(metadata_filepath_json, ch, x, y, z, slice_index, triggerflag, metadata_dictionary,ssh_opts)
                 if calcfocus:
+                    #set up focus service interface
+                    focus_interface = FocusServiceRemote()
                     focus_filepath = os.path.join(path, prot_name + "_S%04d_F%04d_Z%02d_focus.csv"%(slice_index, frame_index, z_index))
-                    write_focus_score(focus_filepath, data,ch,x,y,slice_index,frame_index,prot_name)
+                    #write_focus_score(focus_filepath, data,ch,x,y,slice_index,frame_index,prot_name)
+                    write_focus_score_new(focus_filepath, data,ch,x,y,slice_index,frame_index,prot_name,focus_interface)
                 if afc_image is not None:
                     afc_image_filepath = os.path.join(path, prot_name + "_S%04d_F%04d_Z%02d_afc.json"%(slice_index, frame_index, z_index))
                     #np.savetxt(afc_image_filepath, afc_image)
@@ -59,6 +64,22 @@ def get_score(img):
     score1_std = np.std(score1)
     score1_mean = np.mean(score1)
     return (score1_mean, score1_median, score1_std)
+
+def write_focus_score_new(filename, data, ch,xpos,ypos,slide_index,frame_index,prot_name, focus_interface):
+    df = pd.DataFrame(columns = ['score','ch','xpos','ypos','slide_index','frame_index','prot_name'])
+    #score1_mean,score1_median,score1_std = get_score(data)
+    score = focus_interface.get_score(data)
+    d = {
+            'score':score,
+            'ch':ch,
+            'xpos':xpos,
+            'ypos':ypos,
+            'slide_index':slide_index,
+            'frame_index':frame_index,
+            'prot_name':prot_name
+        }
+    df = df.append(d,ignore_index=True)
+    df.to_csv(filename)
 
 def write_afc_image(filename, afc_image, xpos, ypos, slice_index, frame_index):
     dict = {'afc_image': afc_image.tolist(),'xpos': xpos,'ypos': ypos, 'slice_index': slice_index, 'frame_index': frame_index}

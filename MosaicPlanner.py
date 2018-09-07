@@ -67,6 +67,8 @@ SETTINGS_MODEL_FILE = 'MosaicPlannerSettingsModel.cfg'
 import logging
 logging.getLogger('MosaicPlanner').addHandler(logging.NullHandler())
 
+#from FocusServiceRemote import FocusServiceRemote
+
 class RemoteInterface(RemoteObject):
     def __init__(self, rep_port, parent):
         super(RemoteInterface, self).__init__(rep_port=rep_port)
@@ -348,7 +350,8 @@ class MosaicPanel(FigureCanvas):
         FigureCanvas.__init__(self, parent, -1, self.figure, **kwargs)
         self.canvas = self.figure.canvas
 
-
+        #set up focus service interface
+        #self.focus_interface = FocusServiceRemote()
 
         # set up the remote interface
         self.interface = RemoteInterface(rep_port=7777, parent=self)
