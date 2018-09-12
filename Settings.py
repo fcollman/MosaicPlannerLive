@@ -85,18 +85,18 @@ class DirectorySettings():
                     box.ShowModal()
                     box.Destroy()
                     return None
-        elif kind == 'multi_map':
-            map_folder = os.path.join(root,self.Sample_ID,'raw','map','multi_ribbon_round','map%02d'%self.Map_num)
-            if not os.path.exists(map_folder):
-                os.makedirs(map_folder)
-                cfg['MosaicPlanner']['default_imagepath'] = map_folder
-                cfg['MosaicPlanner']['default_arraypath'] = map_folder
-            else:
-                cfg['MosaicPlanner']['default_imagepath'] = map_folder
-                cfg['MosaicPlanner']['default_arraypath'] = map_folder
-        else:
-            dlg = wx.MessageBox(self,caption = 'Error',message = "Directory must be either \'map\' or \'data\' \n Aborting Acquisition")
-            return None
+        # elif kind == 'multi_map':
+        #     map_folder = os.path.join(root,self.Sample_ID,'raw','map','multi_ribbon_round','map%02d'%self.Map_num)
+        #     if not os.path.exists(map_folder):
+        #         os.makedirs(map_folder)
+        #         cfg['MosaicPlanner']['default_imagepath'] = map_folder
+        #         cfg['MosaicPlanner']['default_arraypath'] = map_folder
+        #     else:
+        #         cfg['MosaicPlanner']['default_imagepath'] = map_folder
+        #         cfg['MosaicPlanner']['default_arraypath'] = map_folder
+        # else:
+        #     dlg = wx.MessageBox(self,caption = 'Error',message = "Directory must be either \'map\' or \'data\' \n Aborting Acquisition")
+        #     return None
 
 
 class RibbonNumberDialog(wx.Dialog):
