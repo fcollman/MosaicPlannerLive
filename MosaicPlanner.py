@@ -46,7 +46,7 @@ from NavigationToolBarImproved import NavigationToolbar2Wx_improved as NavBarImp
 from Settings import (MosaicSettings, CameraSettings,SiftSettings,ChangeCameraSettings, ImageSettings,
                        ChangeImageMetadata, SmartSEMSettings, ChangeSEMSettings, ChannelSettings,
                        ChangeChannelSettings, ChangeSiftSettings, CorrSettings,ChangeCorrSettings,
-                      ChangeZstackSettings, ZstackSettings, DirectorySettings, ChangeDirectorySettings, RibbonNumberDialog, MultiRibbonSettings)
+                      ChangeZstackSettings, ZstackSettings, DirectorySettings, ChangeDirectorySettings)
 
 from configobj import ConfigObj
 from validate import Validator
@@ -764,7 +764,8 @@ class MosaicPanel(FigureCanvas):
                             z = zplane + self.channel_settings.zoffsets[ch]
                             if not z == presentZ:
                                 self.imgSrc.set_z(z)
-                                presentZ = z
+                                z = presentZ
+                        z = presentZ
                         self.imgSrc.set_exposure(self.channel_settings.exposure_times[ch])
                         self.imgSrc.set_channel(ch)
                         #t2 = time.clock()*1000
