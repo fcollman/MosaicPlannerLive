@@ -598,6 +598,7 @@ class MosaicPanel(FigureCanvas):
 
     def on_load(self,rootPath):
         self.rootPath = rootPath
+        os.path.join(rootPath)
         print "transpose toggle state",self.imgSrc.transpose_xy
         self.mosaicImage=MosaicImage(self.subplot,self.posone_plot,self.postwo_plot,self.corrplot,self.imgSrc,rootPath,figure=self.figure)
         self.on_crop_tool()
@@ -2410,6 +2411,7 @@ class ZVISelectFrame(wx.Frame):
 
     def on_image_collect_load(self,event):
         path=self.imgCollectDirPicker.GetPath()
+        print path
         self.mosaicCanvas.on_load(path)
 
     def on_array_save_frames(self,event):
