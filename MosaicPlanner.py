@@ -417,7 +417,7 @@ class MosaicPanel(FigureCanvas):
         # load directory settings
 
         self.output_dir = self.startnewproject(config)
-        self.cfg['MosaicPlanner']['default_outdir'] = self.output_dir
+        # self.cfg['MosaicPlanner']['default_outdir'] = self.output_dir
         # self.outdirdict = {}
         # self.multiribbon_boolean = self.askMultiribbons()
         # if not self.multiribbon_boolean:
@@ -516,10 +516,18 @@ class MosaicPanel(FigureCanvas):
     def _check_sock(self, event):
         self.interface._check_rep()
 
-    def createnewproject(self,config):
+    def createnewproject(self, event = 'none'):
+        config = self.cfg
         goahead = self.asknewproject()
         if goahead:
-            pass
+            self.subplot.cla()
+            self.corrplot.cla()
+            self.posone_plot.cla()
+            self.postwo_plot.cla()
+
+            self.output_dir = self.startnewproject(config)
+
+
 
     def asknewproject(self):
         dlg = wx.MessageDialog(self,message = "Are you sure you want to start a new project? Progress will not be saved.",style = wx.YES|wx.NO)
@@ -528,6 +536,7 @@ class MosaicPanel(FigureCanvas):
             return True
         else:
             return False
+
 
     def startnewproject(self,config):
         self.directory_settings = DirectorySettings()
@@ -550,6 +559,7 @@ class MosaicPanel(FigureCanvas):
         print 'Map Number:', self.directory_settings.Map_num
         self.directory_settings.save_settings(config)
         # self.outdirdict['Slot' + str(self.directory_settings.Slot_num)] = dictvalue
+        self.cfg['MosaicPlanner']['default_outdir'] = outdir
         self.directory_settings.create_directory(config,kind='map')
         return outdir
 
@@ -2175,7 +2185,7 @@ class ZVISelectFrame(wx.Frame):
 
         #File Menu
         self.NewProject = File_Menu.Append(self.ID_NEWPROJECT, 'New Project','Start new mosaic plan on new sample', kind= wx.ITEM_NORMAL)
-        self.Bind(wx.EVT_MENU,self.mosaicCanvas.createnewproject(self.mosaicCanvas.cfg),id=self.ID_NEWPROJECT)
+        self.Bind(wx.EVT_MENU,self.createnewproject,id=self.ID_NEWPROJECT)
 
 
         Imaging_Menu.Check(self.ID_USE_FOCUS_CORRECTION,self.cfg['MosaicPlanner']['use_focus_correction'])
@@ -2271,9 +2281,11 @@ class ZVISelectFrame(wx.Frame):
         self.Bind(wx.EVT_CHAR_HOOK, self.on_key_press)
 
         #self.sizer.Fit(self)
+        self.array_filepicker.SetPath(self.cfg['MosaicPlanner']['default_arraypath'])
         self.Show(True)
 
         self.SmartSEMSettings=SmartSEMSettings()
+
         self.app = QtGui.QApplication([])
 
 
@@ -2284,6 +2296,11 @@ class ZVISelectFrame(wx.Frame):
         #self.mosaicCanvas.draw()
 
 
+
+    def createnewproject(self, event = 'none'):
+        self.mosaicCanvas.createnewproject()
+        self.array_filepicker.SetPath(self.cfg['MosaicPlanner']['default_arraypath'])
+        self.imgCollectDirPicker.SetPath(self.cfg['MosaicPlanner']['default_imagepath'])
 
 
 

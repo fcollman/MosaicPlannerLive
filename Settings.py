@@ -61,13 +61,15 @@ class DirectorySettings():
             map_folder = os.path.join(root,self.Sample_ID,'raw','map','Ribbon%04d'%self.Ribbon_ID,'map%01d'%self.Map_num)
             if not os.path.exists(map_folder):
                 os.makedirs(map_folder)
+                array_folder = os.path.join(root,self.Sample_ID,'raw','map','Ribbon%04d'%self.Ribbon_ID,)
                 cfg['MosaicPlanner']['default_imagepath'] = map_folder
-                cfg['MosaicPlanner']['default_arraypath'] = map_folder
+                cfg['MosaicPlanner']['default_arraypath'] = array_folder
                 # return map_folder
             else:
                 # return map_folder
                 cfg['MosaicPlanner']['default_imagepath'] = map_folder
-                cfg['MosaicPlanner']['default_arraypath'] = map_folder
+                array_folder = os.path.join(root,self.Sample_ID,'raw','map','Ribbon%04d'%self.Ribbon_ID,)
+                cfg['MosaicPlanner']['default_arraypath'] = array_folder
         elif kind == 'data':
             data_folder = os.path.join(root,self.Sample_ID,'raw','data','Ribbon%04d'%self.Ribbon_ID,'session%02d'%self.Session_ID)
             if not os.path.exists(data_folder):
@@ -88,8 +90,10 @@ class DirectorySettings():
             if not os.path.exists(map_folder):
                 os.makedirs(map_folder)
                 cfg['MosaicPlanner']['default_imagepath'] = map_folder
+                cfg['MosaicPlanner']['default_arraypath'] = map_folder
             else:
                 cfg['MosaicPlanner']['default_imagepath'] = map_folder
+                cfg['MosaicPlanner']['default_arraypath'] = map_folder
         else:
             dlg = wx.MessageBox(self,caption = 'Error',message = "Directory must be either \'map\' or \'data\' \n Aborting Acquisition")
             return None
