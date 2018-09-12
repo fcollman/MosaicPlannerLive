@@ -416,53 +416,55 @@ class MosaicPanel(FigureCanvas):
 
         # load directory settings
 
-        self.outdirdict = {}
-        self.multiribbon_boolean = self.askMultiribbons()
-        if not self.multiribbon_boolean:
-            self.Ribbon_Num = 1
-            self.directory_settings = DirectorySettings()
-            self.directory_settings.load_settings(config)
-            self.edit_Directory_settings()
-            dictvalue = self.get_output_dir(self.directory_settings)
-            if dictvalue == None:
-                print "line 382"
-                goahead = False
-                while goahead == False:
-                    self.edit_Directory_settings()
-                    print "line 385"
-                    dictvalue = self.get_output_dir(self.directory_settings)
-                    if dictvalue != None:
-                        goahead = True
-
-            print 'Sample_ID:', self.directory_settings.Sample_ID
-            print 'Ribbon_ID:', self.directory_settings.Ribbon_ID
-            print 'Session_ID:', self.directory_settings.Session_ID
-            print 'Map Number:', self.directory_settings.Map_num
-            self.directory_settings.save_settings(config)
-            self.outdirdict['Slot' + str(self.directory_settings.Slot_num)] = dictvalue
-            self.directory_settings.create_directory(config,kind='map')
-
-        else:
-            self.Ribbon_Num = self.get_ribbon_number()
-            self.directory_settings = DirectorySettings()
-            self.directory_settings.load_settings(config)
-            for i in range(self.Ribbon_Num):
-                self.edit_Directory_settings()
-                dictvalue = self.get_output_dir(self.directory_settings)
-                if dictvalue == None:
-                    print "line 405"
-                    goahead = False
-                    while goahead == False:
-                        self.edit_Directory_settings()
-                        dictvalue = self.get_output_dir(self.directory_settings)
-                        if dictvalue != None:
-                            goahead = True
-                self.outdirdict['Slot' + str(self.directory_settings.Slot_num)] = dictvalue
-                self.directory_settings.save_settings(config)
-            self.directory_settings.create_directory(config, kind= 'map')
-
-        for key,value in self.outdirdict.iteritems():
-            print "Output directory:",key,value
+        self.output_dir = self.startnewproject(config)
+        self.cfg['MosaicPlanner']['default_outdir'] = self.output_dir
+        # self.outdirdict = {}
+        # self.multiribbon_boolean = self.askMultiribbons()
+        # if not self.multiribbon_boolean:
+        #     self.Ribbon_Num = 1
+        #     self.directory_settings = DirectorySettings()
+        #     self.directory_settings.load_settings(config)
+        #     self.edit_Directory_settings()
+        #     dictvalue = self.get_output_dir(self.directory_settings)
+        #     if dictvalue == None:
+        #         print "line 382"
+        #         goahead = False
+        #         while goahead == False:
+        #             self.edit_Directory_settings()
+        #             print "line 385"
+        #             dictvalue = self.get_output_dir(self.directory_settings)
+        #             if dictvalue != None:
+        #                 goahead = True
+        #
+        #     print 'Sample_ID:', self.directory_settings.Sample_ID
+        #     print 'Ribbon_ID:', self.directory_settings.Ribbon_ID
+        #     print 'Session_ID:', self.directory_settings.Session_ID
+        #     print 'Map Number:', self.directory_settings.Map_num
+        #     self.directory_settings.save_settings(config)
+        #     self.outdirdict['Slot' + str(self.directory_settings.Slot_num)] = dictvalue
+        #     self.directory_settings.create_directory(config,kind='map')
+        #
+        # else:
+        #     self.Ribbon_Num = self.get_ribbon_number()
+        #     self.directory_settings = DirectorySettings()
+        #     self.directory_settings.load_settings(config)
+        #     for i in range(self.Ribbon_Num):
+        #         self.edit_Directory_settings()
+        #         dictvalue = self.get_output_dir(self.directory_settings)
+        #         if dictvalue == None:
+        #             print "line 405"
+        #             goahead = False
+        #             while goahead == False:
+        #                 self.edit_Directory_settings()
+        #                 dictvalue = self.get_output_dir(self.directory_settings)
+        #                 if dictvalue != None:
+        #                     goahead = True
+        #         self.outdirdict['Slot' + str(self.directory_settings.Slot_num)] = dictvalue
+        #         self.directory_settings.save_settings(config)
+        #     self.directory_settings.create_directory(config, kind= 'map')
+        #
+        # for key,value in self.outdirdict.iteritems():
+        #     print "Output directory:",key,value
             # print self.directory_settings
         # load Zstack settings
         self.zstack_settings = ZstackSettings()
@@ -513,6 +515,54 @@ class MosaicPanel(FigureCanvas):
 
     def _check_sock(self, event):
         self.interface._check_rep()
+
+    def createnewproject(self,config):
+        goahead = self.asknewproject()
+        if goahead:
+            pass
+
+    def asknewproject(self):
+        dlg = wx.MessageDialog(self,message = "Are you sure you want to start a new project? Progress will not be saved.",style = wx.YES|wx.NO)
+        button_pressed = dlg.ShowModal()
+        if button_pressed == wx.ID_YES:
+            return True
+        else:
+            return False
+
+    def startnewproject(self,config):
+        self.directory_settings = DirectorySettings()
+        self.directory_settings.load_settings(config)
+        self.edit_Directory_settings()
+        outdir = self.get_output_dir(self.directory_settings)
+        if outdir == None:
+            print "line 382"
+            goahead = False
+            while goahead == False:
+                self.edit_Directory_settings()
+                print "line 385"
+                dictvalue = self.get_output_dir(self.directory_settings)
+                if dictvalue != None:
+                    goahead = True
+
+        print 'Sample_ID:', self.directory_settings.Sample_ID
+        print 'Ribbon_ID:', self.directory_settings.Ribbon_ID
+        print 'Session_ID:', self.directory_settings.Session_ID
+        print 'Map Number:', self.directory_settings.Map_num
+        self.directory_settings.save_settings(config)
+        # self.outdirdict['Slot' + str(self.directory_settings.Slot_num)] = dictvalue
+        self.directory_settings.create_directory(config,kind='map')
+        return outdir
+
+
+    def edit_Directory_settings(self,event="none"):
+        dlg = ChangeDirectorySettings(None,-1,title = u"Enter Sample Information",style = wx.OK,settings=self.directory_settings)
+        ret = dlg.ShowModal()
+        if ret == wx.ID_OK:
+            self.directory_settings = dlg.get_settings()
+            self.directory_settings.save_settings(self.cfg)
+        if ret == wx.ID_CANCEL:
+            self.edit_Directory_settings()
+        dlg.Destroy()
 
     def askMultiribbons(self):
         dlg = wx.MessageDialog(self,message = "Are you imaging multiple ribbons?",style = wx.YES|wx.NO)
@@ -1000,8 +1050,8 @@ class MosaicPanel(FigureCanvas):
         self.imgSrc.set_binning(1)
         binning=self.imgSrc.get_binning()
         numchan,chrom_correction = self.summarize_channel_settings()
-
-        self.slack_notify("about to image %d sections"%len(self.posList.slicePositions))
+        if self.cfg['Slack']['do_messaging']:
+            self.slack_notify("about to image %d sections"%len(self.posList.slicePositions))
 
         Caption = "about to capture %d sections, binning is %dx%d, numchannel is %d"%(len(self.posList.slicePositions),binning,binning,numchan)
         dlg = wx.MessageDialog(self,message=Caption, style = wx.OK|wx.CANCEL)
@@ -1011,21 +1061,21 @@ class MosaicPanel(FigureCanvas):
             return False
 
 
+        outdir = self.output_dir
+        # if not self.multiribbon_boolean:
+        #     for key,value in self.outdirdict.iteritems():
+        #         outdir = self.outdirdict[key]
+        # else:
+        #     outdir = None
+        # if outdir is None:
+        #     return None
 
-        if not self.multiribbon_boolean:
-            for key,value in self.outdirdict.iteritems():
-                outdir = self.outdirdict[key]
-        else:
-            outdir = None
-        if outdir is None:
-            return None
+        # for key,value in self.outdirdict.iteritems():
 
-        for key,value in self.outdirdict.iteritems():
+        self.make_channel_directories(outdir)
 
-            self.make_channel_directories(value)
-
-            self.write_session_metadata_json(value)
-            self.write_session_metadata(value)
+        self.write_session_metadata_json(outdir)
+        self.write_session_metadata(outdir)
 
 
         self.move_safe_to_start()
@@ -1223,15 +1273,7 @@ class MosaicPanel(FigureCanvas):
 
         dlg.Destroy()
 
-    def edit_Directory_settings(self,event="none"):
-        dlg = ChangeDirectorySettings(None,-1,title = u"Enter Sample Information",style = wx.OK,settings=self.directory_settings)
-        ret = dlg.ShowModal()
-        if ret == wx.ID_OK:
-            self.directory_settings = dlg.get_settings()
-            self.directory_settings.save_settings(self.cfg)
-        if ret == wx.ID_CANCEL:
-            self.edit_Directory_settings()
-        dlg.Destroy()
+
 
 
     def edit_Zstack_settings(self,event = "none"):
@@ -2016,6 +2058,7 @@ class ZVISelectFrame(wx.Frame):
     ID_SNAPCONTROL = wx.NewId()
     ID_RETAKECONTROL = wx.NewId()
     ID_LEICAAFC = wx.NewId()
+    ID_NEWPROJECT = wx.NewId()
 
     # ID_Alfred = wx.NewId()
 
@@ -2049,6 +2092,11 @@ class ZVISelectFrame(wx.Frame):
         transformMenu = wx.Menu()
         Platform_Menu = wx.Menu()
         Imaging_Menu = wx.Menu()
+        File_Menu = wx.Menu()
+
+
+        #File Menu
+
 
         #OPTIONS MENU
         self.relative_motion = options.Append(self.ID_RELATIVEMOTION, 'Relative motion?', 'Move points in the ribbon relative to the apparent curvature, else in absolution coordinates',kind=wx.ITEM_CHECK)
@@ -2125,9 +2173,13 @@ class ZVISelectFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.mosaicCanvas.launch_retake,id = self.ID_RETAKECONTROL)
         self.Bind(wx.EVT_MENU, self.mosaicCanvas.launch_LeicaAFC, id= self.ID_LEICAAFC)
 
+        #File Menu
+        self.NewProject = File_Menu.Append(self.ID_NEWPROJECT, 'New Project','Start new mosaic plan on new sample', kind= wx.ITEM_NORMAL)
+        self.Bind(wx.EVT_MENU,self.mosaicCanvas.createnewproject(self.mosaicCanvas.cfg),id=self.ID_NEWPROJECT)
+
 
         Imaging_Menu.Check(self.ID_USE_FOCUS_CORRECTION,self.cfg['MosaicPlanner']['use_focus_correction'])
-
+        menubar.Append(File_Menu,'File')
         menubar.Append(options, '&Options')
         menubar.Append(transformMenu,'&Transform')
         menubar.Append(Platform_Menu,'&Platform Options')
@@ -2230,6 +2282,11 @@ class ZVISelectFrame(wx.Frame):
         #self.OnImageLoad()
         #self.on_array_load()
         #self.mosaicCanvas.draw()
+
+
+
+
+
     def toggle_transpose_xy(self,evt=None):
         print "toggle called",self.transpose_xy.IsChecked()
 
