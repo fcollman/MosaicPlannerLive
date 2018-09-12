@@ -67,7 +67,7 @@ SETTINGS_MODEL_FILE = 'MosaicPlannerSettingsModel.cfg'
 import logging
 logging.getLogger('MosaicPlanner').addHandler(logging.NullHandler())
 
-#from FocusServiceRemote import FocusServiceRemote
+from FocusServiceRemote import FocusServiceRemote
 
 class RemoteInterface(RemoteObject):
     def __init__(self, rep_port, parent):
@@ -351,7 +351,7 @@ class MosaicPanel(FigureCanvas):
         self.canvas = self.figure.canvas
 
         #set up focus service interface
-        #self.focus_interface = FocusServiceRemote()
+        self.focus_interface = FocusServiceRemote()
 
         # set up the remote interface
         self.interface = RemoteInterface(rep_port=7777, parent=self)
@@ -1915,7 +1915,7 @@ class MosaicPanel(FigureCanvas):
         self.imgSrc.set_binning(2)
 
 
-    def software_autofocus(self,acquisition_boolean = False, buttonpress = False): #MultiRibbons
+    def software_autofocus_old(self,acquisition_boolean = False, buttonpress = False): #MultiRibbons
         if buttonpress:
             self.imgSrc.set_binning(1)
         print "software autofocus"
@@ -1993,6 +1993,64 @@ class MosaicPanel(FigureCanvas):
 
     def setStagePosition(self, newXPos, newYPos):
         self.imgSrc.move_stage(newXPos, newYPos)
+
+    def software_autofocus(self,acquisition_boolean = False, buttonpress = False):
+        if buttonpress:
+            self.imgSrc.set_binning(1)
+        print "software autofocus"
+        if (acquisition_boolean) and (self.cfg['MosaicPlanner']['hardware_trigger']):
+            self.imgSrc.stop_hardware_triggering()
+        ch = self.cfg['ChannelSettings']['focusscore_chan']
+        self.imgSrc.set_exposure(self.cfg['Software Autofocus']['focus_exp_time'])
+        self.imgSrc.set_channel(ch)
+        current_z = self.imgSrc.get_z()
+        z_start = np.copy(current_z)
+        print "current_z: ", z_start
+        self.imgSrc.set_autofocus_offset(-1)
+        offset_start = self.imgSrc.get_autofocus_offset()
+        print "autofocus offset: ", offset_start
+        focus_image = self.imgSrc.snap_image()
+        score = self.focus_interface.get_score(focus_image)
+        print "score: ", score
+        scores = np.zeros(9)
+        i = 0
+        scores[i] = score
+        print "scores", scores
+        while not (score > 8) & (score < 12): #while not score == 10:
+            self.imgSrc.set_hardware_autofocus_state(False) #turn off autofocus
+            self.imgSrc.set_z(current_z - (score - 10)*0.2)
+            print "deltaz", -(score - 10)*0.2
+            current_z = self.imgSrc.get_z()
+            print "current_z: ", current_z
+            self.imgSrc.set_autofocus_offset(-1)
+            print "autofocus offset: ", self.imgSrc.get_autofocus_offset()
+            focus_image = self.imgSrc.snap_image()
+            score = self.focus_interface.get_score(focus_image)
+            print "score: ", score
+            i = i+1
+            scores[i] = score
+            print "scores", scores
+            if scores[i] == scores[i-1]:
+                self.imgSrc.set_z(current_z + (score - 10)*0.2*2)
+                current_z = self.imgSrc.get_z()
+                print "current_z: ", current_z
+                self.imgSrc.set_autofocus_offset(-1)
+                print "autofocus offset: ", self.imgSrc.get_autofocus_offset()
+                focus_image = self.imgSrc.snap_image()
+                score = self.focus_interface.get_score(focus_image)
+                scores[i] = score
+            if i==8:
+                self.imgSrc.set_z(z_start)
+                self.imgSrc.set_autofocus_offset(offset_start)
+                break
+        self.imgSrc.set_hardware_autofocus_state(True) #turn on autofocus
+
+        if (acquisition_boolean) and (self.cfg['MosaicPlanner']['hardware_trigger']):
+            channels = [ch for ch in self.channel_settings.channels if self.channel_settings.usechannels[ch]]
+            exp_times = [self.channel_settings.exposure_times[ch] for ch in self.channel_settings.channels if self.channel_settings.usechannels[ch]]
+            self.imgSrc.setup_hardware_triggering(channels,exp_times)
+        if buttonpress:
+            self.imgSrc.set_binning(2)
 
 class ZVISelectFrame(wx.Frame):
     """class extending wx.Frame for highest level handling of GUI components """
