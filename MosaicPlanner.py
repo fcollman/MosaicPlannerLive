@@ -520,14 +520,15 @@ class MosaicPanel(FigureCanvas):
         config = self.cfg
         goahead = self.asknewproject()
         if goahead:
+            self.posList.select_all()
+            self.posList.delete_selected()
             self.subplot.cla()
             self.corrplot.cla()
             self.posone_plot.cla()
             self.postwo_plot.cla()
 
             self.output_dir = self.startnewproject(config)
-            self.posList.select_all()
-            self.posList.delete_selected()
+
 
 
 
