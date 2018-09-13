@@ -526,6 +526,8 @@ class MosaicPanel(FigureCanvas):
             self.postwo_plot.cla()
 
             self.output_dir = self.startnewproject(config)
+            self.posList.select_all()
+            self.posList.delete_selected()
 
 
 
