@@ -79,7 +79,8 @@ def write_slice_metadata_json(filename,ch,xpos,ypos,zpos,slice_index,triggerflag
                         'scope_zpos' : zpos,
                         'slice_index' : slice_index,
                         'height' : height,
-                        'width' : width
+                        'width' : width,
+                        'Time' : meta_dict['Time']
     }
 
     thestring = json.JSONEncoder().encode(slice_meta_dict)
