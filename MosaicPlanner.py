@@ -663,6 +663,7 @@ class MosaicPanel(FigureCanvas):
         session_num = self.cfg['Directories']['Session_ID']
         owner = self.cfg['Directories']['meta_experiment_name'] #will change meta_experiment_name to owner
         project = self.cfg['Directories']['Sample_ID']
+        timer = time.time()
 
 
         metadata_dict = {'Height' : height,
@@ -676,8 +677,10 @@ class MosaicPanel(FigureCanvas):
                          'scope' : scope_name,
                          'session' : session_num,
                          'ribbon_length' : length,
+                         'frame_number' : length*mosaicX*mosaicY,
                          'owner' : owner,
-                         'project' : project}
+                         'project' : project,
+                         'Time' : timer}
 
         thestring = json.JSONEncoder().encode(metadata_dict)
         # thestring = json.dumps(metadata_dict)
