@@ -363,9 +363,10 @@ class MosaicPanel(FigureCanvas):
 
         #add subplots for various things
         self.subplot     = self.figure.add_axes([.05, .5, .92, .5])
-        self.posone_plot = self.figure.add_axes([.1, .05, .2, .4])
-        self.postwo_plot = self.figure.add_axes([.37, .05, .2, .4])
-        self.corrplot    = self.figure.add_axes([.65, .05, .25, .4])
+        self.posone_plot = self.figure.add_axes([.1, .025, .2, .4])
+        self.postwo_plot = self.figure.add_axes([.37, .025, .2, .4])
+        self.corrplot    = self.figure.add_axes([.65, .025, .25, .4])
+        print 'pos2 plot position:', self.postwo_plot.get_position()
 
         #initialize the camera settings and mosaic settings
         self.cfg = config
