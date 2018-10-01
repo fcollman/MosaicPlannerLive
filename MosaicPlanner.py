@@ -2078,7 +2078,6 @@ class ZVISelectFrame(wx.Frame):
     ID_LEICAAFC = wx.NewId()
     ID_NEWPROJECT = wx.NewId()
 
-    # ID_Alfred = wx.NewId()
 
     def __init__(self, parent, title):
         """default init function for a wx.Frame
@@ -2172,7 +2171,6 @@ class ZVISelectFrame(wx.Frame):
         self.launch_MM_PropBrowser = Imaging_Menu.Append(self.ID_MM_PROP_BROWSER,'Open MicroManager Property Browser',kind = wx.ITEM_NORMAL)
         self.focus_correction_plane = Imaging_Menu.Append(self.ID_EDIT_FOCUS_CORRECTION,'Edit Focus Correction Plane',kind = wx.ITEM_NORMAL)
         self.use_focus_correction = Imaging_Menu.Append(self.ID_USE_FOCUS_CORRECTION,'Use Focus Correction?','Use Focus Correction For Mapping',kind=wx.ITEM_CHECK)
-        self.launch_ASIControl = Imaging_Menu.Append(self.ID_ASIAUTOFOCUS, 'Allen ASI AutoFocus Control', kind= wx.ITEM_NORMAL)
         self.launch_Snap = Imaging_Menu.Append(self.ID_SNAPCONTROL,'Snap single channel images',kind = wx.ITEM_NORMAL)
         self.launch_Retake = Imaging_Menu.Append(self.ID_RETAKECONTROL,'Retake dialog',kind = wx.ITEM_NORMAL)
         if len(self.cfg['LeicaDMI']['port'])>0:
@@ -2204,17 +2202,6 @@ class ZVISelectFrame(wx.Frame):
         menubar.Append(Imaging_Menu,'&Imaging Settings')
         self.SetMenuBar(menubar)
 
-        #setup a file picker for the metadata selector
-        #self.meta_label=wx.StaticText(self,id=wx.ID_ANY,label="metadata file")
-        #self.meta_filepicker=wx.FilePickerCtrl(self,message='Select a metadata file',\
-        #path="",name='metadataFilePickerCtrl1',\
-        #style=wx.FLP_USE_TEXTCTRL, size=wx.Size(300,20),wildcard='*.*')
-        #self.meta_filepicker.SetPath(self.cfg.Read('default_metadatapath',""))
-        #self.meta_formatBox=wx.ComboBox(self,id=wx.ID_ANY,value='ZeissXML',\
-        #size=wx.DefaultSize,choices=['ZVI','ZeissXML','SimpleCSV','ZeissCZI'], name='File Format For Meta Data')
-        #self.meta_formatBox.SetEditable(False)
-        #self.meta_load_button=wx.Button(self,id=wx.ID_ANY,label="Load",name="metadata load")
-        #self.meta_enter_button=wx.Button(self,id=wx.ID_ANY,label="Edit",name="manual meta")
 
         #define the image file picker components
         self.imgCollectLabel=wx.StaticText(self,id=wx.ID_ANY,label="image collection directory")
@@ -2222,7 +2209,7 @@ class ZVISelectFrame(wx.Frame):
         path="",name='imgCollectPickerCtrl1',\
         style=wx.FLP_USE_TEXTCTRL, size=wx.Size(300,20))
         self.imgCollectDirPicker.SetPath(self.cfg['MosaicPlanner']['default_imagepath'])
-        self.imgCollect_load_button=wx.Button(self,id=wx.ID_ANY,label="Load",name="imgCollect load")
+        self.imgCollect_load_button=wx.Button(self,id=wx.ID_ANY,label="Load Map Images",name="imgCollect load")
 
         #wire up the button to the "on_load" button
         self.Bind(wx.EVT_BUTTON, self.on_image_collect_load,self.imgCollect_load_button)
@@ -2236,26 +2223,18 @@ class ZVISelectFrame(wx.Frame):
         style=wx.FLP_USE_TEXTCTRL, size=wx.Size(300,20),wildcard='*.*')
         self.array_filepicker.SetPath(self.cfg['MosaicPlanner']['default_arraypath'])
 
-        self.array_load_button=wx.Button(self,id=wx.ID_ANY,label="Load",name="load button")
+        self.array_load_button=wx.Button(self,id=wx.ID_ANY,label="Load Position List",name="load button")
         self.array_formatBox=wx.ComboBox(self,id=wx.ID_ANY,value='JSON',\
         size=wx.DefaultSize,choices=['uManager','AxioVision','SmartSEM','OMX','ZEN','JSON'], name='File Format For Position List')
         self.array_formatBox.SetEditable(False)
-        self.array_save_button=wx.Button(self,id=wx.ID_ANY,label="Save",name="save button")
-        self.array_saveframes_button=wx.Button(self,id=wx.ID_ANY,label="Save Frames",name="save-frames button")
+        self.array_save_button=wx.Button(self,id=wx.ID_ANY,label="Save Position List",name="save button")
+        # self.array_saveframes_button=wx.Button(self,id=wx.ID_ANY,label="Save Frames",name="save-frames button")
 
         #wire up the button to the "on_load" button
         self.Bind(wx.EVT_BUTTON, self.on_array_load,self.array_load_button)
         self.Bind(wx.EVT_BUTTON, self.on_array_save,self.array_save_button)
-        self.Bind(wx.EVT_BUTTON, self.on_array_save_frames,self.array_saveframes_button)
+        # self.Bind(wx.EVT_BUTTON, self.on_array_save_frames,self.array_saveframes_button)
 
-        #define a horizontal sizer for them and place the file picker components in there
-        #self.meta_filepickersizer=wx.BoxSizer(wx.HORIZONTAL)
-        #self.meta_filepickersizer.Add(self.meta_label,0,wx.EXPAND)
-        #self.meta_filepickersizer.Add(self.meta_filepicker,1,wx.EXPAND)
-        #self.meta_filepickersizer.Add(wx.StaticText(self,id=wx.ID_ANY,label="Metadata Format:"))
-        #self.meta_filepickersizer.Add(self.meta_formatBox,0,wx.EXPAND)
-        #self.meta_filepickersizer.Add(self.meta_load_button,0,wx.EXPAND)
-        #self.meta_filepickersizer.Add(self.meta_enter_button,0,wx.EXPAND)
 
         #define a horizontal sizer for them and place the file picker components in there
         self.imgCollect_filepickersizer=wx.BoxSizer(wx.HORIZONTAL)
@@ -2271,7 +2250,7 @@ class ZVISelectFrame(wx.Frame):
         self.array_filepickersizer.Add(self.array_formatBox,0,wx.EXPAND)
         self.array_filepickersizer.Add(self.array_load_button,0,wx.EXPAND)
         self.array_filepickersizer.Add(self.array_save_button,0,wx.EXPAND)
-        self.array_filepickersizer.Add(self.array_saveframes_button,0,wx.EXPAND)
+        # self.array_filepickersizer.Add(self.array_saveframes_button,0,wx.EXPAND)
 
         #define the overall vertical sizer for the frame
         self.sizer = wx.BoxSizer(wx.VERTICAL)
