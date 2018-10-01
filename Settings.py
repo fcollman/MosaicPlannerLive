@@ -523,10 +523,7 @@ class ChangeChannelSettings(wx.Dialog):
             ChBox = wx.CheckBox(self)
             ChBox.SetValue(settings.usechannels[ch])
             print settings.prot_names[ch]
-            if 'dapi' in ch.lower():
-                ProtComboBox=wx.ComboBox(self,choices=self.ProteinSelection['QuadBand0DAPI'], style = wx.CB_SORT)
-            else:
-                ProtComboBox=wx.ComboBox(self,choices=self.ProteinSelection['Proteins'], style = wx.CB_SORT)
+            ProtComboBox=wx.ComboBox(self,choices=self.ProteinSelection['Proteins'], style = wx.CB_SORT)
             if ChBox.GetValue():
                 ProtComboBox.SetValue(settings.prot_names[ch])
 
