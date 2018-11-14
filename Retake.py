@@ -445,7 +445,7 @@ class RetakeView(QtGui.QWidget):
         if self.mp.cfg['MosaicPlanner']['hardware_trigger']:
             self.mp.imgSrc.stop_hardware_triggering()
 
-    def retakeMultipleFrame(self,evt=None):
+    def retakeMultipleFrame_old(self,evt=None):
         success, chrom_correction = self.setupAcq()
         currz = self.mp.imgSrc.get_z()
         for frame,section,spot in self.selectedFrames:
@@ -458,13 +458,27 @@ class RetakeView(QtGui.QWidget):
             self.retakesScatterPlot.addPoints([d])
         self.teardownAcq()
 
+    def retakeMultipleFrame(self,evt=None):
+        currz = self.mp.imgSrc.get_z()
+        for frame,section,spot in self.selectedFrames:
+            x,y = self.getFramePos(section=section,frame=frame)
+            self.archiveFrame(section=section,frame=frame)
+            self.mp.software_autofocus()   #call software autofocus before acquisition
+            success, chrom_correction = self.setupAcq()
+            self.mp.multiDacq(success, self.outdir, chrom_correction,
+                              False,False, x, y, currz, section,
+                              frame, hold_focus=True)
+            d = {'pos': (x, y), 'symbol': '+', 'pen': pg.mkPen('w', width=5)}
+            self.retakesScatterPlot.addPoints([d])
+            self.teardownAcq()
+
     def retakeFrame(self,evt=None):
         currx, curry = self.mp.imgSrc.get_xy()
         currz = self.mp.imgSrc.get_z()
         x,y = self.getFramePos()
 
         self.archiveFrame()
-
+        self.mp.software_autofocus()   #call software autofocus before acquisition
         success, chrom_correction = self.setupAcq()
         self.mp.multiDacq(success, self.outdir, chrom_correction,
                           False, False, currx, curry, currz, self.section,
@@ -535,7 +549,7 @@ class RetakeView(QtGui.QWidget):
         self.focus_df = df
         print self.focus_df.score   #print self.focus_df.score1_norm
         #cmap = pg.ColorMap(pos=np.linspace(start=-.04,stop=.04,num=256), color=viridis)
-        cmap = pg.ColorMap(pos=np.linspace(start=0,stop=21,num=256), color=viridis)   #changed colormap
+        cmap = pg.ColorMap(pos=np.linspace(start=3,stop=17,num=256), color=viridis)   #changed colormap
         colors = cmap.map(df.score)  #colors = cmap.map(df.score1_norm)
         brushes = [pg.mkBrush(c) for c in colors]
 

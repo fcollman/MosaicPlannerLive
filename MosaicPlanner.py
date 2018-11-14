@@ -649,7 +649,6 @@ class MosaicPanel(FigureCanvas):
             print score
 
     def multiDacq(self,success,outdir,chrome_correction,autofocus_trigger,triggerflag,x,y,current_z,slice_index,frame_index=0,hold_focus = False):
-
         #print datetime.datetime.now().time()," starting multiDAcq, autofocus on"
         if not hold_focus:
             if self.imgSrc.has_hardware_autofocus():
@@ -1132,7 +1131,7 @@ class MosaicPanel(FigureCanvas):
                                 break
                         if pos.frameList.slicePositions[j].activated:
                             autofocus_trigger = pos.frameList.slicePositions[j].autofocus_trigger
-                            print autofocus_trigger
+                            # print autofocus_trigger
                             self.multiDacq(success,outdir,chrom_correction,autofocus_trigger,triggerflag,fpos.x,fpos.y,current_z,i,j,hold_focus)
                         else:
                             # print 'moving on'
