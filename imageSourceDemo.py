@@ -227,7 +227,9 @@ class imageSource():
 
     def make_random_image(self):
         #return np.random.random(self.get_sensor_size())
-        return np.random.randint(0,2**16 - 1,self.get_sensor_size(),np.uint16)
+        size = self.get_sensor_size()
+        return np.random.randint(0,2**16 - 1, size = size).astype(np.int16)
+
     def get_image(self,wait=True):
         return self.make_random_image()
 

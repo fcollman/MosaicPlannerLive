@@ -46,7 +46,7 @@ from NavigationToolBarImproved import NavigationToolbar2Wx_improved as NavBarImp
 from Settings import (MosaicSettings, CameraSettings,SiftSettings,ChangeCameraSettings, ImageSettings,
                        ChangeImageMetadata, SmartSEMSettings, ChangeSEMSettings, ChannelSettings,
                        ChangeChannelSettings, ChangeSiftSettings, CorrSettings,ChangeCorrSettings,
-                      ChangeZstackSettings, ZstackSettings, DirectorySettings, ChangeDirectorySettings, RibbonNumberDialog, MultiRibbonSettings)
+                      ChangeZstackSettings, ZstackSettings, DirectorySettings, ChangeDirectorySettings)
 
 from configobj import ConfigObj
 from validate import Validator
@@ -56,7 +56,6 @@ from Snap import SnapView
 from Retake import RetakeView
 from LeicaAFCView import LeicaAFCView
 from LeicaDMI import LeicaDMI
-from slacker import Slacker
 from SaveThread import file_save_process
 import scipy.optimize as opt #softwarea-autofocus
 
@@ -178,7 +177,7 @@ class MosaicToolbar(NavBarImproved):
         ffBmp         = wx.Image('icons/ff-icon.png',      wx.BITMAP_TYPE_PNG).ConvertToBitmap()
         rotateBmp     = wx.Image('icons/rotate-icon.png',  wx.BITMAP_TYPE_PNG).ConvertToBitmap()
         gridBmp       = wx.Image('icons/grid-icon.png',    wx.BITMAP_TYPE_PNG).ConvertToBitmap()
-        softwareAFbmp = wx.Image('icons/new/1446777567_Ironman.png', wx.BITMAP_TYPE_PNG).ConvertToBitmap()
+        softwareAFbmp = wx.Image('icons/icons8-target-32.bmp', wx.BITMAP_TYPE_PNG).ConvertToBitmap()
         cameraBmp     = wx.Image('icons/camera-icon.png',  wx.BITMAP_TYPE_PNG).ConvertToBitmap()
         mosaicBmp     = wx.Image('icons/mosaic-icon.png',  wx.BITMAP_TYPE_PNG).ConvertToBitmap()
         carBmp        = wx.Image('icons/car-icon.png',     wx.BITMAP_TYPE_PNG).ConvertToBitmap()
@@ -186,10 +185,10 @@ class MosaicToolbar(NavBarImproved):
         snapBmp       = wx.Image('icons/new/snap.png',     wx.BITMAP_TYPE_PNG).ConvertToBitmap()
         cameraBmp     = wx.Image('icons/new/camera.png',   wx.BITMAP_TYPE_PNG).ConvertToBitmap()
         liveBmp       = wx.Image('icons/new/livemode.png', wx.BITMAP_TYPE_PNG).ConvertToBitmap()
-        batmanBmp     = wx.Image('icons/new/batman.png',   wx.BITMAP_TYPE_PNG).ConvertToBitmap()
+        startBmp     = wx.Image('icons/icons8-start-30.png',   wx.BITMAP_TYPE_PNG).ConvertToBitmap()
         activateBmp   = wx.Image('icons/activate-icon.png',wx.BITMAP_TYPE_PNG).ConvertToBitmap()
         #mosaicBmp     = wx.Image('icons/new/mosaic_camera.png', wx.BITMAP_TYPE_PNG).ConvertToBitmap()
-        checkBmp     = wx.Image('icons/new/1446777170_Check.png',wx.BITMAP_TYPE_PNG).ConvertToBitmap() #MultiRibbons
+        # checkBmp     = wx.Image('icons/new/1446777170_Check.png',wx.BITMAP_TYPE_PNG).ConvertToBitmap() #MultiRibbons
 
         self.DeleteTool(self.wx_ids['Subplots']) # batman - what is this? add comment above it?
 
@@ -227,8 +226,8 @@ class MosaicToolbar(NavBarImproved):
         #add the toggleable tools
         self.gridTool=self.AddCheckTool(self.ON_GRID,gridBmp,wx.NullBitmap,'toggle show frames')
         self.rotateTool=self.AddCheckTool(self.ON_ROTATE,rotateBmp,wx.NullBitmap,'toggle rotate boxes')
-        self.runAcqTool=self.AddSimpleTool(self.ON_RUN,batmanBmp,'Acquire AT Data','run_tool')
-        self.runMultiAcqTool=self.AddSimpleTool(self.ON_RUN_MULTI,checkBmp,'MultiRibbons','run_multi_tool') #MultiRibbons
+        self.runAcqTool=self.AddSimpleTool(self.ON_RUN,startBmp,'Acquire AT Data','run_tool')
+        # self.runMultiAcqTool=self.AddSimpleTool(self.ON_RUN_MULTI,checkBmp,'MultiRibbons','run_multi_tool') #MultiRibbons
 
         #setup the controls for the mosaic
         self.showMosaicCheck = wx.CheckBox(self)
@@ -288,7 +287,7 @@ class MosaicToolbar(NavBarImproved):
         wx.EVT_TOOL(self, self.ON_ROTATE, self.canvas.on_rotate_tool)
         wx.EVT_TOOL(self, self.ON_SNAP, self.canvas.on_snap_tool)
         wx.EVT_TOOL(self, self.ON_CROP, self.canvas.on_crop_tool)
-        wx.EVT_TOOL(self, self.ON_RUN_MULTI, self.canvas.on_run_multi_acq)
+        # wx.EVT_TOOL(self, self.ON_RUN_MULTI, self.canvas.on_run_multi_acq)
         wx.EVT_TOOL(self, self.ON_SOFTWARE_AF, self.canvas.on_software_af_tool)
 
         self.Realize()
@@ -324,7 +323,6 @@ class MosaicToolbar(NavBarImproved):
         self.overlapCtrl.SetValue(mosaic_settings.overlap)
         self.showMosaicCheck.SetValue(mosaic_settings.show_box)
 
-    #unused # batman - should we kill it if unused?
     def cross_cursor(self, event):
         self.canvas.SetCursor(wx.StockCursor(wx.CURSOR_ARROW))
 
@@ -364,9 +362,10 @@ class MosaicPanel(FigureCanvas):
 
         #add subplots for various things
         self.subplot     = self.figure.add_axes([.05, .5, .92, .5])
-        self.posone_plot = self.figure.add_axes([.1, .05, .2, .4])
-        self.postwo_plot = self.figure.add_axes([.37, .05, .2, .4])
-        self.corrplot    = self.figure.add_axes([.65, .05, .25, .4])
+        self.posone_plot = self.figure.add_axes([.1, .025, .2, .4])
+        self.postwo_plot = self.figure.add_axes([.37, .025, .2, .4])
+        self.corrplot    = self.figure.add_axes([.65, .025, .25, .4])
+        print 'pos2 plot position:', self.postwo_plot.get_position()
 
         #initialize the camera settings and mosaic settings
         self.cfg = config
@@ -383,6 +382,7 @@ class MosaicPanel(FigureCanvas):
             try:
                 if self.cfg['MosaicPlanner']['demoMode']:
                     from imageSourceDemo import imageSource
+                    print 'demo'
                 else:
                     from imageSourceMM import imageSource
 
@@ -416,53 +416,56 @@ class MosaicPanel(FigureCanvas):
 
         # load directory settings
 
-        self.outdirdict = {}
-        self.multiribbon_boolean = self.askMultiribbons()
-        if not self.multiribbon_boolean:
-            self.Ribbon_Num = 1
-            self.directory_settings = DirectorySettings()
-            self.directory_settings.load_settings(config)
-            self.edit_Directory_settings()
-            dictvalue = self.get_output_dir(self.directory_settings)
-            if dictvalue == None:
-                print "line 382"
-                goahead = False
-                while goahead == False:
-                    self.edit_Directory_settings()
-                    print "line 385"
-                    dictvalue = self.get_output_dir(self.directory_settings)
-                    if dictvalue != None:
-                        goahead = True
-
-            print 'Sample_ID:', self.directory_settings.Sample_ID
-            print 'Ribbon_ID:', self.directory_settings.Ribbon_ID
-            print 'Session_ID:', self.directory_settings.Session_ID
-            print 'Map Number:', self.directory_settings.Map_num
-            self.directory_settings.save_settings(config)
-            self.outdirdict['Slot' + str(self.directory_settings.Slot_num)] = dictvalue
-            self.directory_settings.create_directory(config,kind='map')
-
-        else:
-            self.Ribbon_Num = self.get_ribbon_number()
-            self.directory_settings = DirectorySettings()
-            self.directory_settings.load_settings(config)
-            for i in range(self.Ribbon_Num):
-                self.edit_Directory_settings()
-                dictvalue = self.get_output_dir(self.directory_settings)
-                if dictvalue == None:
-                    print "line 405"
-                    goahead = False
-                    while goahead == False:
-                        self.edit_Directory_settings()
-                        dictvalue = self.get_output_dir(self.directory_settings)
-                        if dictvalue != None:
-                            goahead = True
-                self.outdirdict['Slot' + str(self.directory_settings.Slot_num)] = dictvalue
-                self.directory_settings.save_settings(config)
-            self.directory_settings.create_directory(config, kind= 'map')
-
-        for key,value in self.outdirdict.iteritems():
-            print "Output directory:",key,value
+        self.output_dir = self.startnewproject(config)
+        print self.output_dir
+        # self.cfg['MosaicPlanner']['default_outdir'] = self.output_dir
+        # self.outdirdict = {}
+        # self.multiribbon_boolean = self.askMultiribbons()
+        # if not self.multiribbon_boolean:
+        #     self.Ribbon_Num = 1
+        #     self.directory_settings = DirectorySettings()
+        #     self.directory_settings.load_settings(config)
+        #     self.edit_Directory_settings()
+        #     dictvalue = self.get_output_dir(self.directory_settings)
+        #     if dictvalue == None:
+        #         print "line 382"
+        #         goahead = False
+        #         while goahead == False:
+        #             self.edit_Directory_settings()
+        #             print "line 385"
+        #             dictvalue = self.get_output_dir(self.directory_settings)
+        #             if dictvalue != None:
+        #                 goahead = True
+        #
+        #     print 'Sample_ID:', self.directory_settings.Sample_ID
+        #     print 'Ribbon_ID:', self.directory_settings.Ribbon_ID
+        #     print 'Session_ID:', self.directory_settings.Session_ID
+        #     print 'Map Number:', self.directory_settings.Map_num
+        #     self.directory_settings.save_settings(config)
+        #     self.outdirdict['Slot' + str(self.directory_settings.Slot_num)] = dictvalue
+        #     self.directory_settings.create_directory(config,kind='map')
+        #
+        # else:
+        #     self.Ribbon_Num = self.get_ribbon_number()
+        #     self.directory_settings = DirectorySettings()
+        #     self.directory_settings.load_settings(config)
+        #     for i in range(self.Ribbon_Num):
+        #         self.edit_Directory_settings()
+        #         dictvalue = self.get_output_dir(self.directory_settings)
+        #         if dictvalue == None:
+        #             print "line 405"
+        #             goahead = False
+        #             while goahead == False:
+        #                 self.edit_Directory_settings()
+        #                 dictvalue = self.get_output_dir(self.directory_settings)
+        #                 if dictvalue != None:
+        #                     goahead = True
+        #         self.outdirdict['Slot' + str(self.directory_settings.Slot_num)] = dictvalue
+        #         self.directory_settings.save_settings(config)
+        #     self.directory_settings.create_directory(config, kind= 'map')
+        #
+        # for key,value in self.outdirdict.iteritems():
+        #     print "Output directory:",key,value
             # print self.directory_settings
         # load Zstack settings
         self.zstack_settings = ZstackSettings()
@@ -503,8 +506,6 @@ class MosaicPanel(FigureCanvas):
         self.canvas.mpl_connect('key_press_event', self.on_key)
 
         self.slacker = None
-        if self.cfg['Slack']['slack_token'] is not None:
-            self.slacker = Slacker(self.cfg['Slack']['slack_token'])
 
         if len(self.cfg['LeicaDMI']['port']) > 0:
             self.dmi = LeicaDMI(self.cfg['LeicaDMI']['port'])
@@ -513,6 +514,66 @@ class MosaicPanel(FigureCanvas):
 
     def _check_sock(self, event):
         self.interface._check_rep()
+
+    def createnewproject(self, event = 'none'):
+        config = self.cfg
+        goahead = self.asknewproject()
+        if goahead:
+            self.posList.select_all()
+            self.posList.delete_selected()
+            self.subplot.cla()
+            self.corrplot.cla()
+            self.posone_plot.cla()
+            self.postwo_plot.cla()
+
+            self.output_dir = self.startnewproject(config)
+
+
+
+
+    def asknewproject(self):
+        dlg = wx.MessageDialog(self,message = "Are you sure you want to start a new project? Progress will not be saved.",style = wx.YES|wx.NO)
+        button_pressed = dlg.ShowModal()
+        if button_pressed == wx.ID_YES:
+            return True
+        else:
+            return False
+
+
+    def startnewproject(self,config):
+        self.directory_settings = DirectorySettings()
+        self.directory_settings.load_settings(config)
+        self.edit_Directory_settings()
+        outdir = self.get_output_dir(self.directory_settings)
+        if outdir == None:
+            print "line 382"
+            goahead = False
+            while goahead == False:
+                self.edit_Directory_settings()
+                print "line 385"
+                dictvalue = self.get_output_dir(self.directory_settings)
+                if dictvalue != None:
+                    goahead = True
+
+        print 'Sample_ID:', self.directory_settings.Sample_ID
+        print 'Ribbon_ID:', self.directory_settings.Ribbon_ID
+        print 'Session_ID:', self.directory_settings.Session_ID
+        print 'Map Number:', self.directory_settings.Map_num
+        self.directory_settings.save_settings(config)
+        self.cfg['MosaicPlanner']['default_outdir'] = outdir
+        self.directory_settings.create_directory(config,kind='map')
+        return outdir
+
+
+    def edit_Directory_settings(self,event="none"):
+        dlg = ChangeDirectorySettings(None,-1,title = u"Enter Sample Information",style = wx.OK,settings=self.directory_settings)
+        ret = dlg.ShowModal()
+        if ret == wx.ID_OK:
+            self.directory_settings = dlg.get_settings()
+            self.directory_settings.save_settings(self.cfg)
+        if ret == wx.ID_CANCEL:
+            self.edit_Directory_settings()
+        dlg.Destroy()
 
     def askMultiribbons(self):
         dlg = wx.MessageDialog(self,message = "Are you imaging multiple ribbons?",style = wx.YES|wx.NO)
@@ -538,6 +599,7 @@ class MosaicPanel(FigureCanvas):
 
     def on_load(self,rootPath):
         self.rootPath = rootPath
+        os.path.join(rootPath)
         print "transpose toggle state",self.imgSrc.transpose_xy
         self.mosaicImage=MosaicImage(self.subplot,self.posone_plot,self.postwo_plot,self.corrplot,self.imgSrc,rootPath,figure=self.figure)
         self.on_crop_tool()
@@ -602,6 +664,7 @@ class MosaicPanel(FigureCanvas):
         session_num = self.cfg['Directories']['Session_ID']
         owner = self.cfg['Directories']['meta_experiment_name'] #will change meta_experiment_name to owner
         project = self.cfg['Directories']['Sample_ID']
+        timer = time.time()
 
 
         metadata_dict = {'Height' : height,
@@ -615,8 +678,10 @@ class MosaicPanel(FigureCanvas):
                          'scope' : scope_name,
                          'session' : session_num,
                          'ribbon_length' : length,
+                         'frame_number' : length*mosaicX*mosaicY,
                          'owner' : owner,
-                         'project' : project}
+                         'project' : project,
+                         'Time' : timer}
 
         thestring = json.JSONEncoder().encode(metadata_dict)
         # thestring = json.dumps(metadata_dict)
@@ -703,7 +768,8 @@ class MosaicPanel(FigureCanvas):
                             z = zplane + self.channel_settings.zoffsets[ch]
                             if not z == presentZ:
                                 self.imgSrc.set_z(z)
-                                presentZ = z
+                                z = presentZ
+                        z = presentZ
                         self.imgSrc.set_exposure(self.channel_settings.exposure_times[ch])
                         self.imgSrc.set_channel(ch)
                         #t2 = time.clock()*1000
@@ -877,70 +943,6 @@ class MosaicPanel(FigureCanvas):
     #     if button_pressed == wx.ID_CANCEL:
     #         return False
 
-    def execute_imaging(self,pos_list,numFrames,numSections,channel_settings,chrome_correction,sample_information,mosaic_settings,zstack_settings,acquisition_settings,
-                        stage_reset_settings,autofocus_settings):
-
-
-        assert(isinstance(zstack_settings, ZstackSettings))
-        assert(isinstance(channel_settings, ChannelSettings))
-        assert(isinstance(pos_list,posList))
-        assert(type(autofocus_settings == dict))
-        assert(type(acquisition_settings == dict))
-        outdir = self.outdirdict[sample_information.Ribbon_ID]
-
-        binning = acquisition_settings['Binning']
-
-        numFrames,numSections = self.setup_progress_bar()
-        hold_focus = not (zstack_settings.zstack_flag or chrome_correction)
-
-
-
-        # starting with cycling through positions
-        goahead = True
-        #loop over positions
-        for i,pos in enumerate(pos_list.slicePositions):
-            if pos.activated:
-                if not goahead:
-                    break
-                if not self.imgSrc.get_hardware_autofocus_state():
-                    print "autofocus not enabled when moving between sections.. "
-                    goahead=False
-                    break
-                (goahead, skip) = self.progress.Update(i*numFrames,'section %d of %d'%(i,numSections-1))
-                #turn on autofocus
-                self.ResetPiezo()
-                current_z = self.imgSrc.get_z()
-                if pos.frameList is None:
-                    self.multiDacq(outdir,chrome_correction,pos.x,pos.y,current_z,i,hold_focus=hold_focus)
-                else:
-                    for j,fpos in enumerate(pos.frameList.slicePositions):
-                        if not goahead:
-                            print "breaking out!"
-                            break
-                        if not self.imgSrc.get_hardware_autofocus_state():
-                            print "autofocus no longer enabled while moving between frames.. quiting"
-                            goahead = False
-                            break
-                        self.multiDacq(outdir,chrome_correction,fpos.x,fpos.y,current_z,i,j,hold_focus)
-                        self.ResetPiezo()
-                        (goahead, skip)=self.progress.Update((i*numFrames) + j+1,'section %d of %d, frame %d'%(i,numSections-1,j))
-
-                wx.Yield()
-        if not goahead:
-            print "acquisition stopped prematurely"
-            print "section %d"%(i)
-            if pos.frameList is not None:
-                print "frame %d"%(j)
-
-        self.dataQueue.put(STOP_TOKEN)
-        self.saveProcess.join()
-        print "save process ended"
-        self.progress.Destroy()
-        self.imgSrc.set_binning(2)
-        if self.cfg['MosaicPlanner']['hardware_trigger']:
-            self.imgSrc.stop_hardware_triggering()
-
-
 
     def slack_notify(self,message,notify=False):
         if self.slacker is not None:
@@ -1001,7 +1003,6 @@ class MosaicPanel(FigureCanvas):
         binning=self.imgSrc.get_binning()
         numchan,chrom_correction = self.summarize_channel_settings()
 
-        self.slack_notify("about to image %d sections"%len(self.posList.slicePositions))
 
         Caption = "about to capture %d sections, binning is %dx%d, numchannel is %d"%(len(self.posList.slicePositions),binning,binning,numchan)
         dlg = wx.MessageDialog(self,message=Caption, style = wx.OK|wx.CANCEL)
@@ -1011,21 +1012,21 @@ class MosaicPanel(FigureCanvas):
             return False
 
 
+        outdir = self.output_dir
+        # if not self.multiribbon_boolean:
+        #     for key,value in self.outdirdict.iteritems():
+        #         outdir = self.outdirdict[key]
+        # else:
+        #     outdir = None
+        # if outdir is None:
+        #     return None
 
-        if not self.multiribbon_boolean:
-            for key,value in self.outdirdict.iteritems():
-                outdir = self.outdirdict[key]
-        else:
-            outdir = None
-        if outdir is None:
-            return None
+        # for key,value in self.outdirdict.iteritems():
 
-        for key,value in self.outdirdict.iteritems():
+        self.make_channel_directories(outdir)
 
-            self.make_channel_directories(value)
-
-            self.write_session_metadata_json(value)
-            self.write_session_metadata(value)
+        self.write_session_metadata_json(outdir)
+        self.write_session_metadata(outdir)
 
 
         self.move_safe_to_start()
@@ -1070,22 +1071,18 @@ class MosaicPanel(FigureCanvas):
         goahead = True
 
         if not self.imgSrc.get_hardware_autofocus_state():
-            if self.cfg['Slack']['do_messaging']:
-                self.slack_notify('HELP! lost autofocus on way to first position',notify=True)
             print 'HELP! lost autofocus on way to first position'
             goahead=False
 
 
         #loop over positions
         for i,pos in enumerate(self.posList.slicePositions):
-            if (i==(len(self.posList.slicePositions)-1)) and (self.cfg['Slack']['do_messaging']):
-                    self.slack_notify('last section imaging beginning')
             if pos.activated:
                 if not goahead:
                     break
                 if not self.imgSrc.get_hardware_autofocus_state():
-                    if self.cfg['Slack']['do_messaging']:
-                        self.slack_notify('HELP! lost autofocus between sections',notify=True)
+
+                    print 'HELP! lost autofocus between sections'
                     goahead=False
                     break
                 (goahead, skip) = self.progress.Update(i*numFrames,'section %d of %d'%(i,numSections-1))
@@ -1115,15 +1112,11 @@ class MosaicPanel(FigureCanvas):
                             print "breaking out!"
                             break
                         if not self.imgSrc.get_hardware_autofocus_state():
-                            if self.cfg['Slack']['do_messaging']:
-                                self.slack_notify('HELP! lost autofocus between frames',notify=True)
                             print "autofocus no longer enabled while moving between frames.. quiting"
                             goahead = False
                             break
                         if not self.messageQueue.empty():
                             token,message = self.messageQueue.get()
-                            if self.cfg['Slack']['do_messaging']:
-                                self.slack_notify('HELP! save process failed: %s'%message)
                             if (token == STOP_TOKEN):
                                 goahead = False
                                 break
@@ -1136,8 +1129,8 @@ class MosaicPanel(FigureCanvas):
                             pass
                         self.ResetPiezo()
                         if i==(len(self.posList.slicePositions)-1):
-                            if j == (len(pos.frameList.slicePositions) - 1) and (self.cfg['Slack']['do_messaging']):
-                                self.slack_notify('Done Imaging!')
+                            if j == (len(pos.frameList.slicePositions) - 1):
+                                print 'Done Imaging!'
                         (goahead, skip)=self.progress.Update((i*numFrames) + j+1,'section %d of %d, frame %d'%(i,numSections-1,j))
                         #======================================================
                         if self.interface.pause == True:
@@ -1150,12 +1143,6 @@ class MosaicPanel(FigureCanvas):
 
                 wx.Yield()
         if not goahead:
-            if self.cfg['Slack']['do_messaging']:
-                self.slack_notify('Imaging stopped prematurely')
-                self.slack_notify('on section %d'%i)
-                if pos.frameList is not None:
-                    self.slack_notify("frame %d"%(j))
-
             print "acquisition stopped prematurely"
             print "section %d"%(i)
             if pos.frameList is not None:
@@ -1223,15 +1210,7 @@ class MosaicPanel(FigureCanvas):
 
         dlg.Destroy()
 
-    def edit_Directory_settings(self,event="none"):
-        dlg = ChangeDirectorySettings(None,-1,title = u"Enter Sample Information",style = wx.OK,settings=self.directory_settings)
-        ret = dlg.ShowModal()
-        if ret == wx.ID_OK:
-            self.directory_settings = dlg.get_settings()
-            self.directory_settings.save_settings(self.cfg)
-        if ret == wx.ID_CANCEL:
-            self.edit_Directory_settings()
-        dlg.Destroy()
+
 
 
     def edit_Zstack_settings(self,event = "none"):
@@ -1708,208 +1687,208 @@ class MosaicPanel(FigureCanvas):
         else:
             self.do_shift(event)
 
-    def on_run_multi_acq(self,event="none"): #MultiRibbons
-        #pick position lists
-        outdirlist =[]
-        keys = sorted(self.outdirdict)
-        for key in keys:
-            outdirlist.append(self.outdirdict[key])
-        print 'outdirlist:', outdirlist
-        print 'keys', keys
-        poslistpath=[]
-        dlg = MultiRibbonSettings(None, -1,self.Ribbon_Num, keys, title = "Multiribbon Settings", settings = self.channel_settings,style=wx.OK)
-        ret=dlg.ShowModal()
-        if ret == wx.ID_OK:
-            poslistpath, ToImageList =dlg.GetSettings()
-        dlg.Destroy()
-        print "poslistpath:", poslistpath
-        print 'to Image list:', ToImageList
-
-        #load all ribbons as one posList for display
-        for rib in range(self.Ribbon_Num):
-            if ToImageList[rib]:
-                self.posList.add_from_file_JSON(poslistpath[rib])
-                self.posList.rotate_boxes_angle()
-                self.posList.set_frames_visible(True)
-                self.draw()
-            else:
-                pass
-        #print self.posList.mosaic_settings.mx, self.posList.mosaic_settings.my, self.posList.mosaic_settings.overlap
-
-        caption = "about to capture multiple ribbons"
-        dlg = wx.MessageDialog(self,message=caption, style = wx.OK|wx.CANCEL)
-        button_pressed = dlg.ShowModal()
-        if button_pressed == wx.ID_CANCEL:
-            return False
-
-        self.imgSrc.set_binning(1)
-        binning=self.imgSrc.get_binning()
-        numchan,chrom_correction = self.summarize_channel_settings()
-        self.slack_notify("about to image %d Ribbons"%len(self.Ribbon_Num))
-
-        if self.cfg['MosaicPlanner']['hardware_trigger']:
-            # iterates over channels/exposure times in appropriate order
-            channels = [ch for ch in self.channel_settings.channels if self.channel_settings.usechannels[ch]]
-            exp_times = [self.channel_settings.exposure_times[ch] for ch in self.channel_settings.channels if
-                         self.channel_settings.usechannels[ch]]
-            for k, ch in enumerate(self.channel_settings.channels):
-                print 'Channel:', ch
-                print 'Exposure:', self.channel_settings.exposure_times[ch]
-            for k in range(len(channels)):
-                print 'Exposure in order:', exp_times[k]
-                print 'Channel in order:', channels[k]
-            success = self.imgSrc.setup_hardware_triggering(channels, exp_times)
-        else:
-            success = False
-
-        #pick output directories
-
-        # for rib in range(self.Ribbon_Num):
-        #     newoutdir = self.get_output_dir()
-        #     if newoutdir is None:
-        #         return None
-        #     outdir.append(newoutdir)
-        # print "outdir:", outdir, type(outdir), len(outdir)
-        progress_ribbons = wx.ProgressDialog("A ribbon progress box", "Ribbons remaining", self.Ribbon_Num,
-        style=wx.PD_CAN_ABORT | wx.PD_ELAPSED_TIME | wx.PD_REMAINING_TIME)
-
-        for rib in range(self.Ribbon_Num): #loop through all ribbons
-            (keep_going, skip1) = progress_ribbons.Update(rib, 'ribbon %d of %d'%(rib,self.Ribbon_Num-1))
-            print 'keep going', keep_going
-            if not keep_going:
-                break
-            #clear position list
-            print 'Imaging:', ToImageList[rib]
-            if ToImageList[rib]:
-
-                self.posList.select_all()
-                self.draw()
-                self.posList.delete_selected()
-                self.draw()
-
-                #load poslist from JSON file
-                self.posList.add_from_file_JSON(poslistpath[rib])
-                self.posList.rotate_boxes_angle()
-                self.posList.set_frames_visible(True)
-                self.draw()
-
-                #from on_run_acq
-                self.slack_notify("Acquiring data from ribbon %s of %s with %s sections"%(rib,self.Ribbon_Num,len(self.posList.slicePositions)))
-                self.make_channel_directories(outdirlist[rib])
-
-                self.write_session_metadata(outdirlist[rib])
-
-                #self.move_safe_to_start() - do not use
-                #lower objective, move the stage to section 1 of the ribbon
-                self.imgSrc.move_safe_and_focus(self.posList.slicePositions[1].x,self.posList.slicePositions[1].y)
-
-                #call software autofocus
-                self.software_autofocus()
-
-                self.move_safe_to_start() #move to section 0
-
-                self.dataQueue = mp.Queue()
-
-                metadata_dictionary = {
-                'channelname'    : self.channel_settings.prot_names,
-                '(height,width)' : self.imgSrc.get_sensor_size(),
-                'ScaleFactorX'   : self.imgSrc.get_pixel_size(),
-                'ScaleFactorY'   : self.imgSrc.get_pixel_size(),
-                'exp_time'       : self.channel_settings.exposure_times,
-                }
-                ssh_opts = dict(self.cfg['SSH'])
-                ssh_opts['mount_point']=self.lookup_mountpoint(outdirlist[rib])
-                self.saveProcess =  mp.Process(target=file_save_process,args=(self.dataQueue, metadata_dictionary, ssh_opts))
-                self.saveProcess.start()
-
-                numFrames,numSections = self.setup_progress_bar()
-                print "numFrames:", numFrames, "numSections:", numSections
-
-                hold_focus = not (self.zstack_settings.zstack_flag or chrom_correction)
-
-
-
-                goahead = True
-                #loop over positions
-                for i,pos in enumerate(self.posList.slicePositions):
-                    if pos.activated:
-                        if not goahead:
-                            break
-                        if not self.imgSrc.get_hardware_autofocus_state():
-                            self.slack_notify('HELP! lost autofocus between frames',notify=True)
-                            print "autofocus not enabled when moving between sections.. "
-                            goahead=False
-                            break
-                        (goahead, skip) = self.progress.Update(i*numFrames,'section %d of %d'%(i,numSections-1))
-                        #turn on autofocus
-                        self.ResetPiezo()
-                        current_z = self.imgSrc.get_z()
-                        if pos.frameList is None:
-                            triggerflag = False
-                            autofocus_trigger = False
-                            self.multiDacq(success,outdirlist[rib],chrom_correction,autofocus_trigger,triggerflag,pos.x,pos.y,current_z,i,hold_focus=hold_focus)
-                        else:
-                            triggerflag = False
-                            initial_position = self.get_initial_position(pos)
-                            if initial_position is not None:
-                                print 'moving to initial position to focus'
-                                initx = initial_position[0]
-                                inity = initial_position[1]
-                                self.move_to_initial_and_focus(initx,inity)
-                            for j,fpos in enumerate(pos.frameList.slicePositions):
-                                if j == (len(pos.frameList.slicePositions) - 1):
-                                    triggerflag = True
-                                if not goahead:
-                                    print "breaking out!"
-                                    break
-                                if not self.imgSrc.get_hardware_autofocus_state():
-                                    self.slack_notify('HELP! lost autofocus between frames',notify=True)
-                                    print "autofocus no longer enabled while moving between frames.. quiting"
-                                    goahead = False
-                                    break
-                                if pos.frameList.slicePositions[j].activated:
-                                    autofocus_trigger = pos.frameList.slicePositions[j].autofocus_trigger
-                                    self.multiDacq(success,outdirlist[rib],chrom_correction,autofocus_trigger,triggerflag,fpos.x,fpos.y,current_z,i,j,hold_focus)
-                                else:
-                                    pass
-                                self.ResetPiezo()
-                                if i==(len(self.posList.slicePositions)-1):
-                                    if j == (len(pos.frameList.slicePositions) - 1):
-                                        self.slack_notify('Done Imaging!')
-                                (goahead, skip)=self.progress.Update((i*numFrames) + j,'ribbon %d of %d, section %d of %d, frame %d'%(rib,self.Ribbon_Num-1,i,numSections-1,j))
-                            #======================================================
-                            if self.interface.pause == True:
-                                while self.interface.pause == True:
-                                    self._check_sock(True)
-                                    (goahead, skip)=self.progress.Update((i*numFrames) + j+1,'REMOTELY PAUSED -- section %d of %d, frame %d'%(i,numSections-1,j))
-                                    #time.sleep(0.1)
-                                    wx.Yield()
-                            #======================================================
-                        wx.Yield()
-                        if not goahead:
-                            self.slack_notify('Imaging stopped prematurely')
-                            self.slack_notify('on section %d'%i)
-                            if pos.frameList is not None:
-                                self.slack_notify("frame %d"%(j))
-                            print "acquisition stopped prematurely"
-                            print "section %d"%(i)
-                            if pos.frameList is not None:
-                                print "frame %d"%(j)
-
-
-
-                self.dataQueue.put(STOP_TOKEN)
-                self.saveProcess.join()
-                print "save process ended, ribbon %d of 3"%(rib)
-                self.progress.Destroy()
-                self.move_safe_to_start()
-                if self.cfg['MosaicPlanner']['hardware_trigger']:
-                    self.imgSrc.stop_hardware_triggering()
-            else:
-                print 'Moving on'
-                pass
-        progress_ribbons.Destroy()
-        self.imgSrc.set_binning(2)
+    # def on_run_multi_acq(self,event="none"): #MultiRibbons
+    #     #pick position lists
+    #     outdirlist =[]
+    #     keys = sorted(self.outdirdict)
+    #     for key in keys:
+    #         outdirlist.append(self.outdirdict[key])
+    #     print 'outdirlist:', outdirlist
+    #     print 'keys', keys
+    #     poslistpath=[]
+    #     dlg = MultiRibbonSettings(None, -1,self.Ribbon_Num, keys, title = "Multiribbon Settings", settings = self.channel_settings,style=wx.OK)
+    #     ret=dlg.ShowModal()
+    #     if ret == wx.ID_OK:
+    #         poslistpath, ToImageList =dlg.GetSettings()
+    #     dlg.Destroy()
+    #     print "poslistpath:", poslistpath
+    #     print 'to Image list:', ToImageList
+    #
+    #     #load all ribbons as one posList for display
+    #     for rib in range(self.Ribbon_Num):
+    #         if ToImageList[rib]:
+    #             self.posList.add_from_file_JSON(poslistpath[rib])
+    #             self.posList.rotate_boxes_angle()
+    #             self.posList.set_frames_visible(True)
+    #             self.draw()
+    #         else:
+    #             pass
+    #     #print self.posList.mosaic_settings.mx, self.posList.mosaic_settings.my, self.posList.mosaic_settings.overlap
+    #
+    #     caption = "about to capture multiple ribbons"
+    #     dlg = wx.MessageDialog(self,message=caption, style = wx.OK|wx.CANCEL)
+    #     button_pressed = dlg.ShowModal()
+    #     if button_pressed == wx.ID_CANCEL:
+    #         return False
+    #
+    #     self.imgSrc.set_binning(1)
+    #     binning=self.imgSrc.get_binning()
+    #     numchan,chrom_correction = self.summarize_channel_settings()
+    #     self.slack_notify("about to image %d Ribbons"%len(self.Ribbon_Num))
+    #
+    #     if self.cfg['MosaicPlanner']['hardware_trigger']:
+    #         # iterates over channels/exposure times in appropriate order
+    #         channels = [ch for ch in self.channel_settings.channels if self.channel_settings.usechannels[ch]]
+    #         exp_times = [self.channel_settings.exposure_times[ch] for ch in self.channel_settings.channels if
+    #                      self.channel_settings.usechannels[ch]]
+    #         for k, ch in enumerate(self.channel_settings.channels):
+    #             print 'Channel:', ch
+    #             print 'Exposure:', self.channel_settings.exposure_times[ch]
+    #         for k in range(len(channels)):
+    #             print 'Exposure in order:', exp_times[k]
+    #             print 'Channel in order:', channels[k]
+    #         success = self.imgSrc.setup_hardware_triggering(channels, exp_times)
+    #     else:
+    #         success = False
+    #
+    #     #pick output directories
+    #
+    #     # for rib in range(self.Ribbon_Num):
+    #     #     newoutdir = self.get_output_dir()
+    #     #     if newoutdir is None:
+    #     #         return None
+    #     #     outdir.append(newoutdir)
+    #     # print "outdir:", outdir, type(outdir), len(outdir)
+    #     progress_ribbons = wx.ProgressDialog("A ribbon progress box", "Ribbons remaining", self.Ribbon_Num,
+    #     style=wx.PD_CAN_ABORT | wx.PD_ELAPSED_TIME | wx.PD_REMAINING_TIME)
+    #
+    #     for rib in range(self.Ribbon_Num): #loop through all ribbons
+    #         (keep_going, skip1) = progress_ribbons.Update(rib, 'ribbon %d of %d'%(rib,self.Ribbon_Num-1))
+    #         print 'keep going', keep_going
+    #         if not keep_going:
+    #             break
+    #         #clear position list
+    #         print 'Imaging:', ToImageList[rib]
+    #         if ToImageList[rib]:
+    #
+    #             self.posList.select_all()
+    #             self.draw()
+    #             self.posList.delete_selected()
+    #             self.draw()
+    #
+    #             #load poslist from JSON file
+    #             self.posList.add_from_file_JSON(poslistpath[rib])
+    #             self.posList.rotate_boxes_angle()
+    #             self.posList.set_frames_visible(True)
+    #             self.draw()
+    #
+    #             #from on_run_acq
+    #             self.slack_notify("Acquiring data from ribbon %s of %s with %s sections"%(rib,self.Ribbon_Num,len(self.posList.slicePositions)))
+    #             self.make_channel_directories(outdirlist[rib])
+    #
+    #             self.write_session_metadata(outdirlist[rib])
+    #
+    #             #self.move_safe_to_start() - do not use
+    #             #lower objective, move the stage to section 1 of the ribbon
+    #             self.imgSrc.move_safe_and_focus(self.posList.slicePositions[1].x,self.posList.slicePositions[1].y)
+    #
+    #             #call software autofocus
+    #             self.software_autofocus()
+    #
+    #             self.move_safe_to_start() #move to section 0
+    #
+    #             self.dataQueue = mp.Queue()
+    #
+    #             metadata_dictionary = {
+    #             'channelname'    : self.channel_settings.prot_names,
+    #             '(height,width)' : self.imgSrc.get_sensor_size(),
+    #             'ScaleFactorX'   : self.imgSrc.get_pixel_size(),
+    #             'ScaleFactorY'   : self.imgSrc.get_pixel_size(),
+    #             'exp_time'       : self.channel_settings.exposure_times,
+    #             }
+    #             ssh_opts = dict(self.cfg['SSH'])
+    #             ssh_opts['mount_point']=self.lookup_mountpoint(outdirlist[rib])
+    #             self.saveProcess =  mp.Process(target=file_save_process,args=(self.dataQueue, metadata_dictionary, ssh_opts))
+    #             self.saveProcess.start()
+    #
+    #             numFrames,numSections = self.setup_progress_bar()
+    #             print "numFrames:", numFrames, "numSections:", numSections
+    #
+    #             hold_focus = not (self.zstack_settings.zstack_flag or chrom_correction)
+    #
+    #
+    #
+    #             goahead = True
+    #             #loop over positions
+    #             for i,pos in enumerate(self.posList.slicePositions):
+    #                 if pos.activated:
+    #                     if not goahead:
+    #                         break
+    #                     if not self.imgSrc.get_hardware_autofocus_state():
+    #                         self.slack_notify('HELP! lost autofocus between frames',notify=True)
+    #                         print "autofocus not enabled when moving between sections.. "
+    #                         goahead=False
+    #                         break
+    #                     (goahead, skip) = self.progress.Update(i*numFrames,'section %d of %d'%(i,numSections-1))
+    #                     #turn on autofocus
+    #                     self.ResetPiezo()
+    #                     current_z = self.imgSrc.get_z()
+    #                     if pos.frameList is None:
+    #                         triggerflag = False
+    #                         autofocus_trigger = False
+    #                         self.multiDacq(success,outdirlist[rib],chrom_correction,autofocus_trigger,triggerflag,pos.x,pos.y,current_z,i,hold_focus=hold_focus)
+    #                     else:
+    #                         triggerflag = False
+    #                         initial_position = self.get_initial_position(pos)
+    #                         if initial_position is not None:
+    #                             print 'moving to initial position to focus'
+    #                             initx = initial_position[0]
+    #                             inity = initial_position[1]
+    #                             self.move_to_initial_and_focus(initx,inity)
+    #                         for j,fpos in enumerate(pos.frameList.slicePositions):
+    #                             if j == (len(pos.frameList.slicePositions) - 1):
+    #                                 triggerflag = True
+    #                             if not goahead:
+    #                                 print "breaking out!"
+    #                                 break
+    #                             if not self.imgSrc.get_hardware_autofocus_state():
+    #                                 self.slack_notify('HELP! lost autofocus between frames',notify=True)
+    #                                 print "autofocus no longer enabled while moving between frames.. quiting"
+    #                                 goahead = False
+    #                                 break
+    #                             if pos.frameList.slicePositions[j].activated:
+    #                                 autofocus_trigger = pos.frameList.slicePositions[j].autofocus_trigger
+    #                                 self.multiDacq(success,outdirlist[rib],chrom_correction,autofocus_trigger,triggerflag,fpos.x,fpos.y,current_z,i,j,hold_focus)
+    #                             else:
+    #                                 pass
+    #                             self.ResetPiezo()
+    #                             if i==(len(self.posList.slicePositions)-1):
+    #                                 if j == (len(pos.frameList.slicePositions) - 1):
+    #                                     self.slack_notify('Done Imaging!')
+    #                             (goahead, skip)=self.progress.Update((i*numFrames) + j,'ribbon %d of %d, section %d of %d, frame %d'%(rib,self.Ribbon_Num-1,i,numSections-1,j))
+    #                         #======================================================
+    #                         if self.interface.pause == True:
+    #                             while self.interface.pause == True:
+    #                                 self._check_sock(True)
+    #                                 (goahead, skip)=self.progress.Update((i*numFrames) + j+1,'REMOTELY PAUSED -- section %d of %d, frame %d'%(i,numSections-1,j))
+    #                                 #time.sleep(0.1)
+    #                                 wx.Yield()
+    #                         #======================================================
+    #                     wx.Yield()
+    #                     if not goahead:
+    #                         self.slack_notify('Imaging stopped prematurely')
+    #                         self.slack_notify('on section %d'%i)
+    #                         if pos.frameList is not None:
+    #                             self.slack_notify("frame %d"%(j))
+    #                         print "acquisition stopped prematurely"
+    #                         print "section %d"%(i)
+    #                         if pos.frameList is not None:
+    #                             print "frame %d"%(j)
+    #
+    #
+    #
+    #             self.dataQueue.put(STOP_TOKEN)
+    #             self.saveProcess.join()
+    #             print "save process ended, ribbon %d of 3"%(rib)
+    #             self.progress.Destroy()
+    #             self.move_safe_to_start()
+    #             if self.cfg['MosaicPlanner']['hardware_trigger']:
+    #                 self.imgSrc.stop_hardware_triggering()
+    #         else:
+    #             print 'Moving on'
+    #             pass
+    #     progress_ribbons.Destroy()
+    #     self.imgSrc.set_binning(2)
 
 
     def software_autofocus(self,acquisition_boolean = False, buttonpress = False): #MultiRibbons
@@ -2016,8 +1995,8 @@ class ZVISelectFrame(wx.Frame):
     ID_SNAPCONTROL = wx.NewId()
     ID_RETAKECONTROL = wx.NewId()
     ID_LEICAAFC = wx.NewId()
+    ID_NEWPROJECT = wx.NewId()
 
-    # ID_Alfred = wx.NewId()
 
     def __init__(self, parent, title):
         """default init function for a wx.Frame
@@ -2049,6 +2028,11 @@ class ZVISelectFrame(wx.Frame):
         transformMenu = wx.Menu()
         Platform_Menu = wx.Menu()
         Imaging_Menu = wx.Menu()
+        File_Menu = wx.Menu()
+
+
+        #File Menu
+
 
         #OPTIONS MENU
         self.relative_motion = options.Append(self.ID_RELATIVEMOTION, 'Relative motion?', 'Move points in the ribbon relative to the apparent curvature, else in absolution coordinates',kind=wx.ITEM_CHECK)
@@ -2106,7 +2090,6 @@ class ZVISelectFrame(wx.Frame):
         self.launch_MM_PropBrowser = Imaging_Menu.Append(self.ID_MM_PROP_BROWSER,'Open MicroManager Property Browser',kind = wx.ITEM_NORMAL)
         self.focus_correction_plane = Imaging_Menu.Append(self.ID_EDIT_FOCUS_CORRECTION,'Edit Focus Correction Plane',kind = wx.ITEM_NORMAL)
         self.use_focus_correction = Imaging_Menu.Append(self.ID_USE_FOCUS_CORRECTION,'Use Focus Correction?','Use Focus Correction For Mapping',kind=wx.ITEM_CHECK)
-        self.launch_ASIControl = Imaging_Menu.Append(self.ID_ASIAUTOFOCUS, 'Allen ASI AutoFocus Control', kind= wx.ITEM_NORMAL)
         self.launch_Snap = Imaging_Menu.Append(self.ID_SNAPCONTROL,'Snap single channel images',kind = wx.ITEM_NORMAL)
         self.launch_Retake = Imaging_Menu.Append(self.ID_RETAKECONTROL,'Retake dialog',kind = wx.ITEM_NORMAL)
         if len(self.cfg['LeicaDMI']['port'])>0:
@@ -2125,26 +2108,19 @@ class ZVISelectFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.mosaicCanvas.launch_retake,id = self.ID_RETAKECONTROL)
         self.Bind(wx.EVT_MENU, self.mosaicCanvas.launch_LeicaAFC, id= self.ID_LEICAAFC)
 
+        #File Menu
+        self.NewProject = File_Menu.Append(self.ID_NEWPROJECT, 'New Project','Start new mosaic plan on new sample', kind= wx.ITEM_NORMAL)
+        self.Bind(wx.EVT_MENU,self.createnewproject,id=self.ID_NEWPROJECT)
+
 
         Imaging_Menu.Check(self.ID_USE_FOCUS_CORRECTION,self.cfg['MosaicPlanner']['use_focus_correction'])
-
+        menubar.Append(File_Menu,'File')
         menubar.Append(options, '&Options')
         menubar.Append(transformMenu,'&Transform')
         menubar.Append(Platform_Menu,'&Platform Options')
         menubar.Append(Imaging_Menu,'&Imaging Settings')
         self.SetMenuBar(menubar)
 
-        #setup a file picker for the metadata selector
-        #self.meta_label=wx.StaticText(self,id=wx.ID_ANY,label="metadata file")
-        #self.meta_filepicker=wx.FilePickerCtrl(self,message='Select a metadata file',\
-        #path="",name='metadataFilePickerCtrl1',\
-        #style=wx.FLP_USE_TEXTCTRL, size=wx.Size(300,20),wildcard='*.*')
-        #self.meta_filepicker.SetPath(self.cfg.Read('default_metadatapath',""))
-        #self.meta_formatBox=wx.ComboBox(self,id=wx.ID_ANY,value='ZeissXML',\
-        #size=wx.DefaultSize,choices=['ZVI','ZeissXML','SimpleCSV','ZeissCZI'], name='File Format For Meta Data')
-        #self.meta_formatBox.SetEditable(False)
-        #self.meta_load_button=wx.Button(self,id=wx.ID_ANY,label="Load",name="metadata load")
-        #self.meta_enter_button=wx.Button(self,id=wx.ID_ANY,label="Edit",name="manual meta")
 
         #define the image file picker components
         self.imgCollectLabel=wx.StaticText(self,id=wx.ID_ANY,label="image collection directory")
@@ -2152,7 +2128,7 @@ class ZVISelectFrame(wx.Frame):
         path="",name='imgCollectPickerCtrl1',\
         style=wx.FLP_USE_TEXTCTRL, size=wx.Size(300,20))
         self.imgCollectDirPicker.SetPath(self.cfg['MosaicPlanner']['default_imagepath'])
-        self.imgCollect_load_button=wx.Button(self,id=wx.ID_ANY,label="Load",name="imgCollect load")
+        self.imgCollect_load_button=wx.Button(self,id=wx.ID_ANY,label="Load Map Images",name="imgCollect load")
 
         #wire up the button to the "on_load" button
         self.Bind(wx.EVT_BUTTON, self.on_image_collect_load,self.imgCollect_load_button)
@@ -2166,26 +2142,18 @@ class ZVISelectFrame(wx.Frame):
         style=wx.FLP_USE_TEXTCTRL, size=wx.Size(300,20),wildcard='*.*')
         self.array_filepicker.SetPath(self.cfg['MosaicPlanner']['default_arraypath'])
 
-        self.array_load_button=wx.Button(self,id=wx.ID_ANY,label="Load",name="load button")
+        self.array_load_button=wx.Button(self,id=wx.ID_ANY,label="Load Position List",name="load button")
         self.array_formatBox=wx.ComboBox(self,id=wx.ID_ANY,value='JSON',\
         size=wx.DefaultSize,choices=['uManager','AxioVision','SmartSEM','OMX','ZEN','JSON'], name='File Format For Position List')
         self.array_formatBox.SetEditable(False)
-        self.array_save_button=wx.Button(self,id=wx.ID_ANY,label="Save",name="save button")
-        self.array_saveframes_button=wx.Button(self,id=wx.ID_ANY,label="Save Frames",name="save-frames button")
+        self.array_save_button=wx.Button(self,id=wx.ID_ANY,label="Save Position List",name="save button")
+        # self.array_saveframes_button=wx.Button(self,id=wx.ID_ANY,label="Save Frames",name="save-frames button")
 
         #wire up the button to the "on_load" button
         self.Bind(wx.EVT_BUTTON, self.on_array_load,self.array_load_button)
         self.Bind(wx.EVT_BUTTON, self.on_array_save,self.array_save_button)
-        self.Bind(wx.EVT_BUTTON, self.on_array_save_frames,self.array_saveframes_button)
+        # self.Bind(wx.EVT_BUTTON, self.on_array_save_frames,self.array_saveframes_button)
 
-        #define a horizontal sizer for them and place the file picker components in there
-        #self.meta_filepickersizer=wx.BoxSizer(wx.HORIZONTAL)
-        #self.meta_filepickersizer.Add(self.meta_label,0,wx.EXPAND)
-        #self.meta_filepickersizer.Add(self.meta_filepicker,1,wx.EXPAND)
-        #self.meta_filepickersizer.Add(wx.StaticText(self,id=wx.ID_ANY,label="Metadata Format:"))
-        #self.meta_filepickersizer.Add(self.meta_formatBox,0,wx.EXPAND)
-        #self.meta_filepickersizer.Add(self.meta_load_button,0,wx.EXPAND)
-        #self.meta_filepickersizer.Add(self.meta_enter_button,0,wx.EXPAND)
 
         #define a horizontal sizer for them and place the file picker components in there
         self.imgCollect_filepickersizer=wx.BoxSizer(wx.HORIZONTAL)
@@ -2201,7 +2169,7 @@ class ZVISelectFrame(wx.Frame):
         self.array_filepickersizer.Add(self.array_formatBox,0,wx.EXPAND)
         self.array_filepickersizer.Add(self.array_load_button,0,wx.EXPAND)
         self.array_filepickersizer.Add(self.array_save_button,0,wx.EXPAND)
-        self.array_filepickersizer.Add(self.array_saveframes_button,0,wx.EXPAND)
+        # self.array_filepickersizer.Add(self.array_saveframes_button,0,wx.EXPAND)
 
         #define the overall vertical sizer for the frame
         self.sizer = wx.BoxSizer(wx.VERTICAL)
@@ -2219,9 +2187,11 @@ class ZVISelectFrame(wx.Frame):
         self.Bind(wx.EVT_CHAR_HOOK, self.on_key_press)
 
         #self.sizer.Fit(self)
+        self.array_filepicker.SetPath(self.cfg['MosaicPlanner']['default_arraypath'])
         self.Show(True)
 
         self.SmartSEMSettings=SmartSEMSettings()
+
         self.app = QtGui.QApplication([])
 
 
@@ -2230,6 +2200,16 @@ class ZVISelectFrame(wx.Frame):
         #self.OnImageLoad()
         #self.on_array_load()
         #self.mosaicCanvas.draw()
+
+
+
+    def createnewproject(self, event = 'none'):
+        self.mosaicCanvas.createnewproject()
+        self.array_filepicker.SetPath(self.cfg['MosaicPlanner']['default_arraypath'])
+        self.imgCollectDirPicker.SetPath(self.cfg['MosaicPlanner']['default_imagepath'])
+
+
+
     def toggle_transpose_xy(self,evt=None):
         print "toggle called",self.transpose_xy.IsChecked()
 
@@ -2336,6 +2316,7 @@ class ZVISelectFrame(wx.Frame):
 
     def on_image_collect_load(self,event):
         path=self.imgCollectDirPicker.GetPath()
+        print path
         self.mosaicCanvas.on_load(path)
 
     def on_array_save_frames(self,event):

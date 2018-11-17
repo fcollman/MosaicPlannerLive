@@ -8,6 +8,7 @@ import numpy as np
 import sys
 import traceback
 from Tokens import STOP_TOKEN,BUBBLE_TOKEN
+import time
 import json
 def file_save_process(queue,message_queue, metadata_dictionary,ssh_opts):
 
@@ -79,7 +80,8 @@ def write_slice_metadata_json(filename,ch,xpos,ypos,zpos,slice_index,triggerflag
                         'scope_zpos' : zpos,
                         'slice_index' : slice_index,
                         'height' : height,
-                        'width' : width
+                        'width' : width,
+                        'Time' : time.time()
     }
 
     thestring = json.JSONEncoder().encode(slice_meta_dict)
