@@ -17,7 +17,7 @@
 # 
 #===============================================================================
  
-from Settings import MosaicSettings, CameraSettings, SmartSEMSettings
+from Settings import MosaicSettings, CameraSettings, SmartSEMSettings,MosaicSettingsSchema, CameraSettingsSchema
 import numpy as np
 from numpy import sin, pi, cos, arctan, sin, tan, sqrt
 import csv
@@ -29,16 +29,48 @@ from matplotlib.lines import Line2D
 from matplotlib.quiver import Quiver
 #from matplotlib.nxutils import points_inside_poly
 from CenterRectangle import CenterRectangle
-from Transform import Transform
+import os
 from scipy.interpolate import griddata
 import lxml.etree as ET
 import json
-  
-  
+import marshmallow as mm
+
+class NumberDisplaySettingsSchema(mm.Schema):
+    shownumbers = mm.fields.Bool(required=True)
+    color = mm.fields.Str(required=True)
+    horizontalAlignment = mm.fields.Str(required=True)
+    verticalAlignment = mm.fields.Str(required=True)
+    
+class NumberDisplaySettings(object):
+    def __init__(self,shownumbers=False,color='darkorange',horizontalAlignment='right',verticalAlignment='top'):
+        self.shownumbers = shownumbers
+        self.color=color
+        self.horizontalAlignment = horizontalAlignment
+        self.verticalAlignment = verticalAlignment
+
+class slicePositionSchema(mm.Schema):
+    x = mm.fields.Float(required=True)
+    y = mm.fields.Float(required=True)
+    angle = mm.fields.Float(required=True)
+    showAngle = mm.fields.Bool(required=False,default=True)
+    selected = mm.fields.Bool(required=False,default=False)
+    activated = mm.fields.Bool(required=False,default=True)
+    withpoint = mm.fields.Bool(required=False,default=True)
+    number = mm.fields.Int(required=True)
+    numberDisplaySettings = mm.fields.Nested(NumberDisplaySettingsSchema)
+    frameList = mm.fields.Nested('posListSchema')
+
+class posListSchema(mm.Schema):
+    mosaic_settings = mm.fields.Nested(MosaicSettingsSchema,required=True)
+    camera_settings = mm.fields.Nested(CameraSettingsSchema,required=True)
+    slicePositions = mm.fields.Nested(slicePositionSchema,many=True)
+    dosort = mm.fields.Bool(required=False,default=True)
+    numberDisplaySettings = mm.fields.Nested(NumberDisplaySettingsSchema)
+
 class posList():
     """class for holding, altering, and plotting the position list"""
     def __init__(self,axis,mosaic_settings=MosaicSettings(),camera_settings=CameraSettings(),
-                 shownumbers=False,dosort=True):
+                 numberDisplaySettings=NumberDisplaySettings(),dosort=True):
         """initialization function
         
         keywords)
@@ -55,8 +87,8 @@ class posList():
         self.pos1=None
         self.pos2=None
         self.dosort=dosort
-        self.shownumbers=shownumbers
-
+        self.numberDisplaySettings=numberDisplaySettings
+   
 
     def get_next_pos(self,pos):
         self.__sort_points()
@@ -188,7 +220,8 @@ class posList():
             #if the frames already exist, use the set_mosaic_visible function to make them visible/invisible
             #as frameList is a posList class.. low and behold fancy recursive META logic
             if not pos.frameList==None:
-                pos.frameList.set_mosaic_visible(visible)       
+                pos.frameList.set_mosaic_visible(visible)
+
     
     def select_points_inside(self,verts): 
         """select all the points inside the vertices created by the Lasso widget callback function
@@ -290,6 +323,28 @@ class posList():
         dist=np.sqrt(dx*dx+dy*dy)
         min_index=dist.argmin()
         return self.slicePositions[min_index]
+
+
+
+    def get_nearest_position_index(self,x,y):
+        """return the slicePosition index nearest an x,y point
+
+        keywords:
+        x)the x coordinate in microns to get the nearest point
+        y)the y coordinate in microns to get the nearest point
+
+        returns index
+        the slicePosition index from the list which is closest to the input point
+
+        """
+        (xpos,ypos,select)=self.__getXYS()
+        dx=(xpos-x)
+        dy=(ypos-y)
+        dist=np.sqrt(dx*dx+dy*dy)
+        min_index=dist.argmin()
+        return min_index
+
+
         
     def calcAngles(self):
         """calculate the angle tangent to each point on the position list
@@ -389,7 +444,7 @@ class posList():
         
         """
         newPosition=slicePosition(axis=self.axis,pos_list=self,x=x,y=y,z=z,edgecolor=edgecolor,withpoint=withpoint,
-                                  showNumber=self.shownumbers,selected=selected)
+                                  numberDisplaySettings = self.numberDisplaySettings,selected=selected)
         self.slicePositions.append(newPosition)  
         if self.dosort:
             self.__sort_points()
@@ -438,7 +493,7 @@ class posList():
     def add_from_posList(self,posList):
         for pos in posList.slicePositions:
             newPosition=slicePosition(axis=self.axis,pos_list=self,x=pos.x,y=pos.y,z=pos.z,
-                showNumber=pos.shownumbers,edgecolor=pos.edgecolor,withpoint=pos.withpoint,
+                numberDisplaySettings=self.numberDisplaySettings,edgecolor=pos.edgecolor,withpoint=pos.withpoint,
                 selected=pos.selected,number=pos.number)
             self.slicePositions.append(newPosition)  
 
@@ -468,7 +523,8 @@ class posList():
                         z=None
                     else:
                         z=float(z)
-                    newPosition=slicePosition(axis=self.axis,pos_list=self,x=float(row[1]),y=float(row[2]),z=z,showNumber=self.shownumbers)
+                    newPosition=slicePosition(axis=self.axis,pos_list=self,x=float(row[1]),y=float(row[2]),
+                                              z=z,numberDisplaySettings=self.numberDisplaySettings)
                     self.slicePositions.append(newPosition)          
             rownum += 1          
         ifile.close() 
@@ -496,7 +552,8 @@ class posList():
                 if len(row)>0:
                     (label_and_x,Y,Z)=row
                     (label,X)=label_and_x.split(': ')
-                    newPosition=slicePosition(axis=self.axis,pos_list=self,x=float(X),y=float(Y),showNumber=self.shownumbers)
+                    newPosition=slicePosition(axis=self.axis,pos_list=self,x=float(X),y=float(Y),
+                                              numberDisplaySettings=self.numberDisplaySettings)
                     self.slicePositions.append(newPosition)          
             rownum += 1          
         ifile.close() 
@@ -523,7 +580,8 @@ class posList():
         for row in reader:         
             if rownum >headerrows-1:
                 if len(row)>0:
-                    newPosition=slicePosition(axis=self.axis,pos_list=self,x=float(row[1]),y=float(row[2]),showNumber=self.shownumbers,z=float(row[3]))
+                    newPosition=slicePosition(axis=self.axis,pos_list=self,x=float(row[1]),y=float(row[2]),
+                                              numberDisplaySettings= self.numberDisplaySettings,z=float(row[3]))
                     self.slicePositions.append(newPosition)           
             rownum += 1          
         ifile.close() 
@@ -549,7 +607,8 @@ class posList():
         for row in reader:         
             if rownum >headerrows-1:
                 (Label,X,Y,Z,T,R,M,Mag,WD)=row
-                newPosition=slicePosition(axis=self.axis,pos_list=self,x=float(X),y=float(Y),showNumber=self.shownumbers)
+                newPosition=slicePosition(axis=self.axis,pos_list=self,x=float(X),y=float(Y),
+                                          numberDisplaySettings=self.numberDisplaySettings)
                 self.slicePositions.append(newPosition)          
             rownum += 1          
         ifile.close() 
@@ -576,13 +635,29 @@ class posList():
         self.p2=-1
         for i in range(len(thedict["POSITIONS"])):
             newPosition=slicePosition(axis=self.axis,pos_list=self,x=thedict["POSITIONS"][i]["X"],\
-            y=thedict["POSITIONS"][i]["Y"],z=None,angle=thedict["POSITIONS"][i]["ANGLE"],showNumber=self.shownumbers)
+            y=thedict["POSITIONS"][i]["Y"],z=None,angle=thedict["POSITIONS"][i]["ANGLE"],numberDisplaySettings=self.numberDisplaySettings)
             self.slicePositions.append(newPosition)
         self.mosaic_settings.mx = thedict["MOSAIC"]["MOSAICX"]
         self.mosaic_settings.my = thedict["MOSAIC"]["MOSAICY"]
         self.mosaic_settings.overlap = thedict["MOSAIC"]["OVERLAP"]
+        self.set_mosaic_settings(self.mosaic_settings)
         ifile.close()
         self.updateNumbers()
+
+    def load_frame_state_table(self,filename):
+        filename, formattype = filename.split('.')
+        filename = filename + 'frame_state_table.json'
+
+
+        if os.path.exists(filename):
+            ifile = open(filename,'rb')
+            thedict = json.load(ifile)
+            for i,item in enumerate(sorted(thedict)):
+                self.slicePositions[i].update_framestates(thedict[item])
+        else:
+            pass
+
+
 
     def save_position_list(self,filename,trans=None):
         """save the positionlist to a axiovision position list format, csv format
@@ -785,6 +860,24 @@ class posList():
         file.write(thestring)
         file.close()
 
+
+    def on_save_frame_state_table(self,filepath):
+
+        filename, formattype = filepath.split('.')
+        filename = filename + 'frame_state_table.json'
+        statetable_dict = {}
+
+        for i in range(len(self.slicePositions)):
+            section_num, frame_statelist = self.slicePositions[i].create_frame_state_list()
+            statetable_dict[section_num] = frame_statelist
+        thestring = json.JSONEncoder().encode(statetable_dict)
+        with open(filename,'w') as file:
+            file.write(thestring)
+        file.close()
+
+
+
+
     def save_frame_list_OMX(self,filename,trans=None,Z=13235.0):
         """save the positionlist to a SmartSEM position list csv format, where each frame of the mosaic is its own position
         keywords:
@@ -866,9 +959,9 @@ class posList():
     def __sort_points(self,vertsort=False):
         """sort the slicePositions in the list according to their x value"""
         if self.dosort:
-			if vertsort:
-				self.slicePositions.sort(key=lambda pos: pos.y, reverse=False)  
-			else:
+            if vertsort:
+                self.slicePositions.sort(key=lambda pos: pos.y, reverse=False)
+            else:
 				self.slicePositions.sort(key=lambda pos: pos.x, reverse=False)  
             
     def updateNumbers(self):
@@ -911,12 +1004,14 @@ class posList():
         for pos in self.slicePositions:
             pos.destroy()
             del pos
-               
+
+
+
 class slicePosition():
     """class which contains information about a single position in the position list, and is responsible for keeping 
     its matplotlib representation up to date via function calls which are mostly managed by its posList"""
-    def __init__(self,axis,pos_list,x,y,withpoint=True,selected=False, activated = True,
-                 edgecolor='g',number=-1,showNumber=False,z=None,angle = 0,showAngle=True):
+    def __init__(self,axis,pos_list,x,y,withpoint=True,selected=False, activated = True, autofocus_trigger = False, initial_trigger = False,
+                 edgecolor='g',number=-1,numberDisplaySettings=NumberDisplaySettings(),z=None,angle = 0,showAngle=True, framestatetable = None):
         """constructor function
         
         keywords:
@@ -937,9 +1032,12 @@ class slicePosition():
         self.angle = angle
         self.selected=selected
         self.activated=activated
+        self.autofocus_trigger = autofocus_trigger
+        self.initial_trigger = initial_trigger
+        self.framestatetable = framestatetable
         self.withpoint=withpoint
         self.number = number
-        self.showNumber = showNumber
+        self.numberDisplaySettings = numberDisplaySettings
         self.showAngle = showAngle
         self.quiverLength = .15
         self.quiverLine = None
@@ -952,13 +1050,14 @@ class slicePosition():
 
 
         if self.axis:
-            self.numTxt = self.axis.text(self.x,self.y,str(self.number)+"  ",color='w',weight='bold') 
-            self.numTxt.set_visible(self.showNumber)
-            self.numTxt.set_horizontalalignment('right')
+            self.numTxt = self.axis.text(self.x,self.y,str(self.number),color=self.numberDisplaySettings.color,weight='bold') 
+            self.numTxt.set_visible(self.numberDisplaySettings.shownumbers)
+            self.numTxt.set_horizontalalignment(self.numberDisplaySettings.horizontalAlignment)
+            self.numTxt.set_verticalalignment(self.numberDisplaySettings.verticalAlignment)
         else:
             self.numTxt = None
  
-
+        self.setAngle(angle)
     
         
     def __paintPoint(self):
@@ -981,7 +1080,7 @@ class slicePosition():
             u = self.quiverLength*np.sin(self.angle)
             v = self.quiverLength*np.cos(self.angle)
             self.quiverLine = Quiver(self.axis,self.x,self.y,u,v,units='inches',scale=.5,headlength=3,headwidth=3,
-                                     width=.02,scale_units='inches',color='w')
+                                     width=.02,scale_units='inches',color='y')
             self.axis.add_artist(self.quiverLine)
 
     def __paintMosaicBox(self,edgecolor='g'):
@@ -1006,15 +1105,21 @@ class slicePosition():
             self.__paintFramesTilted()
         else:
             self.__paintFramesGrid()
+        if self.framestatetable != None:
+            self.update_framestates(self.framestatetable)
             
     def __paintFramesGrid(self):
         if not self.axis: return None
         """paint the individual frames for this position using a standard grid algorithm according to the current mosaic_settings for the associated position list"""
         #only do this if the current list is empty
         if self.frameList==None:
+            frameNumberSettings = NumberDisplaySettings(shownumbers=self.numberDisplaySettings.shownumbers,
+                                            color='m',
+                                            horizontalAlignment='center',
+                                            verticalAlignment='center')
             #the frame list will be another posList with the same camera_settings, but the default MosaicSettings (i.e. a 1x1)
             self.frameList=posList(self.axis,mosaic_settings=MosaicSettings(mag=self.pos_list.mosaic_settings.mag),
-                                   camera_settings=self.pos_list.camera_settings,shownumbers=False,dosort=False)
+                                   camera_settings=self.pos_list.camera_settings,dosort=False,numberDisplaySettings=frameNumberSettings)
             (fh,fw)=self.pos_list.calcFrameSize()
             (h,w)=self.pos_list.calcMosaicSize()
             mx = self.pos_list.mosaic_settings.mx
@@ -1055,8 +1160,13 @@ class slicePosition():
         if not self.axis: return None
         """paint the individual frames for this position using an algorithm which should take into account the angle of the slice's tilt"""
         if self.frameList==None:
-            self.frameList=posList(self.axis,mosaic_settings=MosaicSettings(mag=self.pos_list.mosaic_settings.mag),camera_settings=self.pos_list.camera_settings,
-                                   dosort=False)
+            frameNumberSettings = NumberDisplaySettings(shownumbers=self.numberDisplaySettings.shownumbers,
+                                                        color='m',
+                                                        horizontalAlignment='center',
+                                                        verticalAlignment='center')
+            self.frameList=posList(self.axis,mosaic_settings=MosaicSettings(mag=self.pos_list.mosaic_settings.mag),
+                                   camera_settings=self.pos_list.camera_settings,
+                                   dosort=False,numberDisplaySettings=frameNumberSettings)
             (fh,fw)=self.pos_list.calcFrameSize()
             (h,w)=self.pos_list.calcMosaicSize() 
             alpha=(self.pos_list.mosaic_settings.overlap*1.0)/100
@@ -1104,7 +1214,10 @@ class slicePosition():
                     xrange = range(mx-1,-1,-1)
                 for x in xrange:
                     self.frameList.add_position(xx[y,x],yy[y,x],withpoint=False,edgecolor='c')
+
+
             self.frameList.set_mosaic_visible(True)
+
 
             #shiftx_rot=.5*(self.pos_list.mosaic_settings.mx-1)*fw*(1-alpha);
             #self.frameList.shift_all(-shiftx_rot*cos(self.angle),-shiftx_rot*sin(self.angle))
@@ -1280,6 +1393,8 @@ class slicePosition():
     def set_number_visible(self,isvisible):
         if not self.axis: return None
         self.numTxt.set_visible(isvisible)
+        if self.frameList is not None:
+            self.frameList.setNumberVisibility(isvisible)
         
     def setPosition(self,x,y):
         """set the coordinates for this position, and update its matplotlib elements accordingly
@@ -1303,9 +1418,10 @@ class slicePosition():
         self.__updateMosaicSize()
         self.__updateFramesLayout()
 
-    def set_activated(self,activated):
+    def set_activated(self,activated,type = 'slice'):
+
         self.activated=activated
-        self.__updatePointActivated()
+        self.__updatePointActivated(type)
 
     def set_selected(self,selected):
         """set this point to be selected or not
@@ -1315,7 +1431,61 @@ class slicePosition():
         """
         self.selected=selected
         self.__updatePointSelect()
-        
+
+    def set_autofocus_trigger(self,trigger, type = 'Normal'):
+        if type == 'Normal':
+            self.initial_trigger = False
+            self.autofocus_trigger = trigger
+            self.__updatePointActivated('frame')
+        if type == 'Initial':
+            self.initial_trigger = trigger
+            if self.initial_trigger == True:
+                self.autofocus_trigger = False
+            self.__updatePointActivated('frame')
+
+
+    def create_frame_state_list(self):
+        # filename, format = filename.split('.')
+        # filename = filename + 'frame_state_table.' + 'json'
+
+        statedict = {'inactive' : 0,
+                    'active' : 1,
+                    'initial_frame' : 2,
+                    'trigger_autofocus' : 3}
+        statelist = []
+        if self.frameList == None:
+            return None
+        else:
+            for fpos in self.frameList.slicePositions:
+                if not fpos.activated:
+                    statelist.append(statedict['inactive'])
+                elif fpos.initial_trigger:
+                    statelist.append(statedict['initial_frame'])
+                elif fpos.autofocus_trigger:
+                    statelist.append(statedict['trigger_autofocus'])
+                else:
+                    statelist.append(statedict['active'])
+
+            return self.number, statelist
+
+
+
+    def update_framestates(self,statelist):
+        if self.frameList == None:
+            self.paintFrames()
+            self.framestatetable = statelist
+        for i,fpos in enumerate(self.frameList.slicePositions):
+            framestate = statelist[i]
+            # print 'framestate:', framestate
+            if framestate == 0:
+                fpos.set_activated(False,type = 'frame')
+            elif framestate == 2:
+                fpos.set_autofocus_trigger(True,'Initial')
+            elif framestate == 3:
+                fpos.set_autofocus_trigger(True)
+            else:
+                fpos.set_activated(True, type = 'frame')
+
     def select_if_inside(self,verts):
         """select this point if it is inside the list of vertices given (created by Lasso tool)
         as determined by matplotlib.nxutils.points_inside_poly
@@ -1333,13 +1503,37 @@ class slicePosition():
         if not isselect==self.selected:
             self.selected=isselect
             self.__updatePointSelect()
-    def __updatePointActivated(self):
+    def __updatePointActivated(self,type = 'slice'):
         if not self.axis: return None
-        if self.activated:
-            marker = 'o'
-        else:
-            marker = 'x'
-        self.pointLine2D.set_marker(marker)
+        if type == 'slice':
+            if self.activated:
+                marker = 'o'
+                color = 'b'
+            else:
+                marker = 'x'
+                color = 'm'
+            self.pointLine2D.set_marker(marker)
+            # self.pointLine2D.set_markercolor(color)
+            self.pointLine2D.set_markeredgecolor(color)
+        if type == 'frame':
+            if (self.initial_trigger):
+                self.activated = True
+                self.autofocus_trigger = False
+                color = 'y'
+            elif self.autofocus_trigger:
+                self.initial_trigger = False
+                self.activated = True
+                color = 'b'
+            elif not self.activated:
+                self.autofocus_trigger = False
+                self.initial_trigger = False
+                color = 'r'
+
+
+            elif (self.activated) and not(self.initial_trigger) and not (self.autofocus_trigger):
+                color = 'c'
+            self.box.set_edgecolor(color)
+
 
     def __updatePointSelect(self):
         """private function for updating the color of the point,depending on its selected state"""

@@ -4,7 +4,6 @@ from PIL import Image
 import time
 from Rectangle import Rectangle
 import wx
-from retry import retry
 import datetime
 import os
 from MMArduino import MMArduino
@@ -71,6 +70,34 @@ class imageSource():
             self.mmc.setConfig('Triggering','Software')
             self.mmc.setConfig('Triggering','Software')
         #set the exposure to use
+
+    def reset_piezo(self,cfg):
+
+        do_stage_reset=cfg['enableStageReset']
+        if do_stage_reset:
+            z_label = cfg['compensationStage']
+            piezo_label = cfg['resetStage']
+            min_threshold = cfg['minThreshold']
+            max_threshold = cfg['maxThreshold']
+            reset_position = cfg['resetPosition']
+            invert_compensation = cfg['invertCompensation']
+
+            piezo = self.mmc.getPosition(piezo_label)
+            if (piezo<min_threshold) or (piezo>max_threshold):
+                z = self.mmc.getPosition(z_label)
+                islocked = self.mmc.isContinuousFocusEnabled()
+
+                if islocked:
+                    self.mmc.enableContinuousFocus(False)
+
+                if invert_compensation:
+                    self.mmc.setPosition(z_label,z+(piezo-reset_position))
+                else:
+                    self.mmc.setPosition(z_label,z-(piezo-reset_position))
+                self.mmc.setPosition(piezo_label,reset_position)
+
+                if islocked:
+                    self.mmc.enableContinuousFocus(True)
 
     def define_focal_plane(self,points):
         if points.shape[1]>3:
@@ -154,6 +181,13 @@ class imageSource():
         self.numberHardwareChannels = len(exposure_times)
         self.mmc.startContinuousSequenceAcquisition(0)
 
+    def stopSequenceAcquisition(self):
+        self.mmc.stopSequenceAcquisition()
+        self.mmc.clearCircularBuffer()
+        
+    def startContinuousSequenceAcquisition(self,val):
+        self.mmc.startContinuousSequenceAcquisition(val)
+
     def startHardwareSequence(self):
         assert(self.masterArduino is not None)
         self.masterArduino.startTimedPattern()
@@ -186,6 +220,7 @@ class imageSource():
       #NEED TO IMPLEMENT IF NOT MICROMANAGER
         self.mmc.setExposure(exp_msec)
     
+
     def reset_focus_offset(self):
         if self.has_hardware_autofocus():
             focusDevice=self.mmc.getAutoFocusDevice()
@@ -193,12 +228,13 @@ class imageSource():
   
     def get_hardware_autofocus_state(self):
         if self.has_hardware_autofocus():
-            return self.mmc.isContinuousFocusLocked()
+            return self.mmc.isContinuousFocusEnabled()
            
-    def set_hardware_autofocus_state(self,state):
+    def set_hardware_autofocus_state(self,state,dowait=True):
         if self.has_hardware_autofocus():
             self.mmc.enableContinuousFocus(state)
-            self.mmc.waitForDevice(self.mmc.getAutoFocusDevice())
+            if dowait:
+                self.mmc.waitForDevice(self.mmc.getAutoFocusDevice())
         
     def has_hardware_autofocus(self):
         #NEED TO IMPLEMENT IF NOT MICROMANAGER
@@ -348,12 +384,17 @@ class imageSource():
         #NEED TO IMPLEMENT IF NOT MICROMANAGER
         return self.mmc.getPixelSizeUm()
 
-    def get_image(self):
-        while self.mmc.getRemainingImageCount()==0:
-            time.sleep(.001)
-        data = self.mmc.popNextImage()
-        return self.flip_image(data)
-
+    def get_image(self,wait=True):
+        rem = self.mmc.getRemainingImageCount()
+        if wait:
+            while (rem ==0):
+                time.sleep(.01)
+                rem = self.mmc.getRemainingImageCount()
+        if rem>0:
+            data = self.mmc.popNextImage()
+            return self.flip_image(data)
+        else:
+            return None
 
     def get_frame_size_um(self):
         (sensor_width,sensor_height)=self.get_sensor_size()
@@ -517,3 +558,15 @@ class imageSource():
         stg=self.mmc.getXYStageDevice()
         self.mmc.setXYPosition(stg,x,y)
         #self.mmc.waitForDevice(stg)
+
+    def set_autofocus_offset(self,offset): #MultiRibbons
+        if self.has_hardware_autofocus():
+            self.mmc.setAutoFocusOffset(offset)
+            self.mmc.waitForDevice(self.mmc.getAutoFocusDevice())
+
+    def get_autofocus_offset(self): #MultiRibbons
+        if self.has_hardware_autofocus():
+            return self.mmc.getAutoFocusOffset()
+    
+    def shutdown(self):
+        self.mmc.unloadAllDevices()

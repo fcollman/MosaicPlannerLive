@@ -55,3 +55,9 @@ docs/_build/
 # PyBuilder
 target/
 /MosaicPlannerSettings.cfg
+.idea/
+.DS_Store
+*.db
+*.db-journal
+schema*
+*.ipynb

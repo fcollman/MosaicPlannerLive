@@ -19,17 +19,18 @@
 import wx
 import os
 import json
+import marshmallow as mm
 
 class DirectorySettings():
 
-    def __init__(self,Sample_ID = None, Ribbon_ID = None, Session_ID = None,Map_num= None,Slot_num = None,default_path = None ):
+    def __init__(self,Sample_ID = None, Ribbon_ID = None, Session_ID = None,Map_num= None,default_path = None,meta_experiment_name = None ):
 
         self.default_path = default_path
         self.Sample_ID = Sample_ID
         self.Ribbon_ID = Ribbon_ID
         self.Session_ID = Session_ID
-        self.Slot_num = Slot_num
         self.Map_num = Map_num
+        self.meta_experiment_name = meta_experiment_name
 
 
 
@@ -39,7 +40,7 @@ class DirectorySettings():
         cfg['Directories']['Session_ID'] = self.Session_ID
         cfg['Directories']['Map_num'] = self.Map_num
         cfg['Directories']['Default_Path'] = self.default_path
-        cfg['Directories']['Slot_num'] = self.Slot_num
+        cfg['Directories']['meta_experiment_name'] = self.meta_experiment_name
         cfg.write()
 
     def load_settings(self,cfg):
@@ -48,7 +49,7 @@ class DirectorySettings():
         self.Ribbon_ID = cfg['Directories']['Ribbon_ID']
         self.Session_ID = cfg['Directories']['Session_ID']
         self.Map_num = cfg['Directories']['Map_num']
-        self.Slot_num = cfg['Directories']['Slot_num']
+        self.meta_experiment_name = cfg['Directories']['meta_experiment_name']
 
     def create_directory(self,cfg,kind):
         root = self.default_path
@@ -57,11 +58,15 @@ class DirectorySettings():
             map_folder = os.path.join(root,self.Sample_ID,'raw','map','Ribbon%04d'%self.Ribbon_ID,'map%01d'%self.Map_num)
             if not os.path.exists(map_folder):
                 os.makedirs(map_folder)
+                array_folder = os.path.join(root,self.Sample_ID,'raw','map','Ribbon%04d'%self.Ribbon_ID,)
                 cfg['MosaicPlanner']['default_imagepath'] = map_folder
+                cfg['MosaicPlanner']['default_arraypath'] = array_folder
                 # return map_folder
             else:
                 # return map_folder
                 cfg['MosaicPlanner']['default_imagepath'] = map_folder
+                array_folder = os.path.join(root,self.Sample_ID,'raw','map','Ribbon%04d'%self.Ribbon_ID,)
+                cfg['MosaicPlanner']['default_arraypath'] = array_folder
         elif kind == 'data':
             data_folder = os.path.join(root,self.Sample_ID,'raw','data','Ribbon%04d'%self.Ribbon_ID,'session%02d'%self.Session_ID)
             if not os.path.exists(data_folder):
@@ -77,58 +82,52 @@ class DirectorySettings():
                     box.ShowModal()
                     box.Destroy()
                     return None
-        elif kind == 'multi_map':
-            map_folder = os.path.join(root,self.Sample_ID,'raw','map','multi_ribbon_round','map%02d'%self.Map_num)
-            if not os.path.exists(map_folder):
-                os.makedirs(map_folder)
-                cfg['MosaicPlanner']['default_imagepath'] = map_folder
-            else:
-                cfg['MosaicPlanner']['default_imagepath'] = map_folder
-        else:
-            dlg = wx.MessageBox(self,caption = 'Error',message = "Directory must be either \'map\' or \'data\' \n Aborting Acquisition")
-            return None
 
 
-class RibbonNumberDialog(wx.Dialog):
-    def __init__(self,parent,id,style,title = "Enter Number of Ribbons"):
-        wx.Dialog.__init__(self,parent,id,title,style = wx.DEFAULT_DIALOG_STYLE, size = (200,75))
-        vbox = wx.BoxSizer(wx.VERTICAL)
 
-        self.RibbonNum_txt = wx.StaticText(self,label = "Number of Ribbons:")
-        self.RibbonNum_IntCtrl = wx.lib.intctrl.IntCtrl(self,value = 1, min = 1, max = None, allow_none = False)
-
-        ok_button = wx.Button(self,wx.ID_OK,'OK')
-        cancel_button = wx.Button(self,wx.ID_CANCEL,'Cancel')
-        hbox1 = wx.BoxSizer(wx.HORIZONTAL)
-        hbox2 = wx.BoxSizer(wx.HORIZONTAL)
-        hbox1.Add(self.RibbonNum_txt)
-        hbox1.Add(self.RibbonNum_IntCtrl)
-        hbox2.Add(ok_button)
-        hbox2.Add(cancel_button)
-        vbox.Add(hbox1)
-        vbox.Add(hbox2)
-        self.SetSizer(vbox)
-
-    def GetValue(self):
-        val = self.RibbonNum_IntCtrl.GetValue()
-        return val
+# class RibbonNumberDialog(wx.Dialog):
+#     def __init__(self,parent,id,style,title = "Enter Number of Ribbons"):
+#         wx.Dialog.__init__(self,parent,id,title,style = wx.DEFAULT_DIALOG_STYLE, size = (200,75))
+#         vbox = wx.BoxSizer(wx.VERTICAL)
+#
+#         self.RibbonNum_txt = wx.StaticText(self,label = "Number of Ribbons:")
+#         self.RibbonNum_IntCtrl = wx.lib.intctrl.IntCtrl(self,value = 1, min = 1, max = None, allow_none = False)
+#
+#         ok_button = wx.Button(self,wx.ID_OK,'OK')
+#         cancel_button = wx.Button(self,wx.ID_CANCEL,'Cancel')
+#         hbox1 = wx.BoxSizer(wx.HORIZONTAL)
+#         hbox2 = wx.BoxSizer(wx.HORIZONTAL)
+#         hbox1.Add(self.RibbonNum_txt)
+#         hbox1.Add(self.RibbonNum_IntCtrl)
+#         hbox2.Add(ok_button)
+#         hbox2.Add(cancel_button)
+#         vbox.Add(hbox1)
+#         vbox.Add(hbox2)
+#         self.SetSizer(vbox)
+#
+#     def GetValue(self):
+#         val = self.RibbonNum_IntCtrl.GetValue()
+#         return val
 
 
 
 
 class ChangeDirectorySettings(wx.Dialog):
     def __init__(self,parent, id,style, title="Enter Sample Information",settings = DirectorySettings()):
-        wx.Dialog.__init__(self, parent, id, title, style= wx.DEFAULT_DIALOG_STYLE, size= (420,-1),)
+        wx.Dialog.__init__(self, parent, id, title, style= wx.DEFAULT_DIALOG_STYLE, size= (440,-1),)
         vbox = wx.BoxSizer(wx.VERTICAL)
         # self.settings = settings
 
-        self.RootDir_txt = wx.StaticText(self,label = 'Data Directory')
+        self.MetaExp_txt = wx.StaticText(self,label = 'Meta Experiment Name:')
+        self.MetaExp_Ctrl = wx.TextCtrl(self,value = settings.meta_experiment_name)
+
+        self.RootDir_txt = wx.StaticText(self,label = 'Data Directory:')
         self.RootDir_Ctrl = wx.DirPickerCtrl(self,path=settings.default_path)
 
         self.SampleID_txt = wx.StaticText(self, label = "Sample ID:")
         self.SampleID_Ctrl = wx.TextCtrl(self,value=settings.Sample_ID)
 
-        self.Ribbon_txt = wx.StaticText(self, label= "Ribbon Number:")
+        self.Ribbon_txt = wx.StaticText(self, label= "Sample Number:")
         self.RibbonInt_Ctrl = wx.lib.intctrl.IntCtrl(self,value = settings.Ribbon_ID, min = 0, max = None, allow_none = False)
 
         self.Session_txt = wx.StaticText(self,label = "Session Number:")
@@ -136,9 +135,6 @@ class ChangeDirectorySettings(wx.Dialog):
 
         self.Map_txt = wx.StaticText(self,label = "Map Number:")
         self.MapInt_Ctrl = wx.lib.intctrl.IntCtrl(self,value = settings.Map_num, min = 0 , max = None, allow_none = False)
-
-        self.Slot_txt = wx.StaticText(self,label = "Slot Number:")
-        self.SlotInt_Ctrl = wx.lib.intctrl.IntCtrl(self, value = settings.Slot_num, min = 0, max = 7, allow_none = False)
 
 
         ok_button = wx.Button(self,wx.ID_OK,'OK')
@@ -150,18 +146,18 @@ class ChangeDirectorySettings(wx.Dialog):
         hbox4 = wx.BoxSizer(wx.HORIZONTAL)
         hbox5 = wx.BoxSizer(wx.HORIZONTAL)
         hbox6 = wx.BoxSizer(wx.HORIZONTAL)
-        hbox.Add(self.RootDir_txt)
-        hbox.Add(self.RootDir_Ctrl)
-        hbox1.Add(self.SampleID_txt)
-        hbox1.Add(self.SampleID_Ctrl)
-        hbox2.Add(self.Ribbon_txt)
-        hbox2.Add(self.RibbonInt_Ctrl)
-        hbox3.Add(self.Session_txt)
-        hbox3.Add(self.SessionInt_Ctrl)
-        hbox4.Add(self.Map_txt)
-        hbox4.Add(self.MapInt_Ctrl)
-        hbox5.Add(self.Slot_txt)
-        hbox5.Add(self.SlotInt_Ctrl)
+        hbox.Add(self.MetaExp_txt)
+        hbox.Add(self.MetaExp_Ctrl)
+        hbox1.Add(self.RootDir_txt)
+        hbox1.Add(self.RootDir_Ctrl)
+        hbox2.Add(self.SampleID_txt)
+        hbox2.Add(self.SampleID_Ctrl)
+        hbox3.Add(self.Ribbon_txt)
+        hbox3.Add(self.RibbonInt_Ctrl)
+        hbox4.Add(self.Session_txt)
+        hbox4.Add(self.SessionInt_Ctrl)
+        hbox5.Add(self.Map_txt)
+        hbox5.Add(self.MapInt_Ctrl)
         hbox6.Add(ok_button)
         hbox6.Add(cancel_button)
         vbox.Add(hbox)
@@ -179,9 +175,9 @@ class ChangeDirectorySettings(wx.Dialog):
         Session_ID = self.SessionInt_Ctrl.GetValue()
         Sample_ID = self.SampleID_Ctrl.GetValue()
         Map_num = self.MapInt_Ctrl.GetValue()
-        Slot_num = self.SlotInt_Ctrl.GetValue()
         Default_Path = self.RootDir_Ctrl.GetPath()
-        return DirectorySettings(Sample_ID,Ribbon_ID,Session_ID,Map_num,Slot_num,Default_Path)
+        meta_experiment_name = self.MetaExp_Ctrl.GetValue()
+        return DirectorySettings(Sample_ID,Ribbon_ID,Session_ID,Map_num,Default_Path,meta_experiment_name)
 
 
 
@@ -415,7 +411,12 @@ class ChangeSiftSettings(wx.Dialog):
         inlier_thresh = self.inlierThreshIntCtrl.GetValue()
         return SiftSettings(contrastThreshold,numFeatures,inlier_thresh)
         
-        
+class CameraSettingsSchema(mm.Schema):
+    sensor_height = mm.fields.Int(required=True)
+    sensor_widht = mm.fields.Int(required=True)
+    pix_width = mm.fields.Float(required=True)
+    pix_height = mm.fields.Float(required=True)
+
 class CameraSettings():
     """simple struct for containing the parameters for the camera"""
     def __init__(self,sensor_height=1040,sensor_width=1388,pix_width=6.5,pix_height=6.5):
@@ -425,6 +426,13 @@ class CameraSettings():
         #in microns
         self.pix_width=pix_width
         self.pix_height=pix_height
+    def to_dict(self):
+        d={'sensor_height':self.sensor_height,
+           'sensor_width':self.sensor_width,
+           'pix_width':self.pix_width,
+           'pix_height':self.pix_height
+        }
+        
     def save_settings(self,cfg):
         cfg['Camera_Settings']['sensor_height']=self.sensor_height
         cfg['Camera_Settings']['sensor_width']=self.sensor_width
@@ -485,7 +493,7 @@ class ChannelSettings():
 class ChangeChannelSettings(wx.Dialog):
     """simple dialog for changing the channel settings"""
     def __init__(self, parent, id, title, settings,style):
-        wx.Dialog.__init__(self, parent, id, title,style=wx.DEFAULT_DIALOG_STYLE, size=(420, 600))
+        wx.Dialog.__init__(self, parent, id, title,style=wx.DEFAULT_DIALOG_STYLE, size=(500, 600))
         
         self.settings=settings
         vbox = wx.BoxSizer(wx.VERTICAL)   
@@ -512,14 +520,15 @@ class ChangeChannelSettings(wx.Dialog):
         for ch in settings.channels:
             hbox =wx.BoxSizer(wx.HORIZONTAL)
             Txt=wx.StaticText(self,label=ch)
-            if 'dapi' in ch.lower():
-                ProtComboBox=wx.ComboBox(self,choices=self.ProteinSelection['QuadBand0DAPI'], style = wx.CB_SORT)
-            else:
-                ProtComboBox=wx.ComboBox(self,choices=self.ProteinSelection['Proteins'], style = wx.CB_SORT)
-
-
             ChBox = wx.CheckBox(self)
             ChBox.SetValue(settings.usechannels[ch])
+            print settings.prot_names[ch]
+            ProtComboBox=wx.ComboBox(self,choices=self.ProteinSelection['Proteins'], style = wx.CB_SORT)
+            if ChBox.GetValue():
+                ProtComboBox.SetValue(settings.prot_names[ch])
+
+
+
             IntCtrl=wx.lib.intctrl.IntCtrl( self, value=settings.exposure_times[ch],size=(50,-1))
             FloatCtrl=wx.lib.agw.floatspin.FloatSpin(self, 
                                        value=settings.zoffsets[ch],
@@ -585,9 +594,15 @@ class ChangeChannelSettings(wx.Dialog):
             zoffsets[ch]=self.ZOffCtrls[i].GetValue()
         return ChannelSettings(self.settings.channels,exposure_times=exposure_times,zoffsets=zoffsets,usechannels=usechannels,prot_names=prot_names,map_chan=map_chan)
         
- 
+class MosaicSettingsSchema(mm.Schema):
+    mx = mm.fields.Int(required=True)
+    my = mm.fields.Int(required=True)
+    overlap = mm.fields.Int(required=True)
+    show_box = mm.fields.Bool(required=True)
+    mag = mm.fields.Float(required=True)
+
 class MosaicSettings:
-    def __init__(self,mag=65.486,mx=1,my=1,overlap=10,show_box=False,show_frames=False):
+    def __init__(self,mag=65.486,mx=1,my=1,overlap=20,show_box=False,show_frames=False):
         """a simple struct class for encoding settings about mosaics
         
         keywords)
@@ -760,19 +775,21 @@ class ChangeSEMSettings(wx.Dialog):
 
 class MultiRibbonSettings(wx.Dialog): #MultiRibbons
     """dialog for setting multiribbon aquisition"""
-    def __init__(self, parent, id, ribbon_number, title, settings,style):
+    def __init__(self, parent, id, ribbon_number,slot_labels, title, settings,style):
         wx.Dialog.__init__(self, parent, id, title,style=wx.DEFAULT_DIALOG_STYLE, size=(1000, 300))
 
         vbox = wx.BoxSizer(wx.VERTICAL)
-        gridSizer=wx.FlexGridSizer(rows=5,cols=3,vgap=5,hgap=5)
-        gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label="ribbon#"),border=5)
+        gridSizer=wx.FlexGridSizer(rows=9,cols=3,vgap=5,hgap=5)
+        gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label="slot#"),border=5)
         gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label="array file"),border=5)
         gridSizer.Add(wx.StaticText(self,id=wx.ID_ANY,label=" "),border=5)
 
         self.ribbon_number = ribbon_number
+        self.slot_labels = slot_labels
         self.RibbonFilePath = []
+        self.ToImageList = []
         for i in range(self.ribbon_number):
-            self.ribbon_label=wx.StaticText(self,id=wx.ID_ANY,label=str(i))
+            self.ribbon_label=wx.StaticText(self,id=wx.ID_ANY,label=slot_labels[i])
             self.ribbon_load_button=wx.Button(self,id=wx.ID_ANY,label=" ",name="load button")
             self.ribbon_filepicker=wx.FilePickerCtrl(self,message='Select an array file',\
             path="",name='arrayFilePickerCtrl1',\
@@ -800,4 +817,10 @@ class MultiRibbonSettings(wx.Dialog): #MultiRibbons
             #pathway[i]=self.RibbonFilePath[i].GetPath()
             newpath=self.RibbonFilePath[i].GetPath()
             pathway.append(newpath)
-        return pathway
+            print 'new path length:', len(newpath)
+            if len(newpath) == 0:
+                self.ToImageList.append(False)
+            else:
+                self.ToImageList.append(True)
+
+        return pathway, self.ToImageList

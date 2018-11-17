@@ -31,11 +31,9 @@ from Settings import SiftSettings,CorrSettings
 from Rectangle import Rectangle
 import cv2 
 import ransac
-from scipy.signal import correlate2d
 from skimage.measure import block_reduce
 import norm_xcorr
 from skimage.feature import register_translation
-from scipy.signal import correlate
 from skimage.feature.register_translation import _upsampled_dft
 #implicity this relies upon matplotlib.axis matplotlib.AxisImage matplotlib.bar
 
@@ -464,8 +462,8 @@ class MosaicImage():
         '''
         cut_height = cutout.shape[0]-dim
         cut_width = cutout.shape[1]-dim
-        top_pix = np.floor(cut_height/2.0)
-        left_pix = np.floor(cut_width/2.0)
+        top_pix = np.int(np.floor(cut_height/2.0))
+        left_pix = np.int(np.floor(cut_width/2.0))
         cutout_central = cutout[top_pix:top_pix+dim,left_pix:left_pix+dim]
         return  cutout_central
 

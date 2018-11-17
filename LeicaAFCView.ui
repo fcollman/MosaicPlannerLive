@@ -1,0 +1,312 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Form</class>
+ <widget class="QWidget" name="Form">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>790</width>
+    <height>565</height>
+   </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+    <horstretch>1</horstretch>
+    <verstretch>1</verstretch>
+   </sizepolicy>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout_3">
+   <item>
+    <layout class="QVBoxLayout" name="verticalLayout" stretch="100,10">
+     <item>
+      <widget class="GraphicsLayoutWidget" name="afcGraphicsLayout">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="horizontalLayout">
+       <item>
+        <widget class="GraphicsLayoutWidget" name="imageGraphicsLayout"/>
+       </item>
+       <item>
+        <layout class="QVBoxLayout" name="verticalLayout_2">
+         <item>
+          <layout class="QHBoxLayout" name="horizontalLayout_2">
+           <property name="sizeConstraint">
+            <enum>QLayout::SetDefaultConstraint</enum>
+           </property>
+           <item>
+            <widget class="QSpinBox" name="LEDspinBox">
+             <property name="maximum">
+              <number>255</number>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="LEDPushButton">
+             <property name="text">
+              <string>LED get</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+         <item>
+          <layout class="QHBoxLayout" name="horizontalLayout_3">
+           <item>
+            <widget class="QDoubleSpinBox" name="afcSetpointDoubleSpinBox">
+             <property name="minimumSize">
+              <size>
+               <width>100</width>
+               <height>0</height>
+              </size>
+             </property>
+             <property name="maximum">
+              <double>99999999.989999994635582</double>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="AFCSetpointPushButton">
+             <property name="text">
+              <string>AFC setpoint</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+         <item>
+          <layout class="QHBoxLayout" name="horizontalLayout_5">
+           <item>
+            <widget class="QDoubleSpinBox" name="afcScoredoubleSpinBox">
+             <property name="readOnly">
+              <bool>true</bool>
+             </property>
+             <property name="minimum">
+              <double>-1000000.000000000000000</double>
+             </property>
+             <property name="maximum">
+              <double>1000000.000000000000000</double>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="afcScorePushButton">
+             <property name="text">
+              <string>AFC score get</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+         <item>
+          <widget class="QPushButton" name="AFCImagePushButton">
+           <property name="text">
+            <string>AFC Image</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="holdHerePushButton">
+           <property name="text">
+            <string>Hold Here</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="HoldOnPushButton">
+           <property name="text">
+            <string>Hold On</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="SnapPushButton">
+           <property name="text">
+            <string>Snap</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>GraphicsLayoutWidget</class>
+   <extends>QGraphicsView</extends>
+   <header>pyqtgraph.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>AFCImagePushButton</sender>
+   <signal>clicked()</signal>
+   <receiver>Form</receiver>
+   <slot>takeAFCImage()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>777</x>
+     <y>465</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>762</x>
+     <y>449</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>holdHerePushButton</sender>
+   <signal>clicked()</signal>
+   <receiver>Form</receiver>
+   <slot>onHoldHere()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>777</x>
+     <y>494</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>762</x>
+     <y>425</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>HoldOnPushButton</sender>
+   <signal>clicked()</signal>
+   <receiver>Form</receiver>
+   <slot>holdOn()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>777</x>
+     <y>523</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>762</x>
+     <y>490</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>SnapPushButton</sender>
+   <signal>clicked()</signal>
+   <receiver>Form</receiver>
+   <slot>snap()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>777</x>
+     <y>552</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>762</x>
+     <y>534</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>LEDPushButton</sender>
+   <signal>clicked()</signal>
+   <receiver>Form</receiver>
+   <slot>getLEDIntensity()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>776</x>
+     <y>256</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>762</x>
+     <y>255</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>AFCSetpointPushButton</sender>
+   <signal>clicked()</signal>
+   <receiver>Form</receiver>
+   <slot>getAFCOffset()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>776</x>
+     <y>334</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>762</x>
+     <y>519</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>afcSetpointDoubleSpinBox</sender>
+   <signal>valueChanged(double)</signal>
+   <receiver>Form</receiver>
+   <slot>setAFCOffset()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>695</x>
+     <y>332</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>762</x>
+     <y>564</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>LEDspinBox</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>Form</receiver>
+   <slot>setAFCIntensity()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>683</x>
+     <y>255</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>762</x>
+     <y>221</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>afcScorePushButton</sender>
+   <signal>clicked()</signal>
+   <receiver>Form</receiver>
+   <slot>getAFCScore()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>739</x>
+     <y>400</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>788</x>
+     <y>361</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>AFCImage()</slot>
+  <slot>holdHere()</slot>
+  <slot>holdOn()</slot>
+  <slot>snap()</slot>
+  <slot>getLEDIntensity()</slot>
+  <slot>getAFCOffset()</slot>
+  <slot>setAFCOffset()</slot>
+  <slot>setAFCIntensity()</slot>
+  <slot>getAFCScore()</slot>
+ </slots>
+</ui>

@@ -5,13 +5,7 @@ from pyqtgraph.Qt import QtCore, QtGui
 import numpy as np
 import pyqtgraph as pg
 import pyqtgraph.ptime as ptime
-import time
-from skimage import img_as_ubyte,exposure
-import MMCorePy
-import cv2
-from pyqtgraph.widgets.RawImageWidget import RawImageWidget
-import functools
-from imageSourceMM import imageSource
+
 
 
 class VideoView(QtGui.QWidget):
@@ -21,12 +15,11 @@ class VideoView(QtGui.QWidget):
         self.channelGroup=channelGroup
         self.exposure_times=exposure_times
         #self.setContentsMargins(0,0,0,0)
-        self.mmc = imgSrc.mmc
+  
         self.imgSrc = imgSrc
-        self.channels=self.mmc.getAvailableConfigs(self.channelGroup)
+        self.channels=self.imgSrc.get_channels()
         self.init_mmc()
         self.initUI()
-        
         
         self.i = 0
         self.updateTime = ptime.time()
@@ -36,20 +29,18 @@ class VideoView(QtGui.QWidget):
        
     def init_mmc(self):   
         #filename="C:\Users\Smithlab\Documents\ASI_LUM_RETIGA_CRISP.cfg"
-        #self.mmc.loadSystemConfiguration(filename)
-        #self.mmc.enableStderrLog(False)
-        #self.mmc.enableDebugLog(False)
-        # # mmc.setCircularBufferMemoryFootprint(100)
-        self.cam=self.mmc.getCameraDevice()
-        self.mmc.setExposure(50)
-        #self.mmc.setProperty(self.cam, 'Gain', 1)
+       
+        
+        self.imgSrc.set_exposure(50)
+
         Nch=len(self.channels)
         startChan=self.channels[Nch-1]
         for ch in self.channels:
             if 'dapi' in ch.lower():
-                self.mmc.setConfig(self.channelGroup,ch)
-                self.mmc.waitForConfig(self.channelGroup,ch)
-        self.mmc.startContinuousSequenceAcquisition(1)
+                self.imgSrc.set_channel(ch)
+        self.imgSrc.set_binning(1)
+        print 'Binning is:', self.imgSrc.get_binning()
+        self.imgSrc.startContinuousSequenceAcquisition(100)
     
     def initUI(self):
 
@@ -100,7 +91,7 @@ class VideoView(QtGui.QWidget):
             if ch in keys:
                 spnBox.setValue(self.exposure_times[ch])
             else:
-                spnBox.setValue(self.mmc.getExposure())
+                spnBox.setValue(self.imgSrc.get_exposure())
             spnBox.setSuffix(" ms")
             btn.clicked.connect(self.make_channelButtonClicked(ch,spnBox))
             self.expSpnBoxes.append(spnBox)
@@ -142,23 +133,22 @@ class VideoView(QtGui.QWidget):
         return exposure_times
         
     def setExposureAuto(self,evt):
-    
-        self.mmc.stopSequenceAcquisition() 
+        
+        self.imgSrc.stopSequenceAcquisition() 
         perc=95; #the goal is to make the X percentile value equal to Y percent of the maximum value
         #perc is X
         desired_frac=.7 #desired_frac is Y
         max_exposure = 3000 #exposure times shall not end up more than this
         close_frac = .2 #fractional change in exposure for which we will just trust the math
-        bit_depth=self.mmc.getImageBitDepth()
-        max_val=np.power(2,bit_depth)
+        max_val=self.imgSrc.get_max_pixel_value()
+  
         #loop over the channels
         for i,ch in enumerate(self.channels):
             img_counter =0 #counter to count how many snaps it takes us
             if 'Dark' not in ch: #don't set the 'Dark' channel for obvious reasons
                 print ch
                 #setup to use the channel
-                self.mmc.setConfig(self.channelGroup,ch)
-                self.mmc.waitForConfig(self.channelGroup,ch)
+                self.imgSrc.set_channel(ch)
                 
                 
                 #get current exposure
@@ -169,10 +159,10 @@ class VideoView(QtGui.QWidget):
                 #follow loop till we get it right
                 while 1:
                 
-                    self.mmc.setExposure(curr_exposure)
-                    self.mmc.snapImage()
+                    self.imgSrc.set_exposure(curr_exposure)
+                    img=self.imgSrc.snap_image()
                     img_counter+=1
-                    img=self.mmc.getImage()
+                    
                     vec=img.flatten()
                     
                     #the value which is at the perc percentile
@@ -231,17 +221,17 @@ class VideoView(QtGui.QWidget):
         def channelButtonClicked():
             #print ch
             #print spnBox.value()
-            self.mmc.stopSequenceAcquisition() 
-            self.mmc.clearCircularBuffer() 
-            self.mmc.setConfig(self.channelGroup,ch)
+            self.imgSrc.stopSequenceAcquisition() 
+            self.imgSrc.set_channel(ch)
             expTime=spnBox.value()
-            self.mmc.setExposure(expTime)
-            self.mmc.waitForConfig(self.channelGroup,ch)
-            self.mmc.startContinuousSequenceAcquisition(expTime)
+            self.imgSrc.set_exposure(expTime)
+            self.imgSrc.startContinuousSequenceAcquisition(expTime)
         return channelButtonClicked
         
     def closeEvent(self,evt):
-        self.mmc.stopSequenceAcquisition()
+        self.imgSrc.stopSequenceAcquisition()
+        self.imgSrc.set_binning(2)
+        print 'Binning is:', self.imgSrc.get_binning()
         print "stopped acquisition"
         #if self.timer is not None:
         #    print "cancelling timer if it exists"
@@ -270,59 +260,27 @@ class VideoView(QtGui.QWidget):
 
     def updateData(self):
     
-        remcount = self.mmc.getRemainingImageCount()
-        #print 'remcount',remcount
-        #remcount=0
-        if remcount > 0:
-            #rgb32 = self.mmc.popNextImage()
-            data =  self.mmc.getLastImage()
-
-
-            if data.dtype == np.uint16:
-                maxval=self.imgSrc.get_max_pixel_value()
-                #print "max val is",maxval
-                #print 'max_before',np.max(data)
-                #data = exposure.rescale_intensity(data,in_range=(0,maxval))
-                #print 'max after rescale',np.max(data)
-                #data = img_as_ubyte(data)
-                #data=self.lut_convert16as8bit(data,0,5000)
-
-                # "maxval",maxval,np.max(data),data.dtype
-            
-            flipx,flipy,trans = self.imgSrc.get_image_flip()
-            if trans:
-                data = np.transpose(data)
-            if flipx:
-                data = np.fliplr(data)
-            if flipy:
-                data = np.flipud(data)
-            data = np.rot90(data,k=3)
-            #gray=cv2.equalizeHist(gray)
+       
+        data =  self.imgSrc.get_image(wait=False)
+        if data is not None:
+            data = np.rot90(data, k=3)
             self.img.setImage(data,autoLevels=True)
-            #cv2.imshow('Video', gray)
-        #else:
-            #print('No frame')
-        
+
         if not self.ended:
-            self.timer = QtCore.QTimer.singleShot(self.mmc.getExposure(), self.updateData)
+            self.timer = QtCore.QTimer.singleShot(self.imgSrc.get_exposure(), self.updateData)
         now = ptime.time()
         fps1 = 1.0 / (now-self.updateTime)
         self.updateTime = now
         self.fps = self.fps * 0.6 + fps1 * 0.4
         if self.i == 0:
             print "%0.1f fps" % self.fps
+        self.update()
             
- 
-#def myExitHandler(mmc): 
-  
-    #mmc.stopSequenceAcquisition()
-    #QtGui.QApplication.quit()
-    #mmc.reset()
 
-def launchLive(mmc,exposure_times):  
+def launchLive(imgSrc,exposure_times):  
     import sys  
   
-    vidview = VideoView(mmc,exposure_times)
+    vidview = VideoView(imgSrc,exposure_times)
     vidview.setGeometry(250,50,1100,1000)
     vidview.show()
 
@@ -338,21 +296,23 @@ if __name__ == '__main__':
 
     import sys
     import faulthandler
+
+    from imageSourceMM import imageSource
     app = QtGui.QApplication(sys.argv)
     faulthandler.enable()
 
-    #mmc = MMCorePy.CMMCore()
+
     defaultMMpath = "C:\Program Files\Micro-Manager-1.4"
     configFile = QtGui.QFileDialog.getOpenFileName(
         None, "pick a uManager cfg file", defaultMMpath, "*.cfg")
     configFile = str(configFile.replace("/", "\\"))
     print configFile
     imgSrc = imageSource(configFile)
-    #mmc.loadSystemConfiguration(configFile)
+
     print "loaded configuration file"
     launchLive(imgSrc,dict([]))
     #app.exec_()
     print "got out of the event loop"
-    imgSrc.mmc.reset()
+    imgSrc.shutdown()
     print "reset micromanager core"
     sys.exit()
