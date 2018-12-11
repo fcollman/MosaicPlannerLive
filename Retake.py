@@ -300,8 +300,7 @@ class RetakeView(QtGui.QWidget):
         self.ch = self.mp.cfg['ChannelSettings']['focusscore_chan']
 
         #get the outdirectory from mosaicplanner settings
-        for key,value in self.mp.outdirdict.iteritems():
-            self.outdir = self.mp.outdirdict[key]
+        self.outdir = self.mp.output_dir
         #load the focus score data
         self.loadFocusScoreData()
         ## Make all plots clickable
