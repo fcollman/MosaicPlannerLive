@@ -8,6 +8,7 @@ import numpy as np
 import sys
 import traceback
 from Tokens import STOP_TOKEN,BUBBLE_TOKEN
+import time
 import json
 from FocusServiceRemote import FocusServiceRemote
 
@@ -100,7 +101,8 @@ def write_slice_metadata_json(filename,ch,xpos,ypos,zpos,slice_index,triggerflag
                         'scope_zpos' : zpos,
                         'slice_index' : slice_index,
                         'height' : height,
-                        'width' : width
+                        'width' : width,
+                        'Time' : time.time()
     }
 
     thestring = json.JSONEncoder().encode(slice_meta_dict)

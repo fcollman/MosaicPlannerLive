@@ -23,13 +23,12 @@ import marshmallow as mm
 
 class DirectorySettings():
 
-    def __init__(self,Sample_ID = None, Ribbon_ID = None, Session_ID = None,Map_num= None,Slot_num = None,default_path = None,meta_experiment_name = None ):
+    def __init__(self,Sample_ID = None, Ribbon_ID = None, Session_ID = None,Map_num= None,default_path = None,meta_experiment_name = None ):
 
         self.default_path = default_path
         self.Sample_ID = Sample_ID
         self.Ribbon_ID = Ribbon_ID
         self.Session_ID = Session_ID
-        self.Slot_num = Slot_num
         self.Map_num = Map_num
         self.meta_experiment_name = meta_experiment_name
 
@@ -41,7 +40,6 @@ class DirectorySettings():
         cfg['Directories']['Session_ID'] = self.Session_ID
         cfg['Directories']['Map_num'] = self.Map_num
         cfg['Directories']['Default_Path'] = self.default_path
-        cfg['Directories']['Slot_num'] = self.Slot_num
         cfg['Directories']['meta_experiment_name'] = self.meta_experiment_name
         cfg.write()
 
@@ -51,7 +49,6 @@ class DirectorySettings():
         self.Ribbon_ID = cfg['Directories']['Ribbon_ID']
         self.Session_ID = cfg['Directories']['Session_ID']
         self.Map_num = cfg['Directories']['Map_num']
-        self.Slot_num = cfg['Directories']['Slot_num']
         self.meta_experiment_name = cfg['Directories']['meta_experiment_name']
 
     def create_directory(self,cfg,kind):
@@ -61,13 +58,15 @@ class DirectorySettings():
             map_folder = os.path.join(root,self.Sample_ID,'raw','map','Ribbon%04d'%self.Ribbon_ID,'map%01d'%self.Map_num)
             if not os.path.exists(map_folder):
                 os.makedirs(map_folder)
+                array_folder = os.path.join(root,self.Sample_ID,'raw','map','Ribbon%04d'%self.Ribbon_ID,)
                 cfg['MosaicPlanner']['default_imagepath'] = map_folder
-                cfg['MosaicPlanner']['default_arraypath'] = map_folder
+                cfg['MosaicPlanner']['default_arraypath'] = array_folder
                 # return map_folder
             else:
                 # return map_folder
                 cfg['MosaicPlanner']['default_imagepath'] = map_folder
-                cfg['MosaicPlanner']['default_arraypath'] = map_folder
+                array_folder = os.path.join(root,self.Sample_ID,'raw','map','Ribbon%04d'%self.Ribbon_ID,)
+                cfg['MosaicPlanner']['default_arraypath'] = array_folder
         elif kind == 'data':
             data_folder = os.path.join(root,self.Sample_ID,'raw','data','Ribbon%04d'%self.Ribbon_ID,'session%02d'%self.Session_ID)
             if not os.path.exists(data_folder):
@@ -83,41 +82,32 @@ class DirectorySettings():
                     box.ShowModal()
                     box.Destroy()
                     return None
-        elif kind == 'multi_map':
-            map_folder = os.path.join(root,self.Sample_ID,'raw','map','multi_ribbon_round','map%02d'%self.Map_num)
-            if not os.path.exists(map_folder):
-                os.makedirs(map_folder)
-                cfg['MosaicPlanner']['default_imagepath'] = map_folder
-            else:
-                cfg['MosaicPlanner']['default_imagepath'] = map_folder
-        else:
-            dlg = wx.MessageBox(self,caption = 'Error',message = "Directory must be either \'map\' or \'data\' \n Aborting Acquisition")
-            return None
 
 
-class RibbonNumberDialog(wx.Dialog):
-    def __init__(self,parent,id,style,title = "Enter Number of Ribbons"):
-        wx.Dialog.__init__(self,parent,id,title,style = wx.DEFAULT_DIALOG_STYLE, size = (200,75))
-        vbox = wx.BoxSizer(wx.VERTICAL)
 
-        self.RibbonNum_txt = wx.StaticText(self,label = "Number of Ribbons:")
-        self.RibbonNum_IntCtrl = wx.lib.intctrl.IntCtrl(self,value = 1, min = 1, max = None, allow_none = False)
-
-        ok_button = wx.Button(self,wx.ID_OK,'OK')
-        cancel_button = wx.Button(self,wx.ID_CANCEL,'Cancel')
-        hbox1 = wx.BoxSizer(wx.HORIZONTAL)
-        hbox2 = wx.BoxSizer(wx.HORIZONTAL)
-        hbox1.Add(self.RibbonNum_txt)
-        hbox1.Add(self.RibbonNum_IntCtrl)
-        hbox2.Add(ok_button)
-        hbox2.Add(cancel_button)
-        vbox.Add(hbox1)
-        vbox.Add(hbox2)
-        self.SetSizer(vbox)
-
-    def GetValue(self):
-        val = self.RibbonNum_IntCtrl.GetValue()
-        return val
+# class RibbonNumberDialog(wx.Dialog):
+#     def __init__(self,parent,id,style,title = "Enter Number of Ribbons"):
+#         wx.Dialog.__init__(self,parent,id,title,style = wx.DEFAULT_DIALOG_STYLE, size = (200,75))
+#         vbox = wx.BoxSizer(wx.VERTICAL)
+#
+#         self.RibbonNum_txt = wx.StaticText(self,label = "Number of Ribbons:")
+#         self.RibbonNum_IntCtrl = wx.lib.intctrl.IntCtrl(self,value = 1, min = 1, max = None, allow_none = False)
+#
+#         ok_button = wx.Button(self,wx.ID_OK,'OK')
+#         cancel_button = wx.Button(self,wx.ID_CANCEL,'Cancel')
+#         hbox1 = wx.BoxSizer(wx.HORIZONTAL)
+#         hbox2 = wx.BoxSizer(wx.HORIZONTAL)
+#         hbox1.Add(self.RibbonNum_txt)
+#         hbox1.Add(self.RibbonNum_IntCtrl)
+#         hbox2.Add(ok_button)
+#         hbox2.Add(cancel_button)
+#         vbox.Add(hbox1)
+#         vbox.Add(hbox2)
+#         self.SetSizer(vbox)
+#
+#     def GetValue(self):
+#         val = self.RibbonNum_IntCtrl.GetValue()
+#         return val
 
 
 
@@ -137,7 +127,7 @@ class ChangeDirectorySettings(wx.Dialog):
         self.SampleID_txt = wx.StaticText(self, label = "Sample ID:")
         self.SampleID_Ctrl = wx.TextCtrl(self,value=settings.Sample_ID)
 
-        self.Ribbon_txt = wx.StaticText(self, label= "Ribbon Number:")
+        self.Ribbon_txt = wx.StaticText(self, label= "Sample Number:")
         self.RibbonInt_Ctrl = wx.lib.intctrl.IntCtrl(self,value = settings.Ribbon_ID, min = 0, max = None, allow_none = False)
 
         self.Session_txt = wx.StaticText(self,label = "Session Number:")
@@ -145,9 +135,6 @@ class ChangeDirectorySettings(wx.Dialog):
 
         self.Map_txt = wx.StaticText(self,label = "Map Number:")
         self.MapInt_Ctrl = wx.lib.intctrl.IntCtrl(self,value = settings.Map_num, min = 0 , max = None, allow_none = False)
-
-        self.Slot_txt = wx.StaticText(self,label = "Slot Number:")
-        self.SlotInt_Ctrl = wx.lib.intctrl.IntCtrl(self, value = settings.Slot_num, min = 0, max = 7, allow_none = False)
 
 
         ok_button = wx.Button(self,wx.ID_OK,'OK')
@@ -159,7 +146,6 @@ class ChangeDirectorySettings(wx.Dialog):
         hbox4 = wx.BoxSizer(wx.HORIZONTAL)
         hbox5 = wx.BoxSizer(wx.HORIZONTAL)
         hbox6 = wx.BoxSizer(wx.HORIZONTAL)
-        hbox7 = wx.BoxSizer(wx.HORIZONTAL)
         hbox.Add(self.MetaExp_txt)
         hbox.Add(self.MetaExp_Ctrl)
         hbox1.Add(self.RootDir_txt)
@@ -172,10 +158,8 @@ class ChangeDirectorySettings(wx.Dialog):
         hbox4.Add(self.SessionInt_Ctrl)
         hbox5.Add(self.Map_txt)
         hbox5.Add(self.MapInt_Ctrl)
-        hbox6.Add(self.Slot_txt)
-        hbox6.Add(self.SlotInt_Ctrl)
-        hbox7.Add(ok_button)
-        hbox7.Add(cancel_button)
+        hbox6.Add(ok_button)
+        hbox6.Add(cancel_button)
         vbox.Add(hbox)
         vbox.Add(hbox1)
         vbox.Add(hbox2)
@@ -183,7 +167,6 @@ class ChangeDirectorySettings(wx.Dialog):
         vbox.Add(hbox4)
         vbox.Add(hbox5)
         vbox.Add(hbox6)
-        vbox.Add(hbox7)
         self.SetSizer(vbox)
 
     def get_settings(self):
@@ -192,10 +175,9 @@ class ChangeDirectorySettings(wx.Dialog):
         Session_ID = self.SessionInt_Ctrl.GetValue()
         Sample_ID = self.SampleID_Ctrl.GetValue()
         Map_num = self.MapInt_Ctrl.GetValue()
-        Slot_num = self.SlotInt_Ctrl.GetValue()
         Default_Path = self.RootDir_Ctrl.GetPath()
         meta_experiment_name = self.MetaExp_Ctrl.GetValue()
-        return DirectorySettings(Sample_ID,Ribbon_ID,Session_ID,Map_num,Slot_num,Default_Path,meta_experiment_name)
+        return DirectorySettings(Sample_ID,Ribbon_ID,Session_ID,Map_num,Default_Path,meta_experiment_name)
 
 
 
@@ -511,7 +493,7 @@ class ChannelSettings():
 class ChangeChannelSettings(wx.Dialog):
     """simple dialog for changing the channel settings"""
     def __init__(self, parent, id, title, settings,style):
-        wx.Dialog.__init__(self, parent, id, title,style=wx.DEFAULT_DIALOG_STYLE, size=(420, 600))
+        wx.Dialog.__init__(self, parent, id, title,style=wx.DEFAULT_DIALOG_STYLE, size=(500, 600))
         
         self.settings=settings
         vbox = wx.BoxSizer(wx.VERTICAL)   
@@ -541,10 +523,7 @@ class ChangeChannelSettings(wx.Dialog):
             ChBox = wx.CheckBox(self)
             ChBox.SetValue(settings.usechannels[ch])
             print settings.prot_names[ch]
-            if 'dapi' in ch.lower():
-                ProtComboBox=wx.ComboBox(self,choices=self.ProteinSelection['QuadBand0DAPI'], style = wx.CB_SORT)
-            else:
-                ProtComboBox=wx.ComboBox(self,choices=self.ProteinSelection['Proteins'], style = wx.CB_SORT)
+            ProtComboBox=wx.ComboBox(self,choices=self.ProteinSelection['Proteins'], style = wx.CB_SORT)
             if ChBox.GetValue():
                 ProtComboBox.SetValue(settings.prot_names[ch])
 
