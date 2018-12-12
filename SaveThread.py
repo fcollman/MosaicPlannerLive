@@ -20,7 +20,7 @@ def file_save_process(queue,message_queue, metadata_dictionary,ssh_opts):
             return
         else:
             try:
-                (slice_index,frame_index, z_index, prot_name, path, data, ch, x, y, z,triggerflag,calcfocus,afc_image) = token
+                (slice_index,frame_index, z_index, prot_name, path, data, ch, x, y, z,triggerflag,calcfocus,afc_image,use_focus_service) = token
                 tif_filepath = os.path.join(path, prot_name + "_S%04d_F%04d_Z%02d.tif" % (slice_index, frame_index, z_index))
                 metadata_filepath = os.path.join(path, prot_name + "_S%04d_F%04d_Z%02d_metadata.txt"%(slice_index, frame_index, z_index))
                 metadata_filepath_json = os.path.join(path, prot_name + "_S%04d_F%04d_Z%02d_metadata.json"%(slice_index, frame_index, z_index))
@@ -29,10 +29,13 @@ def file_save_process(queue,message_queue, metadata_dictionary,ssh_opts):
                 write_slice_metadata_json(metadata_filepath_json, ch, x, y, z, slice_index, triggerflag, metadata_dictionary,ssh_opts)
                 if calcfocus:
                     #set up focus service interface
-                    focus_interface = FocusServiceRemote()
                     focus_filepath = os.path.join(path, prot_name + "_S%04d_F%04d_Z%02d_focus.csv"%(slice_index, frame_index, z_index))
-                    #write_focus_score(focus_filepath, data,ch,x,y,slice_index,frame_index,prot_name)
-                    write_focus_score_new(focus_filepath, data,ch,x,y,slice_index,frame_index,prot_name,focus_interface)
+                    if use_focus_service:
+                        focus_interface = FocusServiceRemote()
+                        write_focus_score_new(focus_filepath, data,ch,x,y,slice_index,frame_index,prot_name,focus_interface)
+                    else:
+                        write_focus_score(focus_filepath, data,ch,x,y,slice_index,frame_index,prot_name)
+
                 if afc_image is not None:
                     afc_image_filepath = os.path.join(path, prot_name + "_S%04d_F%04d_Z%02d_afc.json"%(slice_index, frame_index, z_index))
                     #np.savetxt(afc_image_filepath, afc_image)
@@ -109,34 +112,7 @@ def write_slice_metadata_json(filename,ch,xpos,ypos,zpos,slice_index,triggerflag
     f = open(filename,'w')
     f.write(thestring)
     f.close()
-    # if triggerflag == True:
-    #
-    #
-    #     if ssh_opts['do_ssh_trigger']:
-    #         fname =ssh_opts['cron_dir']
-    #         sessiondir, frametitle = os.path.split(filename)
-    #         sessiondir, chname = os.path.split(sessiondir)
-    #         # print "Session Directory", sessiondir
-    #         sessiondir = '/'.join(sessiondir.split('\\'))
-    #         junk, sessiondir = sessiondir.split(':')
-    #         print 'mount point is', ssh_opts['mount_point']
-    #         sessiondir = os.path.join(ssh_opts['mount_point'], sessiondir)
-    #         sessiondir = ssh_opts['mount_point']+'/'+sessiondir
-    #         # print sessiondir
-    #         meta_experiment_name = ssh_opts['meta_experiment_name']
-    #         outputstring = "%s,%s,%s"%(sessiondir,slice_index,meta_experiment_name)
-    #
-    #         #linux command to dump outputstring to filename
-    #         cmd = "echo %s > %s"%(outputstring,fname)
-    #
-    #         #run the command via ssh to machine ibs-sharmi-ux1
-    #         ssh = paramiko.SSHClient()
-    #         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    #         try:
-    #             ssh.connect(ssh_opts['host'], username=ssh_opts['username'], password=ssh_opts['password'], timeout = ssh_opts['timeout'])
-    #             ssh.exec_command(cmd)
-    #         except paramiko.ssh_exception.SSHException:
-    #             print "failed to trigger SSH to %s@%s"%(ssh_opts['host'],ssh_opts['username'])
+
 
 
 

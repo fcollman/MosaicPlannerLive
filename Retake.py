@@ -462,7 +462,8 @@ class RetakeView(QtGui.QWidget):
         for frame,section,spot in self.selectedFrames:
             x,y = self.getFramePos(section=section,frame=frame)
             self.archiveFrame(section=section,frame=frame)
-            self.mp.software_autofocus()   #call software autofocus before acquisition
+            if self.retakecheckBox.isChecked():
+                self.mp.software_autofocus()   #call software autofocus before acquisition
             success, chrom_correction = self.setupAcq()
             self.mp.multiDacq(success, self.outdir, chrom_correction,
                               False,False, x, y, currz, section,
@@ -477,7 +478,8 @@ class RetakeView(QtGui.QWidget):
         x,y = self.getFramePos()
 
         self.archiveFrame()
-        self.mp.software_autofocus()   #call software autofocus before acquisition
+        if self.retakecheckBox.isChecked():
+            self.mp.software_autofocus()   #call software autofocus before acquisition
         success, chrom_correction = self.setupAcq()
         self.mp.multiDacq(success, self.outdir, chrom_correction,
                           False, False, currx, curry, currz, self.section,
