@@ -1703,7 +1703,7 @@ class MosaicPanel(FigureCanvas):
         self.imgSrc.set_exposure(self.cfg['Software Autofocus']['focus_exp_time'])
         self.imgSrc.set_channel(ch)
         current_z = self.imgSrc.get_z()
-        z_start = np.copy(current_z)
+        z_start = self.imgSrc.get_z()
         print "current_z: ", z_start
         self.imgSrc.set_autofocus_offset(-1)
         offset_start = self.imgSrc.get_autofocus_offset()
@@ -1719,6 +1719,7 @@ class MosaicPanel(FigureCanvas):
             self.imgSrc.set_hardware_autofocus_state(False) #turn off autofocus
             self.imgSrc.set_z(current_z - (score - 10)*0.2)
             print "deltaz", -(score - 10)*0.2
+            time.sleep(10*self.cfg['MosaicPlanner']['autofocus_wait'])
             current_z = self.imgSrc.get_z()
             print "current_z: ", current_z
             self.imgSrc.set_autofocus_offset(-1)
@@ -1729,8 +1730,12 @@ class MosaicPanel(FigureCanvas):
             i = i+1
             scores[i] = score
             print "scores", scores
-            if scores[i] == scores[i-1]:
+            #if scores[i] == scores[i-1]:
+            if not (abs(scores[i] - 10) < abs(scores[i-1] - 10)) and ((scores[i] - 10)*(scores[i-1] - 10) > 0):
                 self.imgSrc.set_z(current_z + (score - 10)*0.2*2)
+                #self.imgSrc.set_z(current_z + (score - 10)*0.2)
+                print "deltaz", (score - 10)*0.2*2
+                time.sleep(10*self.cfg['MosaicPlanner']['autofocus_wait'])
                 current_z = self.imgSrc.get_z()
                 print "current_z: ", current_z
                 self.imgSrc.set_autofocus_offset(-1)
