@@ -1717,9 +1717,9 @@ class MosaicPanel(FigureCanvas):
         print "scores", scores
         while not (score > 8) & (score < 12): #while not score == 10:
             self.imgSrc.set_hardware_autofocus_state(False) #turn off autofocus
-            self.imgSrc.set_z(current_z - (score - 10)*0.2)
-            print "deltaz", -(score - 10)*0.2
-            time.sleep(10*self.cfg['MosaicPlanner']['autofocus_wait'])
+            self.imgSrc.set_z(current_z - (score - 10)*0.3)
+            print "deltaz", -(score - 10)*0.3
+            #time.sleep(10*self.cfg['MosaicPlanner']['autofocus_wait'])
             current_z = self.imgSrc.get_z()
             print "current_z: ", current_z
             self.imgSrc.set_autofocus_offset(-1)
@@ -1730,12 +1730,10 @@ class MosaicPanel(FigureCanvas):
             i = i+1
             scores[i] = score
             print "scores", scores
-            #if scores[i] == scores[i-1]:
             if not (abs(scores[i] - 10) < abs(scores[i-1] - 10)) and ((scores[i] - 10)*(scores[i-1] - 10) > 0):
-                self.imgSrc.set_z(current_z + (score - 10)*0.2*2)
-                #self.imgSrc.set_z(current_z + (score - 10)*0.2)
-                print "deltaz", (score - 10)*0.2*2
-                time.sleep(10*self.cfg['MosaicPlanner']['autofocus_wait'])
+                self.imgSrc.set_z(current_z + (score - 10)*0.3*2)
+                print "deltaz", (score - 10)*0.3*2
+                #time.sleep(10*self.cfg['MosaicPlanner']['autofocus_wait'])
                 current_z = self.imgSrc.get_z()
                 print "current_z: ", current_z
                 self.imgSrc.set_autofocus_offset(-1)
